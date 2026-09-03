@@ -16,6 +16,7 @@
 | Role Onboarding | ✅ **HOÀN TẤT** — `RoleSelectionScreen`, Phụ nữ vs Người thương (Ghép đôi / Tự thiết lập) |
 | Nickname Engine | ✅ **HOÀN TẤT** — `NicknameConfig`, 7 presets + tự gõ, Live Preview, Firestore sync |
 | Independent Cycle for Partner | ✅ **HOÀN TẤT** — Chồng tự cài chu kỳ nàng, xem lịch chu kỳ & hiệu chỉnh linh hoạt |
+| Dọn dẹp UI tạm & Khóa Role tĩnh | ✅ **HOÀN TẤT** — Gỡ Floating Role Chip, Role chuyển sang Read-only Badge |
 | Deploy Đa Thiết Bị | ✅ **SUCCESS** — Xiaomi 2201116TG + Android Emulator-5554 song song |
 | SHA-1 Debug Keystore | `EA:A9:EA:AB:B7:B9:9A:1F:F1:81:64:BF:76:2E:E1:75:C5:32:7F:47` |
 | SHA-256 Debug Keystore | `4C:A0:DA:B2:A3:D4:94:7D:B4:08:89:D2:11:A8:13:03:AB:77:05:FD:5B:A0:F5:87:F7:D8:D4:1D:0A:76:99:89` |

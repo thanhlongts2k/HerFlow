@@ -50,6 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await box.put(AppConstants.keyCycleLength, _cycleLength);
     await box.put(AppConstants.keyPeriodDuration, _periodDuration);
     await box.put(AppConstants.keyOnboardingGoal, _selectedGoal);
+    await box.put(AppConstants.keyHasSelectedRole, true);
     await box.put(AppConstants.keyIsOnboardingCompleted, true);
 
     if (mounted) {

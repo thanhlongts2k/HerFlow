@@ -10,6 +10,7 @@ import 'package:herflow/features/care_signals/presentation/controllers/care_sign
 import 'package:herflow/features/care_signals/presentation/widgets/care_signal_sheet.dart';
 import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
+import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 import '../controllers/cycle_controller.dart';
 import '../widgets/cycle_calendar_view.dart';
@@ -46,10 +47,13 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
     final selectedDate = ref.watch(selectedCalendarDateProvider);
     final dayInfo = ref.watch(selectedCycleDayInfoProvider);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // Lắng nghe tín hiệu yêu thương mới nhất để phát hiện phản hồi từ Chồng
     final latestSignal = ref.watch(latestCareSignalStreamProvider).valueOrNull;
     final dismissedId = ref.watch(dismissedHusbandResponseIdProvider);
+    final nicknameConfig = ref.watch(nicknameConfigProvider);
+    final savedCoupleId = ref.watch(savedCoupleIdProvider);
 
     // Kích hoạt rung haptic nhẹ khi Chồng vừa bấm chọn phản hồi
     ref.listen(latestCareSignalStreamProvider, (prev, next) {
@@ -95,6 +99,44 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
             tooltip: 'Gửi tín hiệu yêu thương đến chồng',
             onPressed: () => CareSignalSheet.show(context),
           ),
+          // Badge Người thương kết nối
+          if (savedCoupleId != null && savedCoupleId.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(isDark ? 45 : 25),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.secondary.withAlpha(90)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircleAvatar(
+                      radius: 9,
+                      backgroundColor: AppColors.secondary,
+                      child: Text('🛡️', style: TextStyle(fontSize: 8)),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      nicknameConfig.callPartnerAs,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           // Nút xem trước Góc nhìn của Chồng
           IconButton(
             icon: const Icon(Icons.shield_outlined, color: AppColors.secondary),
@@ -142,6 +184,7 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
                 if (showHusbandBanner)
                   _HusbandResponseBanner(
                     signal: latestSignal,
+                    partnerNickname: nicknameConfig.callPartnerAs,
                     onDismiss: () {
                       ref.read(dismissedHusbandResponseIdProvider.notifier).state =
                           latestSignal.id;
@@ -218,10 +261,12 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
 class _HusbandResponseBanner extends StatefulWidget {
   final CareSignalModel signal;
   final VoidCallback onDismiss;
+  final String partnerNickname;
 
   const _HusbandResponseBanner({
     required this.signal,
     required this.onDismiss,
+    this.partnerNickname = 'Người thương',
   });
 
   @override
@@ -313,9 +358,9 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Lời nhắn từ Chồng yêu 💕',
-                            style: TextStyle(
+                          Text(
+                            'Lời nhắn từ ${widget.partnerNickname} 💕',
+                            style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13.5,
                               color: AppColors.primary,

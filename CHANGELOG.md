@@ -4,6 +4,43 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.5.0+10] - 2026-09-03 (Google Auth, Role Onboarding, Nickname Engine & Independent Partner Cycle)
+
+### [Added]
+- **🔐 Tích hợp Xác thực Google Sign-In & Firebase Auth toàn diện:**
+  * Thêm màn hình Đăng nhập `LoginScreen` phong cách Liquid Glass trang nhã.
+  * Hỗ trợ đăng nhập 1 chạm với tài khoản Google thực tế và chế độ Demo tiện lợi (`signInAsDemo`).
+  * Lưu trữ hồ sơ người dùng cục bộ (`userBox`) và đồng bộ lên Firestore `users/{uid}` (Avatar, Tên hiển thị, Email).
+- **🎭 Onboarding Phân vai trò & Chu kỳ độc lập cho Người thương:**
+  * Màn hình `RoleSelectionScreen` chào đón với Avatar người dùng và 2 thẻ lựa chọn lớn:
+    - `[ 🌸 Tôi là Phụ nữ ]`: Điều hướng vào quy trình thiết lập chu kỳ chi tiết cho bạn nữ.
+    - `[ 🛡️ Tôi là Người thương ]`: Mở BottomSheet gồm 2 phương án:
+      * `[ 🔗 Đã có mã ghép đôi từ nàng ]`: Nhập mã kết nối Firestore như thông thường.
+      * `[ 📝 Tự thiết lập chu kỳ của nàng ]`: Cho phép Chàng tự thiết lập ngày kinh gần nhất, độ dài chu kỳ và số ngày hành kinh để theo dõi độc lập khi nàng chưa dùng app.
+- **🏷️ Động cơ danh xưng tùy biến (Nickname Engine):**
+  * Model `NicknameConfig` với các thiết lập: `callPartnerAs` (Bạn gọi người ấy là) & `selfCallAs` (Bạn tự xưng là).
+  * Danh sách preset phong phú: `['Người thương', 'Em bé', 'Bé iu', 'Vợ yêu', 'Chồng yêu', 'Anh yêu', 'Bạn đời']` kèm ô nhập tùy ý ("Tự gõ").
+  * Lưu trữ bền vững tại Hive `settingsBox` và đồng bộ lên Firestore `couples/{coupleId}`.
+  * Live Preview hiển thị câu đối thoại tương tác sinh động ngay trong Cài Đặt.
+- **🌸 Tích hợp giao diện hiển thị danh xưng & chu kỳ nàng:**
+  * **Phía Vợ (`CycleScreen`):**
+    - AppBar hiển thị Couple Badge có tên xưng hô của Chồng (`🛡️ [Danh xưng]`).
+    - Banner phản hồi từ Chồng hiển thị chính xác danh xưng Chồng tự xưng.
+  * **Phía Chồng (`HusbandViewScreen`):**
+    - Subtitle AppBar, Hero Card, Hộp tín hiệu và Quick Chips tự động thay đổi theo danh xưng cấu hình.
+    - Thẻ tóm tắt chu kỳ sinh học của nàng (`_buildCycleSummaryCard`) hiển thị ngày kỳ kinh tới, cửa sổ rụng trứng và nút mở Lịch chi tiết (`_showPartnerCalendarModal`).
+  * **Mục Cài Đặt (`SettingsScreen`):**
+    - Thẻ hồ sơ người dùng Google (`_buildUserProfileCard`) kèm nút Đăng xuất an toàn.
+    - Nhóm tùy chỉnh Danh xưng (`_buildNicknameSection`).
+    - Nhóm hiệu chỉnh chu kỳ của người thương (`_buildPartnerCycleSection` & `_showEditPartnerCycleModal`).
+
+### [Changed]
+- **🧹 Dọn dẹp thành phần thử nghiệm & Khóa vai trò theo tài khoản (Post-Auth Cleanup):**
+  * Gỡ bỏ hoàn toàn nút Floating Action Chip chuyển role nhanh tạm thời trên màn hình chính (`_buildDebugRoleSwitcher` trong `MainNavScreen`).
+  * Chuyển đổi mục "Vai trò ứng dụng" trong Cài đặt (`SettingsScreen`) từ nút bấm tương tác sang thẻ thông tin tĩnh dạng **Read-only Badge** có huy hiệu "Cố định", giải thích rõ vai trò gắn chặt với tài khoản Google đang đăng nhập và chỉ cho phép đổi khi đăng xuất hoặc đặt lại tài khoản.
+
+---
+
 ## [0.4.0+9] - 2026-09-03 (Realtime 2-Way Feedback Loop & Multi-Device Sync)
 
 ### [Added]

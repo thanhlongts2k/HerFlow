@@ -33,6 +33,7 @@ void main() async {
     Hive.openBox(AppConstants.cycleBoxName),
     Hive.openBox(AppConstants.moodBoxName),
     Hive.openBox(AppConstants.settingsBoxName),
+    Hive.openBox(AppConstants.userBoxName),
   ]);
 
   // Khởi tạo Firebase phòng thủ ngoại lệ
@@ -49,22 +50,37 @@ void main() async {
     debugPrint('NotificationService init notice: $e');
   }
 
-  // Kiểm tra trạng thái hoàn thành Onboarding
+  // Kiểm tra trạng thái xác thực và phân vai trò
+  final userBox = Hive.box(AppConstants.userBoxName);
   final settingsBox = Hive.box(AppConstants.settingsBoxName);
+
+  final isLoggedIn = userBox.get(AppConstants.keyUserIsLoggedIn, defaultValue: false) as bool;
+  final hasSelectedRole = settingsBox.get(AppConstants.keyHasSelectedRole, defaultValue: false) as bool;
   final isOnboardingCompleted =
       settingsBox.get(AppConstants.keyIsOnboardingCompleted, defaultValue: false) as bool;
 
+  String initialRoute;
+  if (!isLoggedIn) {
+    initialRoute = AppRoutes.login;
+  } else if (!hasSelectedRole) {
+    initialRoute = AppRoutes.roleSelection;
+  } else if (!isOnboardingCompleted) {
+    initialRoute = AppRoutes.onboarding;
+  } else {
+    initialRoute = AppRoutes.home;
+  }
+
   runApp(
     ProviderScope(
-      child: MoonaApp(isOnboardingCompleted: isOnboardingCompleted),
+      child: MoonaApp(initialRoute: initialRoute),
     ),
   );
 }
 
 class MoonaApp extends ConsumerWidget {
-  final bool isOnboardingCompleted;
+  final String initialRoute;
 
-  const MoonaApp({super.key, required this.isOnboardingCompleted});
+  const MoonaApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,7 +92,7 @@ class MoonaApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      initialRoute: isOnboardingCompleted ? AppRoutes.home : AppRoutes.onboarding,
+      initialRoute: initialRoute,
       onGenerateRoute: AppRoutes.onGenerateRoute,
       builder: (context, child) {
         return BiometricLockScreen(

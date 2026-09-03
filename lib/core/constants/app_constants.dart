@@ -14,6 +14,7 @@ class AppConstants {
   static const String moodBoxName = 'herflow_mood_box';
   static const String nutritionBoxName = 'herflow_nutrition_box';
   static const String settingsBoxName = 'herflow_settings_box';
+  static const String userBoxName = 'herflow_user_box';
 
   // Sinh lý chu kỳ mặc định
   static const int defaultCycleLength = 28; // Chu kỳ trung bình 28 ngày
@@ -30,4 +31,12 @@ class AppConstants {
   static const String keyIsOnboardingCompleted = 'is_onboarding_completed';
   static const String keyIsBiometricEnabled = 'is_biometric_enabled';
   static const String keyOnboardingGoal = 'onboarding_goal';
+  static const String keyHasSelectedRole = 'has_selected_role';
+
+  // Key User Profile
+  static const String keyUserUid = 'user_uid';
+  static const String keyUserDisplayName = 'user_display_name';
+  static const String keyUserEmail = 'user_email';
+  static const String keyUserPhotoUrl = 'user_photo_url';
+  static const String keyUserIsLoggedIn = 'user_is_logged_in';
 }

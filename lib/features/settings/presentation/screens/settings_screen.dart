@@ -2,15 +2,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/providers/app_version_provider.dart';
 import 'package:herflow/core/providers/user_role_provider.dart';
+import 'package:herflow/core/routes/app_routes.dart';
 import 'package:herflow/core/utils/haptic_feedback_utils.dart';
+import 'package:herflow/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
+import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
+import 'package:herflow/features/settings/domain/models/nickname_config.dart';
+import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 
 import 'package:herflow/core/theme/theme_controller.dart';
 
@@ -60,6 +67,10 @@ class SettingsScreen extends ConsumerWidget {
     final coupleId = ref.watch(savedCoupleIdProvider);
     final isConnected = coupleId != null && coupleId.isNotEmpty;
     final currentRole = ref.watch(userRoleProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final nicknameConfig = ref.watch(nicknameConfigProvider);
+    final cycleInfo = ref.watch(cycleControllerProvider).valueOrNull;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -75,6 +86,11 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
+          // ── HỒ SƠ TÀI KHOẢN GOOGLE ─────────────────────────────
+          _buildUserProfileCard(context, ref, isDark, currentUser),
+
+          const SizedBox(height: 6),
+
           // ── NHÓM 1: BẢO MẬT & RIÊNG TƯ ──────────────────────────
           _SectionHeader(
             icon: Icons.security_rounded,
@@ -142,47 +158,137 @@ class SettingsScreen extends ConsumerWidget {
 
           _SettingsDivider(),
 
-          // ── NHÓM 2: VAI TRÒ ỨNG DỤNG ─────────────────────────────
+          // ── NHÓM 2: VAI TRÒ ỨNG DỤNG (READ-ONLY BADGE) ───────────
           _SectionHeader(
             icon: Icons.badge_outlined,
             title: 'Vai Trò Ứng Dụng',
-            color: AppColors.secondary,
+            color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
           ),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _RoleCard(
-                    role: UserRole.wife,
-                    isSelected: currentRole == UserRole.wife,
-                    title: 'Tôi là Vợ',
-                    subtitle: 'Theo dõi chu kỳ',
-                    emoji: '🌸',
-                    selectedColor: AppColors.primary,
-                    onTap: () async {
-                      await ref.read(userRoleProvider.notifier).setRole(UserRole.wife);
-                    },
-                  ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 80 : 50),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _RoleCard(
-                    role: UserRole.husband,
-                    isSelected: currentRole == UserRole.husband,
-                    title: 'Tôi là Chồng',
-                    subtitle: 'Đồng hành cùng nàng',
-                    emoji: '🛡️',
-                    selectedColor: AppColors.secondary,
-                    onTap: () async {
-                      await ref.read(userRoleProvider.notifier).setRole(UserRole.husband);
-                    },
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 40 : 25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          currentRole == UserRole.wife ? '🌸' : '🛡️',
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentRole == UserRole.wife
+                                  ? '🌸 Tài khoản: Phụ nữ'
+                                  : '🛡️ Tài khoản: Người thương',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              currentRole == UserRole.wife
+                                  ? 'Theo dõi chu kỳ sinh học'
+                                  : 'Đồng hành & Chăm sóc nàng',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 35 : 20),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(60),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cố định',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'Vai trò được gắn cố định với tài khoản Google đang đăng nhập.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontStyle: FontStyle.italic,
+                      color: isDark ? Colors.white54 : Colors.grey[600],
+                    ),
+                  ),
+                  const Divider(height: 18),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        AppHaptics.light();
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Đổi vai trò ứng dụng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                            content: const Text(
+                              'Vai trò này được gắn liền với tài khoản của bạn để đảm bảo tính toàn vẹn dữ liệu chu kỳ.\n\nĐể đổi vai trò, bạn cần đăng xuất hoặc đặt lại tài khoản này.',
+                              style: TextStyle(fontSize: 13.5, height: 1.4),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Đã hiểu'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  await ref.read(authControllerProvider.notifier).signOut();
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (r) => false);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                                child: const Text('Đăng xuất ngay', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.info_outline_rounded, size: 14),
+                      label: const Text('Đổi vai trò', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+
+          _SettingsDivider(),
+
+          // ── NHÓM: HỒ SƠ & DANH XƯNG (NICKNAME ENGINE) ──────────
+          _buildNicknameSection(context, ref, isDark, nicknameConfig),
 
           _SettingsDivider(),
 
@@ -258,6 +364,18 @@ class SettingsScreen extends ConsumerWidget {
                 );
               },
             ),
+
+          // ── NHÓM: CHU KỲ CỦA NÀNG (DÀNH CHO NGƯỜI THƯƠNG) ───────
+          if (currentRole == UserRole.husband) ...[
+            _SettingsDivider(),
+            _buildPartnerCycleSection(
+              context,
+              ref,
+              isDark,
+              cycleInfo,
+              nicknameConfig.callPartnerAs,
+            ),
+          ],
 
           _SettingsDivider(),
 
@@ -440,6 +558,503 @@ class SettingsScreen extends ConsumerWidget {
         return 'Theo hệ thống';
     }
   }
+
+  Widget _buildUserProfileCard(
+    BuildContext context,
+    WidgetRef ref,
+    bool isDark,
+    dynamic currentUser,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: AppColors.primary.withAlpha(40),
+            backgroundImage: currentUser?.photoUrl != null && currentUser!.photoUrl!.isNotEmpty
+                ? NetworkImage(currentUser.photoUrl!)
+                : null,
+            child: currentUser?.photoUrl == null
+                ? const Icon(Icons.person, color: AppColors.primary, size: 28)
+                : null,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  currentUser?.displayName ?? 'Người dùng Moona',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  currentUser?.email ?? 'Chưa đăng nhập',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+            tooltip: 'Đăng xuất',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Đăng xuất'),
+                  content: const Text('Bạn có chắc muốn đăng xuất khỏi tài khoản này?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Hủy'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                      child: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) {
+                await ref.read(authControllerProvider.notifier).signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (r) => false);
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNicknameSection(
+    BuildContext context,
+    WidgetRef ref,
+    bool isDark,
+    NicknameConfig nicknameConfig,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          icon: Icons.favorite_outline_rounded,
+          title: 'Hồ Sơ & Danh Xưng',
+          color: AppColors.primary,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Bạn gọi người ấy là
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Bạn gọi người ấy là:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  TextButton.icon(
+                    onPressed: () => _showCustomNicknameDialog(
+                      context,
+                      title: 'Cách bạn gọi người ấy',
+                      currentValue: nicknameConfig.callPartnerAs,
+                      onSave: (val) => ref.read(nicknameConfigProvider.notifier).setCallPartnerAs(val),
+                    ),
+                    icon: const Icon(Icons.edit_rounded, size: 14),
+                    label: const Text('Tự gõ', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: NicknameConfig.presets.map((name) {
+                    final isSel = nicknameConfig.callPartnerAs == name;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(name),
+                        selected: isSel,
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                        onSelected: (val) {
+                          if (val) {
+                            ref.read(nicknameConfigProvider.notifier).setCallPartnerAs(name);
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 2. Bạn tự xưng với người ấy là
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Bạn tự xưng là:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  TextButton.icon(
+                    onPressed: () => _showCustomNicknameDialog(
+                      context,
+                      title: 'Cách bạn tự xưng',
+                      currentValue: nicknameConfig.selfCallAs,
+                      onSave: (val) => ref.read(nicknameConfigProvider.notifier).setSelfCallAs(val),
+                    ),
+                    icon: const Icon(Icons.edit_rounded, size: 14),
+                    label: const Text('Tự gõ', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: NicknameConfig.presets.map((name) {
+                    final isSel = nicknameConfig.selfCallAs == name;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(name),
+                        selected: isSel,
+                        selectedColor: AppColors.secondary,
+                        labelStyle: TextStyle(
+                          color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                        onSelected: (val) {
+                          if (val) {
+                            ref.read(nicknameConfigProvider.notifier).setSelfCallAs(name);
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 3. Live Preview Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(isDark ? 25 : 15),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.primary.withAlpha(isDark ? 60 : 40)),
+                ),
+                child: Row(
+                  children: [
+                    const Text('💬', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Xem trước: "${nicknameConfig.selfCallAs} vừa gửi tín hiệu yêu thương cho ${nicknameConfig.callPartnerAs} 💕"',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPartnerCycleSection(
+    BuildContext context,
+    WidgetRef ref,
+    bool isDark,
+    CycleInfo? cycleInfo,
+    String partnerName,
+  ) {
+    final lastStart = cycleInfo?.lastPeriodStart ?? DateTime.now().subtract(const Duration(days: 14));
+    final lastStartStr = DateFormat('dd/MM/yyyy').format(lastStart);
+    final cycleLen = cycleInfo?.cycleLength ?? 28;
+    final periodDur = cycleInfo?.periodDuration ?? 5;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          icon: Icons.calendar_today_rounded,
+          title: 'Chu Kỳ Của $partnerName',
+          color: AppColors.primary,
+        ),
+        ListTile(
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: 20),
+          ),
+          title: Text('Thông số chu kỳ của $partnerName', style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text(
+            'Kỳ gần nhất: $lastStartStr • Chu kỳ: $cycleLen ngày • Hành kinh: $periodDur ngày',
+            style: const TextStyle(fontSize: 12),
+          ),
+          trailing: ElevatedButton(
+            onPressed: () => _showEditPartnerCycleModal(context, ref, lastStart, cycleLen, periodDur, partnerName),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hiệu chỉnh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCustomNicknameDialog(
+    BuildContext context, {
+    required String title,
+    required String currentValue,
+    required ValueChanged<String> onSave,
+  }) {
+    final controller = TextEditingController(text: currentValue);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Nhập danh xưng yêu thích...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                onSave(text);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditPartnerCycleModal(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime initialDate,
+    int initialCycleLen,
+    int initialPeriodDur,
+    String partnerName,
+  ) {
+    DateTime selectedDate = initialDate;
+    int cycleLen = initialCycleLen;
+    int periodDur = initialPeriodDur;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withAlpha(100),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Hiệu Chỉnh Chu Kỳ $partnerName',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Kỳ kinh gần nhất bắt đầu vào ngày nào?',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                          const SizedBox(height: 8),
+                          CalendarDatePicker(
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now().subtract(const Duration(days: 90)),
+                            lastDate: DateTime.now().add(const Duration(days: 1)),
+                            onDateChanged: (date) => setModalState(() => selectedDate = date),
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Độ dài chu kỳ trung bình:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline, color: AppColors.secondary),
+                                    onPressed: cycleLen > 21
+                                        ? () => setModalState(() => cycleLen--)
+                                        : null,
+                                  ),
+                                  Text(
+                                    '$cycleLen ngày',
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline, color: AppColors.secondary),
+                                    onPressed: cycleLen < 45
+                                        ? () => setModalState(() => cycleLen++)
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Số ngày hành kinh:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline, color: AppColors.secondary),
+                                    onPressed: periodDur > 2
+                                        ? () => setModalState(() => periodDur--)
+                                        : null,
+                                  ),
+                                  Text(
+                                    '$periodDur ngày',
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline, color: AppColors.secondary),
+                                    onPressed: periodDur < 10
+                                        ? () => setModalState(() => periodDur++)
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      AppHaptics.success();
+
+                      final settingsBox = Hive.box(AppConstants.settingsBoxName);
+                      await settingsBox.put(AppConstants.keyLastPeriodStart, selectedDate.toIso8601String());
+                      await settingsBox.put(AppConstants.keyCycleLength, cycleLen);
+                      await settingsBox.put(AppConstants.keyPeriodDuration, periodDur);
+
+                      await ref.read(cycleControllerProvider.notifier).setLastPeriodStart(selectedDate);
+                      await ref.read(cycleControllerProvider.notifier).setCycleLength(cycleLen);
+                      await ref.read(cycleControllerProvider.notifier).setPeriodDuration(periodDur);
+
+                      // Đồng bộ nếu đã ghép đôi
+                      ref.read(partnerSyncControllerProvider.notifier).syncTodayStatus();
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Đã cập nhật chu kỳ của $partnerName thành công! 💕'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text(
+                      'Lưu Cập Nhật',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -484,88 +1099,6 @@ class _SettingsDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Divider(height: 8, indent: 16, endIndent: 16);
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  final UserRole role;
-  final bool isSelected;
-  final String title;
-  final String subtitle;
-  final String emoji;
-  final Color selectedColor;
-  final VoidCallback onTap;
-
-  const _RoleCard({
-    required this.role,
-    required this.isSelected,
-    required this.title,
-    required this.subtitle,
-    required this.emoji,
-    required this.selectedColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        AppHaptics.selection();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? selectedColor.withAlpha(isDark ? 45 : 25)
-              : (isDark ? AppColors.cardDark : AppColors.cardLight),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? selectedColor
-                : (isDark ? AppColors.dividerDark : AppColors.dividerLight),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 20)),
-                const Spacer(),
-                if (isSelected)
-                  Icon(Icons.check_circle_rounded, size: 18, color: selectedColor)
-                else
-                  Icon(Icons.radio_button_unchecked_rounded, size: 18, color: Colors.grey.withAlpha(120)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                color: isSelected ? selectedColor : null,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: theme.textTheme.bodySmall?.color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

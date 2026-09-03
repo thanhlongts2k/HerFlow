@@ -30,4 +30,10 @@ abstract final class AppHaptics {
   static void selection() {
     if (_isEnabled()) HapticFeedback.selectionClick();
   }
+
+  /// Alias cho medium
+  static void mediumImpact() => medium();
+
+  /// Alias cho success
+  static void success() => medium();
 }

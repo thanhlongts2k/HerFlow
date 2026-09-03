@@ -65,6 +65,15 @@ class CycleInfo {
   /// Ngày rụng trứng lý thuyết trong chu kỳ: Ngày thứ (cycleLength - 14)
   int get ovulationDayNumber => cycleLength - 14;
 
+  /// Ngày rụng trứng lý thuyết
+  DateTime get ovulationDate => anchorStart.add(Duration(days: ovulationDayNumber - 1));
+
+  /// Cửa sổ rụng trứng bắt đầu (5 ngày trước ngày rụng trứng)
+  DateTime get fertileWindowStart => anchorStart.add(Duration(days: (ovulationDayNumber - 5).clamp(1, cycleLength) - 1));
+
+  /// Cửa sổ rụng trứng kết thúc (1 ngày sau ngày rụng trứng)
+  DateTime get fertileWindowEnd => anchorStart.add(Duration(days: (ovulationDayNumber + 1).clamp(1, cycleLength) - 1));
+
   /// Kiểm tra xem một ngày có phải là kỳ kinh THỰC TẾ (Đã ghi nhận nhật ký hoặc nằm trong anchor period)
   bool isActualPeriod(DateTime date) {
     final normDate = AppDateUtils.normalize(date);

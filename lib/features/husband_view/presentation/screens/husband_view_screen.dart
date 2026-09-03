@@ -12,6 +12,10 @@ import 'package:herflow/features/partner_sync/presentation/controllers/partner_s
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import 'package:herflow/features/care_signals/presentation/controllers/care_signal_controller.dart';
+import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
+import 'package:herflow/features/cycle/presentation/widgets/cycle_calendar_view.dart';
+import 'package:herflow/features/cycle/presentation/widgets/cycle_phase_legend.dart';
+import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 
 /// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
@@ -28,6 +32,8 @@ class HusbandViewScreen extends ConsumerWidget {
     final liveStatusAsync = ref.watch(partnerLiveStatusStreamProvider);
     final careSignalAsync = ref.watch(latestCareSignalStreamProvider);
     final careSignal = careSignalAsync.valueOrNull;
+    final nicknameConfig = ref.watch(nicknameConfigProvider);
+    final partnerName = nicknameConfig.callPartnerAs;
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -59,7 +65,7 @@ class HusbandViewScreen extends ConsumerWidget {
               ],
             ),
             Text(
-              'Trợ lý thấu hiểu & đồng hành cùng nàng (${AppDateUtils.formatHeaderDate(selectedDate)})',
+              'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: isDark ? Colors.white60 : Colors.black54,
               ),
@@ -130,7 +136,7 @@ class HusbandViewScreen extends ConsumerWidget {
 
                 // 2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG (CARE SIGNAL)
                 if (careSignal != null) ...[
-                  _buildCareSignalBox(context, ref, careSignal, isDark),
+                  _buildCareSignalBox(context, ref, careSignal, isDark, partnerName),
                   const SizedBox(height: 14),
                 ],
 
@@ -141,12 +147,18 @@ class HusbandViewScreen extends ConsumerWidget {
                   cycleDay: cycleDay,
                   energyLevel: energyLevel,
                   isDark: isDark,
+                  partnerName: partnerName,
                   moodText: liveStatus?.moodSummary.isNotEmpty == true
                       ? liveStatus!.moodSummary
                       : (liveStatus?.moodTags.isNotEmpty == true
                           ? liveStatus!.moodTags.join(', ')
                           : moodEntry.mood),
                 ),
+
+                const SizedBox(height: 16),
+
+                // 3.5. TÓM TẮT CHU KỲ CỦA NÀNG (CYCLE SUMMARY CARD)
+                _buildCycleSummaryCard(context, ref, cycleInfo, isDark, partnerName),
 
                 const SizedBox(height: 16),
 
@@ -280,6 +292,7 @@ class HusbandViewScreen extends ConsumerWidget {
     WidgetRef ref,
     CareSignalModel signal,
     bool isDark,
+    String partnerName,
   ) {
     final timeStr = _formatRelativeTime(signal.sentAt);
 
@@ -314,9 +327,9 @@ class HusbandViewScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Tín Hiệu Yêu Thương Từ Nàng 💕',
-                          style: TextStyle(
+                        Text(
+                          'Tín Hiệu Yêu Thương Từ $partnerName 💕',
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.secondary,
@@ -380,9 +393,9 @@ class HusbandViewScreen extends ConsumerWidget {
               ),
             ),
           ] else ...[
-            const Text(
-              'Phản hồi nhanh 1 chạm cho nàng:',
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.grey),
+            Text(
+              'Phản hồi nhanh 1 chạm cho $partnerName:',
+              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.grey),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -453,6 +466,8 @@ class HusbandViewScreen extends ConsumerWidget {
     required int energyLevel,
     required bool isDark,
     required String moodText,
+    required String partnerName,
+    String? partnerAvatarUrl,
   }) {
     final theme = Theme.of(context);
     final batteryInfo = _getBatteryStatus(energyLevel);
@@ -480,20 +495,35 @@ class HusbandViewScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: phase.color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${phase.vietnameseName} • Ngày $cycleDay',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: phase.color.withAlpha(50),
+                    backgroundImage: partnerAvatarUrl != null && partnerAvatarUrl.isNotEmpty
+                        ? NetworkImage(partnerAvatarUrl)
+                        : null,
+                    child: partnerAvatarUrl == null
+                        ? const Text('🌸', style: TextStyle(fontSize: 13))
+                        : null,
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: phase.color,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${phase.vietnameseName} • Ngày $cycleDay',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -538,9 +568,9 @@ class HusbandViewScreen extends ConsumerWidget {
           // Thanh Pin Năng lượng
           Row(
             children: [
-              const Text(
-                'Pin năng lượng nàng:',
-                style: TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w600),
+              Text(
+                'Pin năng lượng $partnerName:',
+                style: const TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -565,12 +595,231 @@ class HusbandViewScreen extends ConsumerWidget {
           if (moodText.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              'Tâm trạng nàng: $moodText',
+              'Tâm trạng $partnerName: $moodText',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
             ),
           ],
         ],
       ),
+    );
+  }
+
+  /// Widget thẻ tóm tắt chu kỳ sinh học của nàng & nút mở lịch chi tiết
+  Widget _buildCycleSummaryCard(
+    BuildContext context,
+    WidgetRef ref,
+    CycleInfo cycleInfo,
+    bool isDark,
+    String partnerName,
+  ) {
+    final daysLeft = cycleInfo.daysUntilNextPeriod(DateTime.now());
+    final nextPeriodStr = DateFormat('dd/MM').format(cycleInfo.nextPeriodDate);
+    final fertileStartStr = DateFormat('dd/MM').format(cycleInfo.fertileWindowStart);
+    final fertileEndStr = DateFormat('dd/MM').format(cycleInfo.fertileWindowEnd);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1E293B).withAlpha(120)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.black.withAlpha(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 30 : 10),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(isDark ? 40 : 25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.primary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Chu Kỳ Sinh Học Của ${partnerName.toUpperCase()}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 2 cột thông tin quan trọng
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.phaseMenstrual.withAlpha(isDark ? 35 : 20),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.phaseMenstrual.withAlpha(60)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Kỳ kinh tới',
+                        style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nextPeriodStr,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.phaseMenstrual,
+                        ),
+                      ),
+                      Text(
+                        daysLeft > 0 ? 'Còn $daysLeft ngày nữa' : 'Đang trong kỳ',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.phaseOvulation.withAlpha(isDark ? 35 : 20),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.phaseOvulation.withAlpha(60)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Cửa sổ rụng trứng',
+                        style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$fertileStartStr - $fertileEndStr',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.phaseOvulation,
+                        ),
+                      ),
+                      Text(
+                        'Chu kỳ: ${cycleInfo.cycleLength} ngày',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Nút xem lịch chu kỳ của nàng
+          OutlinedButton.icon(
+            onPressed: () => _showPartnerCalendarModal(context, cycleInfo),
+            icon: const Icon(Icons.date_range_rounded, size: 16),
+            label: Text('Xem lịch chu kỳ của $partnerName'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              side: BorderSide(color: AppColors.secondary.withAlpha(120)),
+              minimumSize: const Size.fromHeight(42),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPartnerCalendarModal(BuildContext context, CycleInfo cycleInfo) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+
+        return Consumer(
+          builder: (context, ref, _) {
+            final selectedDate = ref.watch(selectedCalendarDateProvider);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.78,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withAlpha(100),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Lịch Chu Kỳ Sinh Học',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          CycleCalendarView(
+                            cycleInfo: cycleInfo,
+                            selectedDate: selectedDate,
+                            onDateSelected: (newDate) {
+                              ref.read(selectedCalendarDateProvider.notifier).state = newDate;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          const CyclePhaseLegend(),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

@@ -5,10 +5,12 @@ import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herflow/core/constants/cycle_phase.dart';
 import 'package:herflow/core/constants/user_role.dart';
+import 'package:herflow/features/auth/domain/models/user_model.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
 import 'package:herflow/features/cycle/domain/entities/period_record.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
+import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 
 void main() {
   group('Cycle Core Engine Unit Tests', () {
@@ -252,6 +254,65 @@ void main() {
       expect(restored.energyLevel, 2);
       expect(restored.moodSummary, 'Mệt mỏi (Cáu kỉnh)');
       expect(restored.husbandActionTip, status.husbandActionTip);
+    });
+  });
+
+  group('NicknameConfig Unit Tests', () {
+    test('Default values and presets check', () {
+      const config = NicknameConfig();
+      expect(config.callPartnerAs, 'Người thương');
+      expect(config.selfCallAs, 'Người thương');
+      expect(NicknameConfig.presets, contains('Người thương'));
+      expect(NicknameConfig.presets, contains('Em bé'));
+      expect(NicknameConfig.presets, contains('Bé iu'));
+      expect(NicknameConfig.presets, contains('Vợ yêu'));
+      expect(NicknameConfig.presets, contains('Chồng yêu'));
+      expect(NicknameConfig.presets, contains('Anh yêu'));
+    });
+
+    test('Serialization and deserialization', () {
+      const config = NicknameConfig(
+        callPartnerAs: 'Bé iu',
+        selfCallAs: 'Anh yêu',
+      );
+      final map = config.toMap();
+      expect(map['callPartnerAs'], 'Bé iu');
+      expect(map['selfCallAs'], 'Anh yêu');
+
+      final restored = NicknameConfig.fromMap(map);
+      expect(restored.callPartnerAs, 'Bé iu');
+      expect(restored.selfCallAs, 'Anh yêu');
+      expect(restored, config);
+    });
+
+    test('Empty fallback to default nickname', () {
+      final restored = NicknameConfig.fromMap({'callPartnerAs': '', 'selfCallAs': '   '});
+      expect(restored.callPartnerAs, NicknameConfig.defaultNickname);
+      expect(restored.selfCallAs, NicknameConfig.defaultNickname);
+    });
+  });
+
+  group('UserModel Domain Tests', () {
+    test('Serialization and equality', () {
+      final now = DateTime(2026, 9, 3);
+      final user = UserModel(
+        uid: 'user_123',
+        displayName: 'Thành Long',
+        email: 'long@gmail.com',
+        photoUrl: 'https://example.com/avatar.png',
+        createdAt: now,
+      );
+
+      final map = user.toMap();
+      expect(map['uid'], 'user_123');
+      expect(map['displayName'], 'Thành Long');
+      expect(map['email'], 'long@gmail.com');
+
+      final restored = UserModel.fromMap(map);
+      expect(restored.uid, user.uid);
+      expect(restored.displayName, user.displayName);
+      expect(restored.email, user.email);
+      expect(restored.photoUrl, user.photoUrl);
     });
   });
 }
