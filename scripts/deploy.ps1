@@ -1,7 +1,7 @@
 # scripts/deploy.ps1
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║   MOONA — Automated Build & Deploy Script (Windows PowerShell)   ║
-# ║   Sử dụng: .\scripts\deploy.ps1 [-Mode debug|release]           ║
+# ║   MOONA -- Automated Build & Deploy Script (Windows PowerShell)  ║
+# ║   Usage: .\scripts\deploy.ps1 [-Mode debug|release]             ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 param(
@@ -9,136 +9,135 @@ param(
     [string]$Mode = "debug"
 )
 
-# ── TIỆN ÍCH HIỂN THỊ MÀU ─────────────────────────────────────────
-function Write-Step   { param($msg) Write-Host "`n▶ $msg" -ForegroundColor Cyan }
-function Write-OK     { param($msg) Write-Host "  ✅ $msg" -ForegroundColor Green }
-function Write-Warn   { param($msg) Write-Host "  ⚠️  $msg" -ForegroundColor Yellow }
-function Write-Fail   { param($msg) Write-Host "  ❌ $msg" -ForegroundColor Red }
-function Write-Info   { param($msg) Write-Host "  ℹ️  $msg" -ForegroundColor Gray }
-function Write-Header {
+# ── COLOR HELPERS ──────────────────────────────────────────────────
+function Write-Step { param($msg) Write-Host "`n>> $msg" -ForegroundColor Cyan }
+function Write-OK   { param($msg) Write-Host "  [OK]  $msg" -ForegroundColor Green }
+function Write-Warn { param($msg) Write-Host "  [!!]  $msg" -ForegroundColor Yellow }
+function Write-Fail { param($msg) Write-Host "  [XX]  $msg" -ForegroundColor Red }
+function Write-Info { param($msg) Write-Host "        $msg" -ForegroundColor Gray }
+
+function Write-Banner {
     Write-Host ""
-    Write-Host "╔══════════════════════════════════════════════╗" -ForegroundColor Magenta
-    Write-Host "║   🌙 MOONA — Auto Build & Deploy              ║" -ForegroundColor Magenta
-    Write-Host "║   Mode: $($Mode.ToUpper().PadRight(37))║" -ForegroundColor Magenta
-    Write-Host "╚══════════════════════════════════════════════╝" -ForegroundColor Magenta
+    Write-Host "=================================================" -ForegroundColor Magenta
+    Write-Host "   MOONA -- Auto Build and Deploy Script" -ForegroundColor Magenta
+    Write-Host "   Mode : $($Mode.ToUpper())" -ForegroundColor Magenta
+    Write-Host "=================================================" -ForegroundColor Magenta
     Write-Host ""
 }
 
 $startTime = Get-Date
-Write-Header
+Write-Banner
 
-# ════════════════════════════════════════════════════════════════════
-# BƯỚC 1: KIỂM TRA THIẾT BỊ ADB
-# ════════════════════════════════════════════════════════════════════
-Write-Step "Bước 1/5 — Kiểm tra thiết bị Android (ADB)"
 
-# Kiểm tra adb có trong PATH không
+# ═════════════════════════════════════════════════════════════════
+# STEP 1: CHECK ADB DEVICE
+# ═════════════════════════════════════════════════════════════════
+Write-Step "Step 1/5 -- Check connected Android device (ADB)"
+
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
-    Write-Fail "Không tìm thấy lệnh 'adb'. Hãy cài Android Platform Tools và thêm vào PATH."
+    Write-Fail "Command 'adb' not found. Install Android Platform Tools and add to PATH."
     exit 1
 }
 
 $adbOutput   = adb devices 2>&1
-$deviceLines = $adbOutput | Where-Object { $_ -match "\t(device|offline|unauthorized)$" }
+$deviceLines = $adbOutput | Where-Object { $_ -match "`t(device|offline|unauthorized)$" }
 
 if ($deviceLines.Count -eq 0) {
-    Write-Fail "Không tìm thấy thiết bị nào kết nối qua ADB!"
-    Write-Warn "Kiểm tra:"
-    Write-Warn "  1. Bật USB Debugging trong Tùy chọn dành cho nhà phát triển"
-    Write-Warn "  2. Kết nối cáp USB và xác nhận trên điện thoại"
-    Write-Warn "  3. Chạy 'adb devices' để kiểm tra thủ công"
+    Write-Fail "No Android device connected via ADB!"
+    Write-Warn "Checklist:"
+    Write-Warn "  1. Enable USB Debugging in Developer Options"
+    Write-Warn "  2. Connect USB cable and confirm on phone screen"
+    Write-Warn "  3. Run 'adb devices' manually to debug"
     exit 1
 }
 
-# Lấy thiết bị đầu tiên ở trạng thái "device" (bỏ qua offline/unauthorized)
-$activeDeviceLine = $deviceLines | Where-Object { $_ -match "\tdevice$" } | Select-Object -First 1
+$activeDeviceLine = $deviceLines | Where-Object { $_ -match "`tdevice$" } | Select-Object -First 1
 
 if (-not $activeDeviceLine) {
     $badLine = $deviceLines | Select-Object -First 1
     if ($badLine -match "unauthorized") {
-        Write-Fail "Thiết bị chưa được uỷ quyền! Vui lòng xác nhận kết nối debug trên màn hình điện thoại."
+        Write-Fail "Device not authorized! Please confirm the debug connection on your phone screen."
     } elseif ($badLine -match "offline") {
-        Write-Fail "Thiết bị đang offline! Thử rút/cắm lại cáp USB."
+        Write-Fail "Device is offline! Try unplugging and re-plugging the USB cable."
     } else {
-        Write-Fail "Thiết bị không ở trạng thái sẵn sàng: $badLine"
+        Write-Fail "Device not ready: $badLine"
     }
     exit 1
 }
 
-$deviceId = ($activeDeviceLine -split "\t")[0].Trim()
+$deviceId = ($activeDeviceLine -split "`t")[0].Trim()
 
 if ($deviceLines.Count -gt 1) {
-    Write-Warn "Phát hiện $($deviceLines.Count) thiết bị — tự chọn thiết bị đầu tiên."
+    Write-Warn "Found $($deviceLines.Count) devices -- auto-selecting first active device."
 }
-Write-OK "Thiết bị sẵn sàng: $deviceId"
 
-# Lấy thông tin thiết bị để hiển thị
 $deviceModel = (adb -s $deviceId shell getprop ro.product.model 2>$null).Trim()
 $androidVer  = (adb -s $deviceId shell getprop ro.build.version.release 2>$null).Trim()
-if ($deviceModel) { Write-Info "  Model: $deviceModel  |  Android: $androidVer" }
+Write-OK "Device ready: $deviceId"
+if ($deviceModel) {
+    Write-Info "Model: $deviceModel  |  Android: $androidVer"
+}
 
 
-# ════════════════════════════════════════════════════════════════════
-# BƯỚC 2: KIỂM TRA TĨNH (FLUTTER ANALYZE)
-# ════════════════════════════════════════════════════════════════════
-Write-Step "Bước 2/5 — Kiểm tra tĩnh mã nguồn (flutter analyze)"
+# ═════════════════════════════════════════════════════════════════
+# STEP 2: STATIC ANALYSIS (FLUTTER ANALYZE)
+# ═════════════════════════════════════════════════════════════════
+Write-Step "Step 2/5 -- Static analysis (flutter analyze)"
 
-$analyzeResult = flutter analyze 2>&1
+$analyzeResult   = flutter analyze 2>&1
 $analyzeExitCode = $LASTEXITCODE
 
-# Lọc và hiển thị chỉ các dòng có lỗi/warning
 $errorLines = $analyzeResult | Where-Object { $_ -match "^\s+(error|warning)" }
 if ($errorLines) {
     $errorLines | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
 }
 
 if ($analyzeExitCode -ne 0) {
-    Write-Fail "flutter analyze phát hiện lỗi! Hãy sửa trước khi build."
-    Write-Warn "Chạy 'flutter analyze' để xem chi tiết đầy đủ."
+    Write-Fail "flutter analyze found errors! Fix them before building."
     exit 1
 }
 
-Write-OK "Không có lỗi phân tích tĩnh — mã nguồn sạch ✨"
+Write-OK "No static analysis issues found -- source code is clean."
 
 
-# ════════════════════════════════════════════════════════════════════
-# BƯỚC 3: TIẾN HÀNH BUILD
-# ════════════════════════════════════════════════════════════════════
-Write-Step "Bước 3/5 — Build APK (Mode: $($Mode.ToUpper()))"
+# ═════════════════════════════════════════════════════════════════
+# STEP 3: BUILD APK
+# ═════════════════════════════════════════════════════════════════
+Write-Step "Step 3/5 -- Build APK (Mode: $($Mode.ToUpper()))"
 
 $buildStart = Get-Date
 
 if ($Mode -eq "debug") {
-    Write-Info "Đang chạy: flutter build apk --debug"
+    Write-Info "Running: flutter build apk --debug"
     flutter build apk --debug
 } else {
-    Write-Info "Đang chạy: flutter build apk --release --split-per-abi"
-    Write-Info "  (Chia nhỏ APK theo kiến trúc CPU — tối ưu kích thước)"
+    Write-Info "Running: flutter build apk --release --split-per-abi"
+    Write-Info "(Split APK by CPU architecture -- optimized file size)"
     flutter build apk --release --split-per-abi
 }
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Fail "Build thất bại! Xem lỗi ở trên."
+    Write-Fail "Build failed! See errors above."
     exit 1
 }
 
-$buildDuration = [math]::Round(((Get-Date) - $buildStart).TotalSeconds, 1)
-Write-OK "Build hoàn thành trong ${buildDuration}s"
+$buildSec = [math]::Round(((Get-Date) - $buildStart).TotalSeconds, 1)
+Write-OK "Build completed in ${buildSec}s"
 
 
-# ════════════════════════════════════════════════════════════════════
-# BƯỚC 4: XÁC ĐỊNH ĐƯỜNG DẪN FILE APK
-# ════════════════════════════════════════════════════════════════════
-Write-Step "Bước 4/5 — Xác định file APK cần cài đặt"
+# ═════════════════════════════════════════════════════════════════
+# STEP 4: RESOLVE APK PATH
+# ═════════════════════════════════════════════════════════════════
+Write-Step "Step 4/5 -- Resolve APK file path"
 
 $apkBase = "build\app\outputs\flutter-apk"
-$apkPath  = $null
+$apkPath = $null
 
 if ($Mode -eq "debug") {
     $candidate = Join-Path $apkBase "app-debug.apk"
     if (Test-Path $candidate) { $apkPath = $candidate }
 } else {
-    # Release: ưu tiên arm64-v8a, fallback sang armeabi-v7a, rồi x86_64, rồi fat APK
+    # Release: prefer arm64-v8a, then armeabi-v7a, then x86_64, then fat APK
     $candidates = @(
         (Join-Path $apkBase "app-arm64-v8a-release.apk"),
         (Join-Path $apkBase "app-armeabi-v7a-release.apk"),
@@ -154,60 +153,66 @@ if ($Mode -eq "debug") {
 }
 
 if (-not $apkPath) {
-    Write-Fail "Không tìm thấy file APK sau khi build tại: $apkBase"
-    Write-Warn "Nội dung thư mục:"
-    Get-ChildItem $apkBase -Filter "*.apk" | ForEach-Object { Write-Info "  $($_.Name)" }
+    Write-Fail "APK file not found after build in: $apkBase"
+    Write-Warn "Directory contents:"
+    Get-ChildItem $apkBase -Filter "*.apk" -ErrorAction SilentlyContinue |
+        ForEach-Object { Write-Info "  $($_.Name)" }
     exit 1
 }
 
 $apkSizeMB = [math]::Round((Get-Item $apkPath).Length / 1MB, 2)
-Write-OK "File APK: $(Split-Path $apkPath -Leaf)  ($apkSizeMB MB)"
-Write-Info "  Đường dẫn: $apkPath"
+$apkName   = Split-Path $apkPath -Leaf
+Write-OK "APK resolved: $apkName ($apkSizeMB MB)"
+Write-Info "Path: $apkPath"
 
 
-# ════════════════════════════════════════════════════════════════════
-# BƯỚC 5: CÀI ĐẶT VÀ KHỞI CHẠY
-# ════════════════════════════════════════════════════════════════════
-Write-Step "Bước 5/5 — Cài đặt & Khởi chạy app"
+# ═════════════════════════════════════════════════════════════════
+# STEP 5: INSTALL AND LAUNCH
+# ═════════════════════════════════════════════════════════════════
+Write-Step "Step 5/5 -- Install and launch on device"
 
-# 5a. Cài đặt
-Write-Info "Đang cài đặt lên $deviceId..."
+# 5a. Install
+Write-Info "Installing on $deviceId ..."
 $installOutput = adb -s $deviceId install -r $apkPath 2>&1
 
 if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
-    Write-Fail "Cài đặt thất bại!"
+    Write-Fail "Installation failed!"
     $installOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
     exit 1
 }
-Write-OK "Cài đặt thành công!"
+Write-OK "Installation successful!"
 
-# 5b. Khởi chạy app
-Write-Info "Đang khởi chạy Moona..."
-$launchCmd = "com.herflow.app.herflow/.MainActivity"
-adb -s $deviceId shell am start -n $launchCmd | Out-Null
+# 5b. Launch app
+Write-Info "Launching Moona app..."
+$packageActivity = "com.herflow.app.herflow/.MainActivity"
+adb -s $deviceId shell am start -n $packageActivity | Out-Null
 
 if ($LASTEXITCODE -eq 0) {
-    Write-OK "App đã khởi chạy!"
+    Write-OK "App launched on device!"
 } else {
-    Write-Warn "Không thể tự động mở app. Hãy mở thủ công trên thiết bị."
-    Write-Warn "  (Có thể package name đã thay đổi — kiểm tra AndroidManifest.xml)"
+    Write-Warn "Could not auto-launch app. Open it manually on the device."
+    Write-Warn "(Check applicationId in android/app/build.gradle.kts if this keeps failing)"
 }
 
 
-# ════════════════════════════════════════════════════════════════════
-# TỔNG KẾT
-# ════════════════════════════════════════════════════════════════════
-$totalSeconds = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-$totalMinutes = [math]::Floor($totalSeconds / 60)
-$remainSec    = $totalSeconds % 60
+# ═════════════════════════════════════════════════════════════════
+# SUMMARY
+# ═════════════════════════════════════════════════════════════════
+$totalSec = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+$mins     = [math]::Floor($totalSec / 60)
+$secs     = [math]::Round($totalSec % 60, 1)
 
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║   🎉 DEPLOY HOÀN THÀNH!                       ║" -ForegroundColor Green
-Write-Host "║                                              ║" -ForegroundColor Green
-Write-Host "║   Mode    : $($Mode.ToUpper().PadRight(34))║" -ForegroundColor Green
-Write-Host "║   APK     : $("$apkSizeMB MB".PadRight(34))║" -ForegroundColor Green
-Write-Host "║   Thời gian: ${totalMinutes}m ${remainSec}s$(" " * (31 - "$totalMinutes m $remainSec s".Length))║" -ForegroundColor Green
-Write-Host "║   Thiết bị: $($deviceId.PadRight(34))║" -ForegroundColor Green
-Write-Host "╚══════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "=================================================" -ForegroundColor Green
+Write-Host "   DEPLOY COMPLETE!" -ForegroundColor Green
+Write-Host "" -ForegroundColor Green
+Write-Host "   Mode    : $($Mode.ToUpper())" -ForegroundColor Green
+Write-Host "   APK     : $apkName" -ForegroundColor Green
+Write-Host "   Size    : $apkSizeMB MB" -ForegroundColor Green
+Write-Host "   Time    : ${mins}m ${secs}s" -ForegroundColor Green
+Write-Host "   Device  : $deviceId" -ForegroundColor Green
+if ($deviceModel) {
+    Write-Host "   Model   : $deviceModel (Android $androidVer)" -ForegroundColor Green
+}
+Write-Host "=================================================" -ForegroundColor Green
 Write-Host ""
