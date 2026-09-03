@@ -4,6 +4,60 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.5.2+12] - 2026-09-03 (Husband Quick Chat, 1-Touch Response Loop, Brand Launcher Icons & Stability)
+
+### [Added]
+- **💬 Modal Chat Nhanh Hỏi Thăm Nàng (`HusbandQuickChatSheet`):**
+  * Thêm BottomSheet cho phép Người thương (Chồng) gửi câu hỏi thăm/quan tâm thích ứng thông minh theo thể trạng và pha chu kỳ của nàng.
+  * Tự động thay đổi bộ câu hỏi gợi ý: Pha Kinh nguyệt / Hoàng thể (chăm sóc, chườm ấm, đồ ăn ngon, nghỉ ngơi) vs Pha Nang trứng / Rụng trứng (hẹn hò, đón tan làm, dạo mát).
+  * Ô nhập tin nhắn tự do bo góc trang nhã với placeholder tự động chèn danh xưng của nàng (`callPartnerAs`).
+- **⚡ Vòng Lặp Phản Hồi 1 Chạm 2 Chiều (`_HusbandResponseBanner`):**
+  * Màn hình Vợ (`CycleScreen`) tự động phát hiện tin nhắn từ Chồng, kích hoạt rung haptic nhẹ và hiển thị banner nổi bật trên đầu màn hình.
+  * Hiển thị ngay 4 nút phản hồi nhanh 1 chạm cho nàng:
+    + 🥺 *"Hơi mệt và mỏi lưng anh ơi"*
+    + 🧋 *"Em thèm trà sữa / đồ ngọt"*
+    + 🥰 *"Em khỏe re, nhớ anh nè"*
+    + 🛌 *"Em đang nằm nghỉ chút"*
+  * Khi Vợ bấm chọn: Gọi `respondCareSignal` đẩy dữ liệu lên Cloud Firestore -> Màn hình Chồng tự động chuyển sang trạng thái đã phản hồi ngay tức thì.
+- **🌙 Bộ Biểu Tượng Hệ Thống Moona Đồng Bộ (`ic_launcher`):**
+  * Thiết kế logo chuẩn nghệ thuật Moona: Đĩa tròn gradient hồng hoa hồng sang tím đêm kèm vầng trăng khuyết vàng dịu dàng.
+  * Cấu hình `flutter_launcher_icons` với `android: true` để ghi đè toàn diện `ic_launcher` trên toàn bộ thư mục mật độ `res/mipmap-*` và màn hình Quản lý ứng dụng (App Info) của hệ điều hành Android.
+  * Tạo widget nhận diện thương hiệu tái sử dụng [MoonaBrandLogo](file:///d:/Sources/HerFlow/lib/core/widgets/moona_brand_logo.dart) đồng bộ trong `LoginScreen` và `SettingsScreen`.
+
+### [Changed]
+- **🎭 Tối Ưu Thẻ Chọn Vai Trò Onboarding (`RoleSelectionScreen`):**
+  * Tái cấu trúc 2 thẻ chọn vai trò ("Tôi là Phụ nữ" / "Tôi là Người thương") từ dạng khối dọc cồng kềnh sang dạng thẻ ngang nhỏ gọn (Compact ListTile, ~100-110dp).
+- **🔒 Phân Quyền Màn Hình Ghép Đôi (`PairingScreen`):**
+  * Tách biệt theo vai trò `userRole`: Người thương (Chồng) chỉ hiển thị ô nhập mã của nàng; Bạn nữ (Vợ) chỉ hiển thị mã số và nút chia sẻ.
+
+### [Fixed]
+- **🛡️ Khắc Phục Triệt Để Crash On Launch Do R8 Minification:**
+  * Sửa lỗi `Failed to create an instance of androidx.work.impl.WorkDatabase` do R8 xóa nhầm native classes của WorkManager và Room.
+  * Thiết lập an toàn `isMinifyEnabled = false` và `isShrinkResources = false` trong `android/app/build.gradle.kts`.
+- **📏 Khắc Phục Triệt Để Lỗi Bể Giao Diện (Overflow 9.8px & 1.7px):**
+  * `CycleCalendarView`: Loại bỏ nút điều hướng tháng `<` `>` thừa (đã có sẵn trong `TableCalendar`), bọc tiêu đề trong `Expanded` + `Flexible` tránh tràn 9.8px.
+  * `HusbandViewScreen` & `CycleHeroIndicator`: Thay thế `Row` thành `Wrap` cho các cụm chip trạng thái, bảo đảm co giãn hoàn hảo trên thiết bị có màn hình hẹp.
+
+---
+
+## [0.5.1+11] - 2026-09-03 (Moona Crescent Moon Launcher Icon & Post-Auth Cleanup)
+
+### [Added]
+- **🌙 Bộ biểu tượng ứng dụng chính thức Moona (Official Launcher Icons):**
+  * Thiết kế và tạo logo vầng trăng khuyết nghệ thuật (Moona Crescent Moon) chuẩn 1024x1024 px trên nền màu tím đêm `#1E1B2E`.
+  * Tích hợp `flutter_launcher_icons`: sinh trọn bộ icon Android đa độ phân giải (`mipmap-mdpi`, `mipmap-hdpi`, `mipmap-xhdpi`, `mipmap-xxhdpi`, `mipmap-xxxhdpi`).
+  * Cấu hình Android Adaptive Icon (`mipmap-anydpi-v26/launcher_icon.xml`) với viền an toàn 16% và màu nền `#1E1B2E`.
+  * Cập nhật `AndroidManifest.xml` trỏ cả `android:icon` và `android:roundIcon` vào `@mipmap/launcher_icon`.
+- **🔑 Hỗ trợ serverClientId cho Google Sign-In:**
+  * Bổ sung tham số `serverClientId` trong `AuthRepository` để sẵn sàng nhận Web Client ID (client_type: 3).
+
+### [Changed]
+- **🧹 Dọn dẹp thành phần thử nghiệm tạm thời:**
+  * Loại bỏ hoàn toàn Floating Action Chip chuyển vai trò nhanh trên màn hình chính (`_buildDebugRoleSwitcher` trong `MainNavScreen`).
+  * Chuyển mục Vai trò trong Cài đặt (`SettingsScreen`) sang dạng Read-only Badge có huy hiệu "Cố định".
+
+---
+
 ## [0.5.0+10] - 2026-09-03 (Google Auth, Role Onboarding, Nickname Engine & Independent Partner Cycle)
 
 ### [Added]

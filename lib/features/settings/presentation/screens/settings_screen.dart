@@ -10,6 +10,7 @@ import 'package:herflow/core/providers/app_version_provider.dart';
 import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/core/routes/app_routes.dart';
 import 'package:herflow/core/utils/haptic_feedback_utils.dart';
+import 'package:herflow/core/widgets/moona_brand_logo.dart';
 import 'package:herflow/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
@@ -491,15 +492,7 @@ class SettingsScreen extends ConsumerWidget {
           // Phiên bản động từ package_info_plus
           ref.watch(appVersionProvider).when(
             data: (info) => ListTile(
-              leading: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.teal.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.info_rounded, color: Colors.teal, size: 20),
-              ),
+              leading: const MoonaBrandLogo(size: 34, hasShadow: false),
               title: const Text('Phiên bản', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text(
                 '${info.appName} ${info.shortVersion} (Build ${info.buildNumber})',

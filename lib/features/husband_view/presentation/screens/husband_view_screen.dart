@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/constants/cycle_phase.dart';
 import 'package:herflow/core/utils/date_utils.dart';
+import 'package:herflow/core/utils/haptic_feedback_utils.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/mood/presentation/controllers/mood_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
@@ -17,6 +18,7 @@ import 'package:herflow/features/cycle/presentation/widgets/cycle_calendar_view.
 import 'package:herflow/features/cycle/presentation/widgets/cycle_phase_legend.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
+import '../widgets/husband_quick_chat_sheet.dart';
 
 /// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
 class HusbandViewScreen extends ConsumerWidget {
@@ -155,7 +157,12 @@ class HusbandViewScreen extends ConsumerWidget {
                           : moodEntry.mood),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+
+                // 3.2. THẺ HỎI THĂM & NHẮN NHỦ NÀNG (HUSBAND QUICK CHAT)
+                _buildQuickChatCard(context, currentPhase, partnerName, isDark),
+
+                const SizedBox(height: 14),
 
                 // 3.5. TÓM TẮT CHU KỲ CỦA NÀNG (CYCLE SUMMARY CARD)
                 _buildCycleSummaryCard(context, ref, cycleInfo, isDark, partnerName),
@@ -314,10 +321,14 @@ class HusbandViewScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withAlpha(isDark ? 50 : 30),
+                  color: (signal.isFromHusband ? AppColors.primary : AppColors.secondary)
+                      .withAlpha(isDark ? 50 : 30),
                   shape: BoxShape.circle,
                 ),
-                child: Text(signal.type.emoji, style: const TextStyle(fontSize: 22)),
+                child: Text(
+                  signal.isFromHusband ? '💬' : signal.type.emoji,
+                  style: const TextStyle(fontSize: 22),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -328,11 +339,13 @@ class HusbandViewScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Tín Hiệu Yêu Thương Từ $partnerName 💕',
-                          style: const TextStyle(
+                          signal.isFromHusband
+                              ? 'Lời Nhắn Bạn Đã Gửi Tới $partnerName 💬'
+                              : 'Tín Hiệu Yêu Thương Từ $partnerName 💕',
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.secondary,
+                            color: signal.isFromHusband ? AppColors.primary : AppColors.secondary,
                           ),
                         ),
                         Text(
@@ -343,7 +356,9 @@ class HusbandViewScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      signal.type.label,
+                      signal.isFromHusband
+                          ? (signal.customNote ?? 'Hỏi thăm & nhắn nhủ nàng')
+                          : signal.type.label,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -356,7 +371,7 @@ class HusbandViewScreen extends ConsumerWidget {
             ],
           ),
 
-          if (signal.customNote != null && signal.customNote!.isNotEmpty) ...[
+          if (!signal.isFromHusband && signal.customNote != null && signal.customNote!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               'Ghi chú: "${signal.customNote}"',
@@ -377,15 +392,42 @@ class HusbandViewScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.done_all_rounded, size: 16, color: AppColors.success),
+                  const Icon(Icons.favorite_rounded, size: 16, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Bạn đã phản hồi: "${signal.responseMessage}"',
+                      signal.isFromHusband
+                          ? '$partnerName đã phản hồi: "${signal.responseMessage}" 💕'
+                          : 'Bạn đã phản hồi: "${signal.responseMessage}"',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.success,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (signal.isFromHusband) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withAlpha(isDark ? 30 : 15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.secondary.withAlpha(50)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.hourglass_top_rounded, size: 16, color: AppColors.secondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Đã gửi tới $partnerName • Đang chờ nàng đọc & phản hồi... ⏳',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
                       ),
                     ),
                   ),
@@ -410,6 +452,119 @@ class HusbandViewScreen extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  /// Thẻ / Nút kích hoạt Modal Chat Nhanh hỏi thăm nàng đặt ngay dưới Hero Card
+  Widget _buildQuickChatCard(
+    BuildContext context,
+    CyclePhase phase,
+    String partnerName,
+    bool isDark,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          AppHaptics.selection();
+          HusbandQuickChatSheet.show(context, phase: phase);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [
+                      AppColors.secondary.withAlpha(45),
+                      AppColors.primary.withAlpha(25),
+                    ]
+                  : [
+                      const Color(0xFFF2F4FD),
+                      const Color(0xFFFFF0F5),
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.secondary.withAlpha(isDark ? 90 : 60),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.secondary.withAlpha(isDark ? 30 : 15),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(isDark ? 40 : 25),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Text('💬', style: TextStyle(fontSize: 22)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '💬 Hỏi thăm & Nhắn nhủ $partnerName',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Gợi ý thông minh theo pha ${phase.vietnameseName} • 1 chạm gửi nhanh',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Nhắn',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.send_rounded, size: 12, color: Colors.white),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -492,10 +647,14 @@ class HusbandViewScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   CircleAvatar(
                     radius: 14,
@@ -786,9 +945,12 @@ class HusbandViewScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Lịch Chu Kỳ Sinh Học',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                      const Expanded(
+                        child: Text(
+                          'Lịch Chu Kỳ Sinh Học',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),

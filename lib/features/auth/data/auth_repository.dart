@@ -16,8 +16,13 @@ class AuthRepository {
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
     FirebaseFirestore? firestore,
+    String? serverClientId,
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn(),
+        _googleSignIn = googleSignIn ??
+            GoogleSignIn(
+              serverClientId: serverClientId,
+              scopes: const ['email', 'profile'],
+            ),
         _firestore = firestore ?? FirebaseFirestore.instance;
 
   Box get _userBox => Hive.box(AppConstants.userBoxName);

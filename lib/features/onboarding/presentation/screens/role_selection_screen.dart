@@ -428,43 +428,62 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Thẻ 1: Tôi là Phụ nữ
-              Expanded(
-                child: _buildRoleCard(
-                  context,
-                  title: 'Tôi là Phụ nữ',
-                  subtitle: 'Theo dõi chu kỳ sinh học của bản thân, ghi nhật ký cảm xúc & sức khỏe',
-                  emoji: '🌸',
-                  gradientColors: [
-                    AppColors.primary.withAlpha(isDark ? 60 : 30),
-                    AppColors.primary.withAlpha(isDark ? 20 : 10),
-                  ],
-                  borderColor: AppColors.primary,
-                  onTap: _selectWifeRole,
-                ),
+              _buildRoleCard(
+                context,
+                title: 'Tôi là Phụ nữ',
+                subtitle: 'Theo dõi chu kỳ sinh học của bản thân, ghi nhật ký cảm xúc & sức khỏe',
+                emoji: '🌸',
+                gradientColors: [
+                  AppColors.primary.withAlpha(isDark ? 50 : 25),
+                  AppColors.primary.withAlpha(isDark ? 15 : 8),
+                ],
+                borderColor: AppColors.primary,
+                onTap: _selectWifeRole,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // Thẻ 2: Tôi là Người thương
-              Expanded(
-                child: _buildRoleCard(
-                  context,
-                  title: 'Tôi là Người thương',
-                  subtitle: 'Đồng hành, thấu hiểu thể trạng và chủ động chăm sóc người phụ nữ của bạn',
-                  emoji: '🛡️',
-                  gradientColors: [
-                    AppColors.secondary.withAlpha(isDark ? 60 : 30),
-                    AppColors.secondary.withAlpha(isDark ? 20 : 10),
-                  ],
-                  borderColor: AppColors.secondary,
-                  onTap: _showHusbandOptions,
-                ),
+              _buildRoleCard(
+                context,
+                title: 'Tôi là Người thương',
+                subtitle: 'Đồng hành, thấu hiểu thể trạng và chủ động chăm sóc người phụ nữ của bạn',
+                emoji: '🛡️',
+                gradientColors: [
+                  AppColors.secondary.withAlpha(isDark ? 50 : 25),
+                  AppColors.secondary.withAlpha(isDark ? 15 : 8),
+                ],
+                borderColor: AppColors.secondary,
+                onTap: _showHusbandOptions,
               ),
 
-              const SizedBox(height: 16),
+              const Spacer(),
+
+              // Ghi chú bảo mật nhẹ nhàng ở chân trang
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_outline_rounded,
+                      size: 13,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Vai trò được lưu bảo mật và gắn chặt với tài khoản của bạn',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -487,61 +506,84 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(22),
+          constraints: const BoxConstraints(minHeight: 100),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: gradientColors,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: borderColor.withAlpha(isDark ? 100 : 80), width: 1.5),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor.withAlpha(isDark ? 90 : 70), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: borderColor.withAlpha(isDark ? 40 : 20),
-                blurRadius: 16,
+                color: borderColor.withAlpha(isDark ? 30 : 15),
+                blurRadius: 14,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: borderColor.withAlpha(isDark ? 40 : 30),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(emoji, style: const TextStyle(fontSize: 28)),
-                  ),
-                  Icon(Icons.arrow_forward_rounded, color: borderColor),
-                ],
+              // Icon vai trò trong vòng tròn nền mờ nhẹ
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: borderColor.withAlpha(isDark ? 35 : 25),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor.withAlpha(50)),
+                ),
+                alignment: Alignment.center,
+                child: Text(emoji, style: const TextStyle(fontSize: 26)),
               ),
-              const Spacer(),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
-                  color: borderColor,
+              const SizedBox(width: 16),
+
+              // Cột Tiêu đề & Dòng mô tả ngắn gọn
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                        color: borderColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: isDark ? Colors.white70 : Colors.black87,
+              const SizedBox(width: 12),
+
+              // Mũi tên điều hướng
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: borderColor.withAlpha(isDark ? 30 : 15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: borderColor,
+                  size: 22,
                 ),
               ),
             ],

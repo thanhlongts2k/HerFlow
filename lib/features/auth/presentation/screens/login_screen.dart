@@ -6,6 +6,7 @@ import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/routes/app_routes.dart';
 import 'package:herflow/core/utils/haptic_feedback_utils.dart';
+import 'package:herflow/core/widgets/moona_brand_logo.dart';
 import '../controllers/auth_controller.dart';
 
 /// Màn hình Đăng Nhập Moona — Google Sign-In & Nhận Diện Cặp Đôi
@@ -114,36 +115,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
 
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(flex: 2),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Spacer(flex: 2),
 
-                  // Moona Logo & Biểu tượng mặt trăng hoa
-                  Center(
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.secondary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withAlpha(isDark ? 90 : 70),
-                            blurRadius: 28,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text('🌙', style: TextStyle(fontSize: 48)),
-                    ),
+                  // Moona Logo chính thức đồng bộ toàn app
+                  const Center(
+                    child: MoonaBrandLogo(size: 104),
                   ),
 
                   const SizedBox(height: 24),
@@ -291,8 +279,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      );
+    },
+  ),
+),
+],
+),
     );
   }
 }

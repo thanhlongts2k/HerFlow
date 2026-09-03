@@ -214,10 +214,10 @@ foreach ($dev in $targetDevices) {
     $installOutput = adb -s $dev install -r -d -t $apkPath 2>&1
 
     if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
-        if ($installOutput -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE|INSTALL_FAILED_SHARED_USER_INCOMPATIBLE") {
-            Write-Warn "Signature incompatibility detected on $dev. Re-installing cleanly..."
+        if ($installOutput -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE|INSTALL_FAILED_SHARED_USER_INCOMPATIBLE|INSTALL_FAILED_VERSION_DOWNGRADE") {
+            Write-Warn "Signature incompatibility or downgrade detected on $dev. Re-installing cleanly..."
             adb -s $dev uninstall com.herflow.app.herflow | Out-Null
-            $installOutput = adb -s $dev install -t $apkPath 2>&1
+            $installOutput = adb -s $dev install -t -d $apkPath 2>&1
         }
     }
 

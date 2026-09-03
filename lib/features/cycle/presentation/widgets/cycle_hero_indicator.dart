@@ -104,8 +104,10 @@ class CycleHeroIndicator extends StatelessWidget {
           const SizedBox(height: 14),
 
           // Badge thông tin: Số ngày đến kỳ tiếp theo & Khả năng thụ thai
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
               _buildBadge(
                 context,
@@ -113,7 +115,6 @@ class CycleHeroIndicator extends StatelessWidget {
                 label: '$daysLeft ngày nữa tới kỳ mới',
                 color: AppColors.primary,
               ),
-              const SizedBox(width: 8),
               _buildBadge(
                 context,
                 icon: Icons.child_care_rounded,

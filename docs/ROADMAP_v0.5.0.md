@@ -198,12 +198,15 @@ Moona Master Roadmap
 │   ├── [1.3] Dual Firestore collection sync (couples & pairings) + In-memory sorting
 │   └── [1.4] Kịch bản build & deploy song song đa thiết bị (scripts/deploy.ps1 -Target all)
 │
-├── SPRINT 2 (v0.5.0) — [✅ HOÀN THÀNH & NGHIỆM THU]
-│   ├── [2.1] Xác thực Google Sign-In & Firebase Auth (LoginScreen + Demo Mode fallback)
-│   ├── [2.2] Onboarding phân vai trò ban đầu (RoleSelectionScreen: Phụ nữ vs Người thương)
-│   ├── [2.3] Tự lập chu kỳ độc lập cho Người thương (DatePicker + Cycle Counters + Hero Summary Card)
-│   ├── [2.4] Động cơ danh xưng tùy biến (Nickname Engine: 7 presets, Custom input, Live Preview)
-│   └── [2.5] Đồng bộ danh xưng & Avatar lên toàn bộ UI Vợ, Chồng và Cài Đặt
+├── SPRINT 2 (v0.5.0 - v0.5.2) — [✅ HOÀN THÀNH & NGHIỆM THU]
+│   ├── [2.1] [x] Xác thực Google Sign-In & Firebase Auth (LoginScreen + Demo Mode fallback)
+│   ├── [2.2] [x] Onboarding phân vai trò ban đầu (RoleSelectionScreen dạng compact ngang ~100-110dp)
+│   ├── [2.3] [x] Tự lập chu kỳ độc lập cho Người thương (DatePicker + Cycle Counters + Hero Summary Card)
+│   ├── [2.4] [x] Động cơ danh xưng tùy biến (Nickname Engine: 7 presets, Custom input, Live Preview)
+│   ├── [2.5] [x] Đồng bộ danh xưng & Avatar lên toàn bộ UI Vợ, Chồng và Cài Đặt
+│   ├── [2.6] [x] Modal Chat Nhanh hỏi thăm nàng (HusbandQuickChatSheet) & Vòng lặp phản hồi 1 chạm
+│   ├── [2.7] [x] Đồng bộ nhận diện thương hiệu Moona Launcher Icon toàn hệ thống Android
+│   └── [2.8] [x] Sửa triệt để lỗi crash R8/ProGuard và các lỗi tràn pixel (overflow)
 │
 └── SPRINT 3 (v0.6.0) — [🚀 CHUẨN BỊ TRIỂN KHAI]
     ├── SPRINT 3A: Cấp Quyền Ngữ Cảnh & Ghép Đôi Bằng Mã QR

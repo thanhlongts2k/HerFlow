@@ -48,7 +48,35 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
     final isDark = theme.brightness == Brightness.dark;
     final pairingState = ref.watch(partnerSyncControllerProvider);
     final savedCoupleId = ref.watch(savedCoupleIdProvider);
+    final currentRole = ref.watch(userRoleProvider);
 
+    // Nếu là Chồng: Ẩn hoàn toàn TabBar, chỉ hiển thị giao diện kết nối với nàng
+    if (currentRole == UserRole.husband) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Kết nối với người thương',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        body: _buildHusbandTab(context, pairingState, savedCoupleId, isDark),
+      );
+    }
+
+    // Nếu là Vợ: Chỉ hiển thị giao diện tạo & chia sẻ mã cho chàng
+    if (currentRole == UserRole.wife) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Chia sẻ mã kết nối',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        body: _buildWifeTab(context, pairingState, isDark),
+      );
+    }
+
+    // Trường hợp chưa rõ vai trò: Cho phép chuyển đổi giữa 2 tab
     return Scaffold(
       appBar: AppBar(
         title: const Text(

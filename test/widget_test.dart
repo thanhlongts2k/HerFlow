@@ -172,6 +172,35 @@ void main() {
       expect(restored.isResponded, isTrue);
     });
 
+    test('Husband CareSignalModel quick chat serialization roundtrip', () {
+      final signal = CareSignalModel(
+        id: 'sig-husband-1',
+        coupleId: 'couple-123',
+        type: CareSignalType.husbandMessage,
+        customNote: 'Bụng còn đau nhiều không em?',
+        sentAt: DateTime(2026, 9, 3, 11, 00),
+        senderRole: 'husband',
+        senderNickname: 'Anh yêu',
+        targetNickname: 'Vợ yêu',
+      );
+
+      expect(signal.isFromHusband, isTrue);
+      expect(signal.isResponded, isFalse);
+
+      final map = signal.toMap();
+      expect(map['type'], 'husbandMessage');
+      expect(map['senderRole'], 'husband');
+      expect(map['senderNickname'], 'Anh yêu');
+      expect(map['targetNickname'], 'Vợ yêu');
+
+      final restored = CareSignalModel.fromMap(map);
+      expect(restored.type, CareSignalType.husbandMessage);
+      expect(restored.isFromHusband, isTrue);
+      expect(restored.customNote, 'Bụng còn đau nhiều không em?');
+      expect(restored.senderNickname, 'Anh yêu');
+      expect(restored.targetNickname, 'Vợ yêu');
+    });
+
     test('AES-256 and SHA-256 checksum integrity verification', () {
       final key = enc.Key.fromUtf8('MoonaSec2026!Key@SecretFlow2026!');
       final iv = enc.IV.fromUtf8('MoonaIV2026Init!');

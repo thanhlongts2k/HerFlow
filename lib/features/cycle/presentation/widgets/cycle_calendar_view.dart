@@ -30,7 +30,6 @@ class CycleCalendarView extends StatefulWidget {
 
 class _CycleCalendarViewState extends State<CycleCalendarView> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
-  PageController? _pageController;
   late DateTime _focusedDay;
 
   @override
@@ -72,99 +71,64 @@ class _CycleCalendarViewState extends State<CycleCalendarView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header phụ: Tiêu đề & Nút Chỉnh sửa chu kỳ thanh lịch (Tách riêng khỏi header tháng)
+            // Header phụ: Tiêu đề & Nút Chỉnh sửa chu kỳ thanh lịch
             if (widget.onEditCycle != null)
               Padding(
                 padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_month_rounded,
-                          size: 16,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Lịch Chu Kỳ Sinh Học',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_rounded,
+                            size: 16,
+                            color: AppColors.primary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Lịch Chu Kỳ Sinh Học',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Nút chuyển tháng an toàn qua _pageController
-                        InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () {
-                            _pageController?.previousPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.chevron_left_rounded,
-                              size: 20,
-                              color: isDark ? Colors.white70 : Colors.black54,
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () {
-                            _pageController?.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.chevron_right_rounded,
-                              size: 20,
-                              color: isDark ? Colors.white70 : Colors.black54,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        InkWell(
+                    const SizedBox(width: 8),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: widget.onEditCycle,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withAlpha(isDark ? 30 : 20),
                           borderRadius: BorderRadius.circular(16),
-                          onTap: widget.onEditCycle,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withAlpha(isDark ? 30 : 20),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppColors.primary.withAlpha(isDark ? 80 : 60),
+                          border: Border.all(
+                            color: AppColors.primary.withAlpha(isDark ? 80 : 60),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.tune_rounded, size: 12, color: AppColors.primary),
+                            SizedBox(width: 4),
+                            Text(
+                              'Chỉnh sửa',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.tune_rounded, size: 12, color: AppColors.primary),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Chỉnh sửa chu kỳ',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -189,9 +153,6 @@ class _CycleCalendarViewState extends State<CycleCalendarView> {
                 setState(() {
                   _focusedDay = focusedDay;
                 });
-              },
-              onCalendarCreated: (pageController) {
-                _pageController = pageController;
               },
               onFormatChanged: (format) {
                 setState(() => _calendarFormat = format);
@@ -232,8 +193,10 @@ class _CycleCalendarViewState extends State<CycleCalendarView> {
             // Legend nhỏ phân biệt Thực tế vs Dự kiến ngay dưới lịch
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 14,
+                runSpacing: 4,
                 children: [
                   _buildMiniLegend(
                     icon: Icons.water_drop_rounded,
@@ -241,14 +204,12 @@ class _CycleCalendarViewState extends State<CycleCalendarView> {
                     label: 'Thực tế',
                     isDark: isDark,
                   ),
-                  const SizedBox(width: 14),
                   _buildMiniLegend(
                     icon: Icons.water_drop_outlined,
                     color: AppColors.primary,
                     label: 'Dự kiến',
                     isDark: isDark,
                   ),
-                  const SizedBox(width: 14),
                   _buildMiniLegend(
                     icon: Icons.star_rounded,
                     color: AppColors.phaseOvulation,

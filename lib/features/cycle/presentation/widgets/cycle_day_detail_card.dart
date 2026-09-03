@@ -39,24 +39,28 @@ class CycleDayDetailCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppDateUtils.formatHeaderDate(dayInfo.date),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppDateUtils.formatHeaderDate(dayInfo.date),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    Text(
-                      'Ngày thứ ${dayInfo.cycleDay} của chu kỳ',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: phase.color,
-                        fontWeight: FontWeight.w700,
+                      Text(
+                        'Ngày thứ ${dayInfo.cycleDay} của chu kỳ',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: phase.color,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(

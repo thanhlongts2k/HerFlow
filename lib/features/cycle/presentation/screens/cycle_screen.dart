@@ -55,22 +55,26 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
     final nicknameConfig = ref.watch(nicknameConfigProvider);
     final savedCoupleId = ref.watch(savedCoupleIdProvider);
 
-    // Kích hoạt rung haptic nhẹ khi Chồng vừa bấm chọn phản hồi
+    // Kích hoạt rung haptic nhẹ khi Chồng vừa gửi tin nhắn HOẶC vừa bấm phản hồi
     ref.listen(latestCareSignalStreamProvider, (prev, next) {
       final prevSignal = prev?.valueOrNull;
       final nextSignal = next.valueOrNull;
-      if (nextSignal != null &&
-          nextSignal.isResponded &&
-          (prevSignal == null || !prevSignal.isResponded || prevSignal.id != nextSignal.id)) {
-        AppHaptics.light();
+      if (nextSignal != null) {
+        if (nextSignal.isFromHusband && (prevSignal == null || prevSignal.id != nextSignal.id)) {
+          AppHaptics.medium();
+        } else if (nextSignal.isResponded &&
+            (prevSignal == null || !prevSignal.isResponded || prevSignal.id != nextSignal.id)) {
+          AppHaptics.light();
+        }
       }
     });
 
     final bool showHusbandBanner = latestSignal != null &&
-        latestSignal.isResponded &&
-        latestSignal.responseMessage != null &&
-        latestSignal.responseMessage!.isNotEmpty &&
-        dismissedId != latestSignal.id;
+        dismissedId != latestSignal.id &&
+        (latestSignal.isFromHusband ||
+            (latestSignal.isResponded &&
+                latestSignal.responseMessage != null &&
+                latestSignal.responseMessage!.isNotEmpty));
 
     return Scaffold(
       appBar: AppBar(
@@ -257,8 +261,8 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
   }
 }
 
-/// Banner thông báo phản hồi ngọt ngào từ Chồng (tự ẩn sau 10s hoặc đóng thủ công)
-class _HusbandResponseBanner extends StatefulWidget {
+/// Banner thông báo phản hồi / hỏi thăm từ Chồng kèm 4 nút phản hồi nhanh 1 chạm
+class _HusbandResponseBanner extends ConsumerStatefulWidget {
   final CareSignalModel signal;
   final VoidCallback onDismiss;
   final String partnerNickname;
@@ -270,16 +274,34 @@ class _HusbandResponseBanner extends StatefulWidget {
   });
 
   @override
-  State<_HusbandResponseBanner> createState() => _HusbandResponseBannerState();
+  ConsumerState<_HusbandResponseBanner> createState() => _HusbandResponseBannerState();
 }
 
-class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
+class _HusbandResponseBannerState extends ConsumerState<_HusbandResponseBanner> {
   Timer? _dismissTimer;
+  bool _isResponding = false;
+
+  static const List<String> _quickWifeReplies = [
+    '🥺 Hơi mệt và mỏi lưng anh ơi',
+    '🧋 Em thèm trà sữa / đồ ngọt',
+    '🥰 Em khỏe re, nhớ anh nè',
+    '🛌 Em đang nằm nghỉ chút',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _startDismissTimer();
+    _checkTimer();
+  }
+
+  void _checkTimer() {
+    // Chỉ tự ẩn sau 10s nếu đã được phản hồi.
+    // Nếu là câu hỏi thăm chưa phản hồi, giữ lại để vợ bấm trả lời.
+    if (widget.signal.isResponded) {
+      _startDismissTimer();
+    } else {
+      _dismissTimer?.cancel();
+    }
   }
 
   void _startDismissTimer() {
@@ -295,8 +317,9 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
   void didUpdateWidget(covariant _HusbandResponseBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.signal.id != widget.signal.id ||
-        oldWidget.signal.respondedAt != widget.signal.respondedAt) {
-      _startDismissTimer();
+        oldWidget.signal.respondedAt != widget.signal.respondedAt ||
+        oldWidget.signal.responseMessage != widget.signal.responseMessage) {
+      _checkTimer();
     }
   }
 
@@ -306,10 +329,38 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
     super.dispose();
   }
 
+  Future<void> _respond(String replyText) async {
+    if (_isResponding) return;
+    setState(() => _isResponding = true);
+    AppHaptics.medium();
+
+    try {
+      await ref.read(partnerSyncRepositoryProvider).respondCareSignal(
+        signalId: widget.signal.id,
+        responseMessage: replyText,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã gửi phản hồi đến ${widget.partnerNickname} 💕'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.primary,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isResponding = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isQuestion = widget.signal.isFromHusband && !widget.signal.isResponded;
+    final senderName = widget.signal.senderNickname ?? widget.partnerNickname;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -351,7 +402,7 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Text('💖', style: TextStyle(fontSize: 16)),
+                      child: Text(isQuestion ? '💬' : '💖', style: const TextStyle(fontSize: 16)),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -359,7 +410,9 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Lời nhắn từ ${widget.partnerNickname} 💕',
+                            isQuestion
+                                ? '$senderName vừa nhắn hỏi thăm 💕'
+                                : 'Lời nhắn từ $senderName 💕',
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 13.5,
@@ -368,8 +421,8 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                           ),
                           Text(
                             widget.signal.respondedAt != null
-                                ? 'Vừa phản hồi'
-                                : 'Vừa xong',
+                                ? 'Đã phản hồi'
+                                : (isQuestion ? 'Vừa xong • 1 chạm trả lời ngay' : 'Vừa xong'),
                             style: TextStyle(
                               fontSize: 11,
                               color: theme.textTheme.bodySmall?.color,
@@ -382,6 +435,7 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                   ],
                 ),
                 const SizedBox(height: 10),
+
                 // Bong bóng tin nhắn
                 Container(
                   width: double.infinity,
@@ -396,7 +450,11 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                     ),
                   ),
                   child: Text(
-                    widget.signal.responseMessage ?? '',
+                    isQuestion
+                        ? (widget.signal.customNote ?? 'Đang nghĩ đến em...')
+                        : (widget.signal.isFromHusband
+                            ? 'Bạn: "${widget.signal.responseMessage}"'
+                            : (widget.signal.responseMessage ?? '')),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -405,15 +463,63 @@ class _HusbandResponseBannerState extends State<_HusbandResponseBanner> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Phản hồi cho: "${widget.signal.customNote ?? widget.signal.type.label}"',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                    color: theme.textTheme.bodySmall?.color,
+
+                // NẾU LÀ CÂU HỎI TỪ CHỒNG & CHƯA PHẢN HỒI: HIỂN THỊ 4 NÚT PHẢN HỒI NHANH 1 CHẠM
+                if (isQuestion) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Phản hồi nhanh 1 chạm cho anh:',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: theme.textTheme.bodyMedium?.color?.withAlpha(200),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _quickWifeReplies.map((reply) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isResponding ? null : () => _respond(reply),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withAlpha(isDark ? 35 : 20),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: AppColors.primary.withAlpha(isDark ? 80 : 50),
+                              ),
+                            ),
+                            child: Text(
+                              reply,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.signal.isFromHusband
+                        ? 'Lời hỏi thăm: "${widget.signal.customNote}"'
+                        : 'Phản hồi cho: "${widget.signal.customNote ?? widget.signal.type.label}"',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
