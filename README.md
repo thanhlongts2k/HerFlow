@@ -1,6 +1,6 @@
 # 🌙 Moona — Trợ Lý Chu Kỳ Sinh Học & Kết Nối Yêu Thương Cặp Đôi
 
-> **Phiên bản hiện tại:** `v0.6.0+15` (Release Build 27MB, In-App OTA Update & GitHub Actions CI/CD)  
+> **Phiên bản hiện tại:** `v0.6.2+17` (Native In-App OTA Update, Role Switcher & Bi-directional Nickname Sync)  
 > **Chu Kỳ • Cảm Xúc • Dinh Dưỡng Đồng Bộ • Kết Nối Người Thương**  
 > Xây dựng trên nền tảng **Flutter (Dart)** hỗ trợ cả Android và iOS theo chuẩn **Feature-First Clean Architecture**, quản lý trạng thái bằng **Riverpod 2.x**, kết nối đồng bộ thời gian thực qua **Cloud Firestore** và lưu trữ cục bộ bảo mật ngoại tuyến bằng **Hive**.
 
@@ -11,14 +11,14 @@
 **Moona** là ứng dụng chăm sóc chu kỳ sinh học và sức khỏe phụ nữ hiện đại, đồng thời là cầu nối cảm xúc giúp hai người thấu hiểu và gắn kết bền chặt hơn mỗi ngày.
 
 ### ✨ Điểm Nổi Bật
-* **Theo dõi 4 pha sinh học chu kỳ:** Thuật toán phân tích chính xác từng giai đoạn (Kinh nguyệt, Nang trứng, Rụng trứng, Hoàng thể) kèm dự báo cửa sổ thụ thai và cảnh báo sớm hội chứng tiền kinh nguyệt (PMS).
+* **Theo dõi 4 pha sinh học chu kỳ:** Thuật toán phân tích chính xác từng giai đoạn (Kinh nguyệt, Nang trứng, Rụng trứng, Hoàng thể) kèm dự báo cửa sổ thụ thai và cảnh báo sớm hội chứng tiền kinh nguyệt (PMS), phát hiện trễ kinh thông minh.
 * **Động cơ dinh dưỡng & thể trạng:** Gợi ý thực phẩm, trà thảo mộc và chế độ tập luyện phù hợp với từng pha nội tiết tố.
 * **Góc Nhìn Người Thương (Husband View):** Màn hình chuyên biệt dành riêng cho chàng với nhiệt kế cảm xúc của nàng, cẩm nang Gentleman's Playbook (việc nên làm & nên tránh) và thẻ tóm tắt chu kỳ.
-* **Modal Chat Nhanh & Vòng lặp phản hồi 1 chạm:** Chàng chủ động gửi câu hỏi thăm thích ứng theo thể trạng nàng; Nàng phản hồi nhanh 1 chạm (🥺 Mệt mỏi, 🧋 Thèm trà sữa, 🥰 Khỏe re, 🛌 Đang nghỉ) đồng bộ realtime. Chuẩn hóa cơ chế ẩn thông minh khi chưa ghép đôi.
-* **Hệ thống danh xưng linh hoạt (Nickname Engine):** Tùy chỉnh danh xưng thân mật giữa hai người với 7 preset phổ biến và ô nhập riêng, đồng bộ toàn diện trên mọi màn hình.
-* **Đăng nhập Google & Ràng buộc vai trò Cloud:** Hỗ trợ đăng nhập Google Auth an toàn, lưu trữ vai trò gắn liền theo tài khoản trên Firestore, tự động khôi phục vai trò xuyên suốt đa thiết bị.
-* **Cập nhật tự động trong ứng dụng (In-App OTA):** Kiểm tra và tải bản cập nhật mới nhất từ GitHub Releases định kỳ 24h trong nền hoặc kiểm tra thủ công 1 chạm.
-* **Tối ưu hóa dung lượng APK siêu nhẹ:** Đóng gói split-per-abi chỉ 27.1 MB (giảm 86.5% so với Fat APK 208MB).
+* **Modal Chat Nhanh & Vòng lặp phản hồi 1 chạm:** Chàng chủ động gửi câu hỏi thăm thích ứng theo thể trạng nàng; Nàng phản hồi nhanh 1 chạm (🥺 Mệt mỏi, 🧋 Thèm trà sữa, 🥰 Khỏe re, 🛌 Đang nghỉ) đồng bộ realtime.
+* **Hệ thống danh xưng đồng bộ 2 chiều (Bi-directional Nickname Engine):** Đồng bộ thời gian thực danh xưng qua `couples/{coupleId}` với Perspective Mapping chuẩn xác, nạp tức thì vào giao diện đối phương.
+* **Mở khóa Đổi Vai Trò trong Cài Đặt (Role Switcher):** Chuyển đổi linh hoạt giữa Vợ và Chồng với cơ chế bảo vệ hoán đổi an toàn khi đã ghép đôi.
+* **Cập nhật tự động Native Trong Ứng Dụng (Native In-App OTA):** Tự động tải file cập nhật APK kèm thanh % tiến trình trực tiếp trong app, tự động gọi Android Package Installer khi hoàn tất.
+* **Tối ưu hóa dung lượng APK siêu nhẹ:** Đóng gói split-per-abi chỉ ~27 MB (giảm 86.5% so với Fat APK).
 * **Pipeline CI/CD tự động (GitHub Actions):** Tự động chạy Quality Gate (100% tests pass, 0 analyze issues), biên dịch APK Release và xuất bản GitHub Release khi gắn tag.
 
 ---

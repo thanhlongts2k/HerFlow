@@ -1,4 +1,4 @@
-// lib/features/settings/presentation/screens/settings_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/constants/user_role.dart';
+import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/core/providers/app_version_provider.dart';
 import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/core/routes/app_routes.dart';
@@ -21,6 +22,7 @@ import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/core/services/app_update_service.dart';
 import 'package:herflow/core/widgets/app_update_dialog.dart';
+import 'package:herflow/core/widgets/moona_confirm_dialog.dart';
 
 import 'package:herflow/core/theme/theme_controller.dart';
 
@@ -179,73 +181,97 @@ class SettingsScreen extends ConsumerWidget {
                   color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 80 : 50),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 40 : 25),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          currentRole == UserRole.wife ? '🌸' : '🛡️',
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              currentRole == UserRole.wife
-                                  ? '🌸 Tài khoản: Phụ nữ'
-                                  : '🛡️ Tài khoản: Người thương',
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              currentRole == UserRole.wife
-                                  ? 'Theo dõi chu kỳ sinh học'
-                                  : 'Đồng hành & Chăm sóc nàng',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.white70 : Colors.black54,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 35 : 20),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(60),
+              child: InkWell(
+                onTap: () => _showRoleSelectionBottomSheet(context, ref, currentRole, isConnected),
+                borderRadius: BorderRadius.circular(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 40 : 25),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            currentRole == UserRole.wife ? '🌸' : '🛡️',
+                            style: const TextStyle(fontSize: 20),
                           ),
                         ),
-                        child: const Text(
-                          'Cố định',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                currentRole == UserRole.wife
+                                    ? '🌸 Vai trò: Phụ nữ (Vợ)'
+                                    : '🛡️ Vai trò: Người thương (Chồng)',
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                currentRole == UserRole.wife
+                                    ? 'Theo dõi chu kỳ sinh học'
+                                    : 'Đồng hành & Chăm sóc nàng',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white70 : Colors.black54,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Vai trò được gắn cố định với tài khoản Google đang đăng nhập.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontStyle: FontStyle.italic,
-                      color: isDark ? Colors.white54 : Colors.grey[600],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 45 : 30),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(80),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Đổi vai trò',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 14,
+                                color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.touch_app_rounded, size: 14, color: isDark ? Colors.white38 : Colors.grey),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Chạm để chuyển đổi linh hoạt giữa giao diện Vợ và Chồng.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? Colors.white54 : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -287,22 +313,73 @@ class SettingsScreen extends ConsumerWidget {
                 fontWeight: isConnected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
-            trailing: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PairingScreen(
-                      initialIndex: currentRole == UserRole.husband ? 1 : 0,
+            trailing: isConnected
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PairingScreen(
+                                initialIndex: currentRole == UserRole.husband ? 1 : 0,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Quản lý',
+                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.link_off_rounded, color: AppColors.error, size: 20),
+                        tooltip: 'Hủy kết nối',
+                        onPressed: () async {
+                          final confirmed = await MoonaConfirmDialog.show(
+                            context,
+                            title: 'Hủy Kết Nối Cặp Đôi?',
+                            message:
+                                'Bạn và Người thương sẽ ngắt kết nối đồng bộ dữ liệu thời gian thực. Cả hai sẽ cần nhập mã ghép đôi mới nếu muốn kết nối lại.',
+                            icon: Icons.link_off_rounded,
+                            confirmText: 'Hủy kết nối',
+                            cancelText: 'Giữ kết nối',
+                            isDestructive: true,
+                          );
+                          if (confirmed == true) {
+                            await ref.read(partnerSyncControllerProvider.notifier).disconnect();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Đã hủy kết nối cặp đôi thành công.'),
+                                  backgroundColor: AppColors.primary,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ],
+                  )
+                : TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PairingScreen(
+                            initialIndex: currentRole == UserRole.husband ? 1 : 0,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Kết nối ngay',
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
                     ),
                   ),
-                );
-              },
-              child: Text(
-                isConnected ? 'Quản lý' : 'Kết nối ngay',
-                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
-              ),
-            ),
           ),
 
           // Lối tắt xem trước giao diện của Chồng (nếu đang ở vai trò Vợ)
@@ -505,17 +582,30 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 );
 
-                final update = await AppUpdateService.checkForUpdate(forceCheck: true);
-                if (!context.mounted) return;
+                try {
+                  final update = await AppUpdateService.checkForUpdate(forceCheck: true);
+                  if (!context.mounted) return;
 
-                if (update != null) {
-                  AppUpdateDialog.show(context, update);
-                } else {
+                  if (update != null) {
+                    AppUpdateDialog.show(context, update);
+                  } else {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Bạn đang sử dụng phiên bản Moona mới nhất (${info.shortVersion})! ✨'),
+                        backgroundColor: AppColors.success,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Bạn đang sử dụng phiên bản Moona mới nhất (${info.shortVersion})! ✨'),
-                      backgroundColor: AppColors.success,
+                      content: const Text('Không thể kiểm tra cập nhật. Vui lòng kiểm tra kết nối mạng Internet! ⚠️'),
+                      backgroundColor: Colors.orange.shade800,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -546,6 +636,209 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  void _showRoleSelectionBottomSheet(
+    BuildContext context,
+    WidgetRef ref,
+    UserRole currentRole,
+    bool isConnected,
+  ) {
+    AppHaptics.medium();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withAlpha(80),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Chọn Vai Trò Của Bạn',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Moona sẽ cá nhân hóa giao diện và trải nghiệm tương thích theo vai trò.',
+              style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white60 : Colors.black54),
+            ),
+            const SizedBox(height: 20),
+
+            // Lựa chọn: Vợ / Phụ nữ
+            _buildRoleOptionItem(
+              context: ctx,
+              title: '🌸 Phụ Nữ (Vợ)',
+              subtitle: 'Theo dõi chu kỳ kinh nguyệt, rụng trứng, thể trạng và năng lượng sinh học.',
+              isSelected: currentRole == UserRole.wife,
+              color: AppColors.primary,
+              onTap: () => _handleRoleChange(context, ref, UserRole.wife, currentRole, isConnected),
+            ),
+            const SizedBox(height: 12),
+
+            // Lựa chọn: Chồng / Người thương
+            _buildRoleOptionItem(
+              context: ctx,
+              title: '🛡️ Người Thương (Chồng)',
+              subtitle: 'Trợ lý thấu hiểu, đồng hành, nhận tín hiệu yêu thương và chăm sóc nàng.',
+              isSelected: currentRole == UserRole.husband,
+              color: AppColors.secondary,
+              onTap: () => _handleRoleChange(context, ref, UserRole.husband, currentRole, isConnected),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleRoleChange(
+    BuildContext context,
+    WidgetRef ref,
+    UserRole newRole,
+    UserRole currentRole,
+    bool isConnected,
+  ) async {
+    Navigator.pop(context); // Đóng BottomSheet
+    if (newRole == currentRole) return;
+
+    if (isConnected) {
+      // KỊCH BẢN 2: ĐÃ GHÉP ĐÔI -> CẢNH BÁO HOÁN ĐỔI VỊ TRÍ
+      final confirm = await MoonaConfirmDialog.show(
+        context,
+        title: 'Hoán Đổi Vai Trò?',
+        message:
+            'Bạn đang kết nối với Người thương với tư cách "${currentRole.label}". Đổi sang "${newRole.label}" sẽ hoán đổi vị trí và giao diện đồng hành của cả hai.\n\nBạn có chắc chắn muốn hoán đổi không?',
+        icon: Icons.swap_horiz_rounded,
+        confirmText: 'Xác nhận hoán đổi',
+        cancelText: 'Hủy',
+        isDestructive: false,
+        customColor: AppColors.secondary,
+      );
+
+      if (confirm != true || !context.mounted) return;
+    }
+
+    // 1. Cập nhật State trong RAM & Hive cục bộ
+    await ref.read(userRoleProvider.notifier).setRole(newRole);
+    await ref.read(nicknameConfigProvider.notifier).loadForUser();
+
+    // 2. Đồng bộ vai trò lên Firestore users/{uid}
+    final uid = UserScope.currentUid();
+    if (uid.isNotEmpty) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'role': newRole.name,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
+
+        // Nếu đã ghép đôi, ghi nhận hoán đổi vai trò lên couples/{coupleId}
+        final coupleId = ref.read(savedCoupleIdProvider);
+        if (coupleId != null && coupleId.isNotEmpty) {
+          await FirebaseFirestore.instance.collection('couples').doc(coupleId).set({
+            'lastRoleSwapAt': FieldValue.serverTimestamp(),
+            'swappedBy': uid,
+          }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
+        }
+      } catch (e) {
+        debugPrint('Sync new role to Firestore error: $e');
+      }
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🎉 Đã chuyển sang vai trò ${newRole.label} thành công!'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+
+      // Nếu đang mở từ push screen, pop về MainNavScreen để refresh giao diện
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  Widget _buildRoleOptionItem({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withAlpha(isDark ? 45 : 25) : (isDark ? Colors.white10 : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? color : (isDark ? Colors.white12 : Colors.black12),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? color : (isDark ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              color: isSelected ? color : Colors.grey,
+              size: 24,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -615,23 +908,14 @@ class SettingsScreen extends ConsumerWidget {
             icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
             tooltip: 'Đăng xuất',
             onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Đăng xuất'),
-                  content: const Text('Bạn có chắc muốn đăng xuất khỏi tài khoản này?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Hủy'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                      child: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
+              final confirmed = await MoonaConfirmDialog.show(
+                context,
+                title: 'Đăng Xuất Tài Khoản?',
+                message: 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Moona trên thiết bị này?',
+                icon: Icons.logout_rounded,
+                confirmText: 'Đăng xuất',
+                cancelText: 'Ở lại',
+                isDestructive: true,
               );
               if (confirmed == true) {
                 await ref.read(authControllerProvider.notifier).signOut();
@@ -858,34 +1142,110 @@ class SettingsScreen extends ConsumerWidget {
     required ValueChanged<String> onSave,
   }) {
     final controller = TextEditingController(text: currentValue);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Nhập danh xưng yêu thích...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 140 : 35),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(isDark ? 40 : 25),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withAlpha(isDark ? 80 : 60),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 28),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Nhập danh xưng yêu thích...',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          AppHaptics.light();
+                          Navigator.pop(ctx);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text('Hủy', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final text = controller.text.trim();
+                          if (text.isNotEmpty) {
+                            AppHaptics.medium();
+                            onSave(text);
+                          }
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text('Lưu', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isNotEmpty) {
-                onSave(text);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
       ),
     );
   }

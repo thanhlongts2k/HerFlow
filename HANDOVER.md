@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.6.1+16` (Patch Release: Cross-Account State Isolation, Late Period Logic & Android 11 Visibility)  
-> **Thời điểm cập nhật:** 03/09/2026 — Hoàn tất đóng gói bản vá v0.6.1+16, kích hoạt GitHub Actions CI/CD Release  
+> **Phiên bản hiện tại:** `v0.6.3+18` (Visual UX Audit Fixes — Husband Navigation & Pairing Banner)  
+> **Thời điểm cập nhật:** 03/09/2026 — Khắc phục dứt điểm 3 cụm lỗi Critical P0/P1 từ VISUAL_UX_AUDIT_REPORT.md  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -10,10 +10,18 @@
 
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
-| **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase sạch 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **25/25 tests PASSED** | Đạt 100% pass toàn bộ test suites (bổ sung test Trễ kinh, Danh xưng theo role, Active UID) |
+| **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
+| **Unit Testing (`flutter test`)** | ✅ **30/30 tests PASSED** | Đạt 100% pass toàn bộ test suites |
+| **Bản Đồ Nghiệp Vụ Toàn Dự Án** | ✅ **CHUẨN HÓA** | Tạo `docs/APP_BUSINESS_MATRIX.md` phân định quyền 2 Role, Unpaired vs Paired, Data Boundary & Perspective Mapping |
+| **BUG-01 + BUG-08: Navigation Chồng** | ✅ **FIXED** | `MainNavScreen` giờ có `_buildHusbandLayout()` riêng: Scaffold + BottomNav 4 tab (Trang chủ, Cảm xúc, Dinh dưỡng, Cài đặt). Chồng chuyển tab bình thường |
+| **BUG-04: Banner ghép đôi thừa** | ✅ **FIXED** | `_buildConnectionHeader()` phân nhánh rõ 2 trạng thái: `isConnected=true` → Card xanh tĩnh "Đang đồng hành 💕"; `isConnected=false` → Banner CTA ghép đôi |
+| **BUG-03: Sub-title AppBar truncate** | ✅ **FIXED** | Bọc trong `Flexible` + `maxLines: 2, overflow: TextOverflow.ellipsis` |
+| **Chuẩn Hóa Dialog (MoonaConfirmDialog)** | ✅ **HOÀN TẤT** | Loại bỏ 100% `AlertDialog` ad-hoc, Action Bar cân xứng ngang hàng 48px, icon tròn pastel, Material 3 & Glassmorphic |
+| **Native In-App OTA Update** | ✅ **HOÀN TẤT** | `ota_update: ^5.1.0`, quyền `REQUEST_INSTALL_PACKAGES`, hiển thị % tải trực tiếp và tự động kích hoạt Package Installer |
+| **Mở Khóa Đổi Vai Trò Cài Đặt** | ✅ **HOÀN TẤT** | Thẻ tương tác đổi vai trò kèm BottomSheet, phân luồng cảnh báo an toàn khi đã ghép đôi |
+| **Đồng Bộ Hai Chiều Danh Xưng** | ✅ **HOÀN TẤT** | Stream realtime trên `couples/{coupleId}` với 4 trường độc lập, giải quyết triệt để Perspective Mapping |
 | **Triệt tiêu Race Condition Đa Tài Khoản** | ✅ **HOÀN TẤT & TRIỆT ĐỂ** | `UserScope.setActiveUid()`, dọn sạch 100% RAM State tree bằng `_invalidateAllUserScopedProviders()` |
-| **Android 11+ Package Visibility (OTA)** | ✅ **HOÀN TẤT** | Thêm `<queries>` cho `https`/`http` và `LaunchMode.externalApplication` trong `app_update_dialog.dart` |
+| **Android 11+ Package Visibility (OTA)** | ✅ **HOÀN TẤT** | Thêm `<queries>` cho `https`/`http` và `LaunchMode.externalApplication` fallback |
 | **Vòng đời Ghép Đôi & Chống tự kết nối** | ✅ **HOÀN TẤT** | Stream realtime tự điều hướng Host vào `MainNavScreen`, chặn tự kết nối với chính mình |
 | **Ràng buộc Sinh Học & Xử lý Trễ Kinh** | ✅ **HOÀN TẤT** | Chặn ngày tương lai, clamp chu kỳ 21-45 ngày, hiển thị badge Trễ kinh và Card tâm lý cho Chồng |
 | **Dự phòng Danh Xưng theo Vai Trò** | ✅ **HOÀN TẤT** | Vợ mặc định gọi "Anh", Chồng mặc định gọi "Em bé", chống rỗng 100% |

@@ -18,6 +18,11 @@ service cloud.firestore {
 
       // Tuyệt đối không cho phép xóa từ client (để server/Cloud Functions dọn dẹp sau 24h)
       allow delete: if false;
+
+      // Cho phép đọc/ghi tín hiệu yêu thương dự phòng theo mã ghép đôi
+      match /care_signals/{signalId} {
+        allow read, write: if pairingCode.size() == 6;
+      }
     }
 
     // 2. Quy tắc bảo mật cho dữ liệu trạng thái cặp đôi (Couples)
@@ -26,6 +31,11 @@ service cloud.firestore {
 
       match /status/{document} {
         // Cho phép đọc/ghi trạng thái tóm tắt nếu có coupleId hợp lệ
+        allow read, write: if coupleId.size() > 0;
+      }
+
+      match /care_signals/{signalId} {
+        // Cho phép đọc/ghi tín hiệu yêu thương của cặp đôi
         allow read, write: if coupleId.size() > 0;
       }
     }

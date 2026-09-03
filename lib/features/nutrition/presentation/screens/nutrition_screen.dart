@@ -2,11 +2,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
+import 'package:herflow/core/constants/cycle_phase.dart';
+import 'package:herflow/core/constants/user_role.dart';
+import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/core/utils/date_utils.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/nutrition/presentation/controllers/nutrition_controller.dart';
+import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 
-/// Màn hình Đề Xuất Dinh Dưỡng Đồng Bộ Chu Kỳ (Cycle-Synced Nutrition)
+/// Màn hình Đề Xuất Dinh Dưỡng Đồng Bộ Chu Kỳ (Vợ: Tự chăm sóc; Chồng: Chàng chuẩn bị cho Nàng)
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});
 
@@ -14,6 +18,13 @@ class NutritionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final recommendation = ref.watch(activeNutritionRecommendationProvider);
     final selectedDate = ref.watch(selectedCalendarDateProvider);
+    final userRole = ref.watch(userRoleProvider);
+    final isHusband = userRole == UserRole.husband;
+    final nicknameConfig = ref.watch(nicknameConfigProvider);
+    final partnerName = nicknameConfig.callPartnerAs.isNotEmpty
+        ? nicknameConfig.callPartnerAs
+        : (isHusband ? 'Bé iu' : 'Anh');
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final phase = recommendation.phase;
@@ -24,7 +35,7 @@ class NutritionScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Dinh Dưỡng Đồng Bộ',
+              isHusband ? 'Dinh Dưỡng Chăm Sóc Nàng' : 'Dinh Dưỡng Đồng Bộ',
               style: theme.textTheme.headlineMedium?.copyWith(
                 color: AppColors.phaseFollicular,
                 fontWeight: FontWeight.w800,
@@ -32,7 +43,9 @@ class NutritionScreen extends ConsumerWidget {
               ),
             ),
             Text(
-              'Gợi ý ăn uống theo ${phase.vietnameseName} (${AppDateUtils.dayMonthFormat.format(selectedDate)})',
+              isHusband
+                  ? 'Gợi ý món ăn chàng nên chuẩn bị cho $partnerName (${AppDateUtils.dayMonthFormat.format(selectedDate)})'
+                  : 'Gợi ý ăn uống theo ${phase.vietnameseName} (${AppDateUtils.dayMonthFormat.format(selectedDate)})',
               style: theme.textTheme.labelSmall,
             ),
           ],
@@ -44,7 +57,7 @@ class NutritionScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. BANNER PHA SINH HỌC HIỆN TẠI
+            // 1. BANNER PHA SINH HỌC HIỆN TẠI (ĐIỀU CHỈNH GÓC NHÌN CHĂM SÓC CHO CHỒNG)
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -71,7 +84,7 @@ class NutritionScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          recommendation.title,
+                          isHusband ? '$partnerName đang ở ${phase.vietnameseName}' : recommendation.title,
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: phase.color,
                             fontWeight: FontWeight.w800,
@@ -79,7 +92,9 @@ class NutritionScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          recommendation.description,
+                          isHusband
+                              ? _getHusbandAdviceForPhase(phase, partnerName)
+                              : recommendation.description,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 12,
                           ),
@@ -93,10 +108,10 @@ class NutritionScreen extends ConsumerWidget {
 
             const SizedBox(height: 18),
 
-            // 2. THỰC PHẨM VÀNG NÊN NẠP
+            // 2. THỰC PHẨM NÊN NẠP / CHÀNG NÊN MUA NẤU
             _buildNutritionSection(
               context,
-              title: 'Thực phẩm vàng nên ăn',
+              title: isHusband ? 'Thực phẩm chàng nên mua & nấu cho nàng' : 'Thực phẩm vàng nên ăn',
               icon: Icons.check_circle_outline_rounded,
               iconColor: AppColors.success,
               child: Wrap(
@@ -135,7 +150,7 @@ class NutritionScreen extends ConsumerWidget {
             // 3. THỰC PHẨM NÊN HẠN CHẾ
             _buildNutritionSection(
               context,
-              title: 'Món ăn & Đồ uống nên hạn chế',
+              title: isHusband ? 'Món ăn & Đồ uống nên nhắc nàng tránh xa' : 'Món ăn & Đồ uống nên hạn chế',
               icon: Icons.highlight_off_rounded,
               iconColor: AppColors.error,
               child: Column(
@@ -167,7 +182,7 @@ class NutritionScreen extends ConsumerWidget {
             // 4. TRÀ THẢO MỘC & THỨC UỐNG XOA DỊU
             _buildNutritionSection(
               context,
-              title: 'Thức uống gợi ý',
+              title: isHusband ? 'Thức uống chàng nên pha bưng tận tay nàng' : 'Thức uống gợi ý',
               icon: Icons.emoji_food_beverage_rounded,
               iconColor: AppColors.accentPeach,
               child: Container(
@@ -182,7 +197,9 @@ class NutritionScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        recommendation.teaSuggestion,
+                        isHusband
+                            ? 'Pha ngay cho $partnerName một tách: ${recommendation.teaSuggestion}'
+                            : recommendation.teaSuggestion,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: isDark ? Colors.white : const Color(0xFF9A3412),
@@ -199,7 +216,7 @@ class NutritionScreen extends ConsumerWidget {
             // 5. VI CHẤT THEN CHỐT & BỮA ĂN MẪU
             _buildNutritionSection(
               context,
-              title: 'Bữa ăn mẫu gợi ý cho hôm nay',
+              title: isHusband ? 'Bữa ăn chàng có thể chuẩn bị hôm nay' : 'Bữa ăn mẫu gợi ý cho hôm nay',
               icon: Icons.restaurant_rounded,
               iconColor: AppColors.secondary,
               child: Column(
@@ -217,9 +234,9 @@ class NutritionScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Text(
-                        'Vi chất bổ trợ: ',
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                      Text(
+                        isHusband ? 'Vi chất nàng cần: ' : 'Vi chất bổ trợ: ',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                       ),
                       Expanded(
                         child: Text(
@@ -242,6 +259,19 @@ class NutritionScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static String _getHusbandAdviceForPhase(CyclePhase phase, String partnerName) {
+    switch (phase) {
+      case CyclePhase.menstrual:
+        return 'Cơ thể $partnerName đang mệt mỏi và mất máu. Chàng hãy chủ động chuẩn bị các món ấm, canh hầm bổ máu, tránh để nàng uống nước đá hay đồ lạnh.';
+      case CyclePhase.follicular:
+        return '$partnerName đang hồi phục và dồi dào sinh lực. Rất thích hợp để chàng đưa nàng đi ăn các món tươi ngon, bổ sung salad và hoa quả giàu vitamin.';
+      case CyclePhase.ovulation:
+        return 'Năng lượng của $partnerName đạt đỉnh điểm, nàng rạng rỡ và nhiều cảm xúc. Chàng có thể chuẩn bị các bữa tối lãng mạn, bổ sung thực phẩm giàu kẽm và protein.';
+      case CyclePhase.luteal:
+        return 'Giai đoạn tiền kinh nguyệt (PMS), $partnerName dễ thèm ngọt, đầy hơi và cáu gắt nhẹ. Chàng hãy kiên nhẫn, chuẩn bị ngũ cốc, món thanh đạm và trà ấm.';
+    }
   }
 
   Widget _buildNutritionSection(

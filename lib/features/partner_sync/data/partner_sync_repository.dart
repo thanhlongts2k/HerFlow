@@ -18,7 +18,7 @@ class PartnerSyncRepository {
   final FirebaseFirestore _firestore;
   final Box _settingsBox;
 
-  static const _kFirestoreTimeout = Duration(seconds: 5);
+  static const _kFirestoreTimeout = Duration(seconds: 8);
 
   static const String keyCoupleId = 'partner_couple_id';
   static const String keyUserRole = 'partner_user_role'; // 'wife' | 'husband'
@@ -227,7 +227,7 @@ class PartnerSyncRepository {
           await _firestore.collection('users').doc(uid).set({
             'coupleId': pairing.coupleId,
             'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+          }, SetOptions(merge: true)).timeout(_kFirestoreTimeout);
         }
         return pairing;
       }
@@ -249,7 +249,7 @@ class PartnerSyncRepository {
         await _firestore.collection('users').doc(uid).set({
           'coupleId': pairing.coupleId,
           'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        }, SetOptions(merge: true)).timeout(_kFirestoreTimeout);
       }
 
       return pairing.copyWith(status: PairingStatus.connected);
@@ -392,6 +392,13 @@ class PartnerSyncRepository {
     final coupleId = signal.coupleId.isNotEmpty ? signal.coupleId : getSavedCoupleId();
     final pairingCode = _settingsBox.get(keyPairingCode) as String?;
 
+    if ((coupleId == null || coupleId.isEmpty) && (pairingCode == null || pairingCode.isEmpty)) {
+      throw Exception('Chưa kết nối với người thương. Vui lòng ghép đôi trước khi gửi!');
+    }
+
+    bool success = false;
+    Object? lastError;
+
     if (coupleId != null && coupleId.isNotEmpty) {
       try {
         await _firestore
@@ -401,7 +408,9 @@ class PartnerSyncRepository {
             .doc(signal.id)
             .set(signal.toMap(), SetOptions(merge: true))
             .timeout(_kFirestoreTimeout);
+        success = true;
       } catch (e) {
+        lastError = e;
         debugPrint('PartnerSyncRepository: sendCareSignal couples error: $e');
       }
     }
@@ -415,9 +424,15 @@ class PartnerSyncRepository {
             .doc(signal.id)
             .set(signal.toMap(), SetOptions(merge: true))
             .timeout(_kFirestoreTimeout);
+        success = true;
       } catch (e) {
+        lastError = e;
         debugPrint('PartnerSyncRepository: sendCareSignal pairings error: $e');
       }
+    }
+
+    if (!success && lastError != null) {
+      throw Exception('Không thể gửi tín hiệu lên đám mây. Vui lòng kiểm tra kết nối mạng!');
     }
   }
 
@@ -445,6 +460,13 @@ class PartnerSyncRepository {
       await _settingsBox.put(keyLatestLocalSignal, map);
     }
 
+    if ((coupleId == null || coupleId.isEmpty) && (pairingCode == null || pairingCode.isEmpty)) {
+      throw Exception('Chưa kết nối với người thương.');
+    }
+
+    bool success = false;
+    Object? lastError;
+
     // 2. Cập nhật Firestore couples collection
     if (coupleId != null && coupleId.isNotEmpty) {
       try {
@@ -455,7 +477,9 @@ class PartnerSyncRepository {
             .doc(signalId)
             .set(updatePayload, SetOptions(merge: true))
             .timeout(_kFirestoreTimeout);
+        success = true;
       } catch (e) {
+        lastError = e;
         debugPrint('PartnerSyncRepository: respondCareSignal couples error: $e');
       }
     }
@@ -470,9 +494,15 @@ class PartnerSyncRepository {
             .doc(signalId)
             .set(updatePayload, SetOptions(merge: true))
             .timeout(_kFirestoreTimeout);
+        success = true;
       } catch (e) {
+        lastError = e;
         debugPrint('PartnerSyncRepository: respondCareSignal pairings error: $e');
       }
+    }
+
+    if (!success && lastError != null) {
+      throw Exception('Không thể gửi phản hồi lên đám mây. Vui lòng kiểm tra kết nối mạng!');
     }
   }
 

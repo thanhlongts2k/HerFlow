@@ -15,7 +15,7 @@ import 'package:herflow/features/settings/presentation/screens/settings_screen.d
 import 'package:herflow/core/services/app_update_service.dart';
 import 'package:herflow/core/widgets/app_update_dialog.dart';
 
-/// Quản lý Tab Navigation chính của ứng dụng Moona (Dành cho Vợ)
+/// Provider quản lý index tab hiện tại (dùng chung cho cả Vợ và Chồng)
 final currentBottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
 class MainNavScreen extends ConsumerStatefulWidget {
@@ -26,11 +26,20 @@ class MainNavScreen extends ConsumerStatefulWidget {
 }
 
 class _MainNavScreenState extends ConsumerState<MainNavScreen> {
+  // ── Danh sách màn hình cho role Vợ ──────────────────────────────────────
   static final List<Widget> _wifeScreens = [
     const CycleScreen(),
     const MoodScreen(),
     const NutritionScreen(),
     const SettingsScreen(),
+  ];
+
+  // ── Danh sách màn hình cho role Chồng ───────────────────────────────────
+  static final List<Widget> _husbandScreens = [
+    const HusbandViewScreen(isWifePreview: false), // Tab 0: Trang chủ Chồng
+    const MoodScreen(),                             // Tab 1: Cảm xúc & Tâm trạng nàng
+    const NutritionScreen(),                        // Tab 2: Dinh dưỡng & Cẩm nang chăm sóc
+    const SettingsScreen(),                         // Tab 3: Cài đặt & Đăng xuất
   ];
 
   @override
@@ -49,17 +58,61 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
     final userRole = ref.watch(userRoleProvider);
 
     if (userRole == UserRole.husband) {
-      return const Column(
-        children: [
-          OfflineBanner(),
-          Expanded(child: HusbandViewScreen(isWifePreview: false)),
-        ],
-      );
+      return _buildHusbandLayout(context, ref);
     }
 
     return _buildWifeLayout(context, ref);
   }
 
+  // ── Layout dành cho Chồng (có BottomNav 4 tab) ──────────────────────────
+  Widget _buildHusbandLayout(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(currentBottomNavIndexProvider);
+
+    return Scaffold(
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: currentIndex,
+              children: _husbandScreens,
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: currentIndex,
+        onDestinationSelected: (index) {
+          AppHaptics.selection();
+          ref.read(currentBottomNavIndexProvider.notifier).state = index;
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.shield_outlined),
+            selectedIcon: Icon(Icons.shield_rounded, color: AppColors.secondary),
+            label: 'Trang chủ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_border_rounded),
+            selectedIcon: Icon(Icons.favorite_rounded, color: AppColors.primary),
+            label: 'Cảm xúc',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_outlined),
+            selectedIcon: Icon(Icons.restaurant_rounded, color: AppColors.phaseFollicular),
+            label: 'Dinh dưỡng',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings_rounded, color: AppColors.primary),
+            label: 'Cài đặt',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Layout dành cho Vợ (có BottomNav 4 tab chu kỳ) ──────────────────────
   Widget _buildWifeLayout(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(currentBottomNavIndexProvider);
 

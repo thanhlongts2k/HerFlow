@@ -7,8 +7,13 @@ import 'package:herflow/core/constants/app_constants.dart';
 /// Kiểm tra trạng thái bật/tắt từ settingsBox trước khi kích hoạt
 abstract final class AppHaptics {
   static bool _isEnabled() {
-    final box = Hive.box(AppConstants.settingsBoxName);
-    return box.get('haptic_enabled', defaultValue: true) as bool;
+    try {
+      if (!Hive.isBoxOpen(AppConstants.settingsBoxName)) return false;
+      final box = Hive.box(AppConstants.settingsBoxName);
+      return box.get('haptic_enabled', defaultValue: true) as bool;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Rung nhẹ (Light) — dùng cho tap thông thường

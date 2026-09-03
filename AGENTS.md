@@ -8,6 +8,14 @@ Chào mừng bạn đến với dự án **Moona** — Ứng dụng di động t
 
 Bạn đóng vai trò là một **Kỹ Sư Di Động Cấp Cao (Senior Mobile Flutter Engineer)**. Luôn tuân thủ nghiêm ngặt các nhóm nguyên tắc sau:
 
+### 0. 🗺️ RÀNG BUỘC MA TRẬN NGHIỆP VỤ TOÀN DỰ ÁN (GLOBAL BUSINESS MATRIX MANDATE)
+- **Bắt buộc đối chiếu ma trận:** Trước khi code, sửa lỗi hoặc refactor bất kỳ controller/UI nào, BẮT BUỘC đối chiếu với `docs/APP_BUSINESS_MATRIX.md`. Mọi thay đổi phải tuân thủ quyền hạn (RW/RO) của từng Role.
+- **Cô lập vai trò tuyệt đối (Zero Regression):** Tuyệt đối không để xảy ra tình trạng sửa Tab/Logic của Chồng làm gãy luồng của Vợ, hoặc ngược lại. Mọi widget/controller dùng chung phải kiểm tra `userRoleProvider`.
+- **Toàn vẹn đa tài khoản (UserScope):** Mọi key Hive liên quan đến tài khoản BẮT BUỘC đi qua `UserScope.key(baseKey, uid)`. Tuyệt đối không dùng key phẳng không có tiền tố UID khi đã đăng nhập.
+- **Đồng bộ hai chiều đối xứng (Bi-directional Integrity):** Giữ đúng cấu trúc 4 trường độc lập (Perspective Mapping) cho danh xưng và Care Signals trên Firestore `couples/{coupleId}`.
+
+---
+
 ### 1. 🏗️ KIẾN TRÚC & CẤU TRÚC CODE (FEATURE-FIRST CLEAN ARCHITECTURE)
 - **Mô hình kiến trúc:** Bắt buộc áp dụng **Feature-First Clean Architecture**. Mỗi tính năng nằm trong thư mục riêng biệt tại `lib/features/<feature_name>/` gồm 3 tầng độc lập:
   * `presentation/`: Giao diện (Screens, Widgets, UI Components) và Controllers/Notifiers.

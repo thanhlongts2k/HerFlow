@@ -8,6 +8,7 @@ import 'package:herflow/features/partner_sync/domain/models/partner_status_model
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import 'package:herflow/features/care_signals/presentation/controllers/care_signal_controller.dart';
 import 'package:herflow/features/care_signals/presentation/widgets/care_signal_banner_card.dart';
+import 'package:herflow/core/widgets/moona_confirm_dialog.dart';
 
 /// Màn hình Dashboard Realtime dành riêng cho Chồng lắng nghe trực tiếp từ Firestore
 class HusbandDashboardScreen extends ConsumerWidget {
@@ -376,34 +377,23 @@ class HusbandDashboardScreen extends ConsumerWidget {
     }
   }
 
-  void _confirmDisconnect(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Ngắt kết nối với Vợ?'),
-        content: const Text(
-          'Bạn sẽ không còn nhận được thông tin cập nhật trạng thái của vợ nữa cho đến khi nhập mã mới.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              ref.read(partnerSyncControllerProvider.notifier).disconnect();
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: const Text('Ngắt kết nối'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDisconnect(BuildContext context, WidgetRef ref) async {
+    final confirmed = await MoonaConfirmDialog.show(
+      context,
+      title: 'Ngắt Kết Nối Với Vợ?',
+      message:
+          'Bạn sẽ không còn nhận được thông tin cập nhật trạng thái của vợ nữa cho đến khi nhập mã ghép đôi mới.',
+      icon: Icons.link_off_rounded,
+      confirmText: 'Ngắt kết nối',
+      cancelText: 'Giữ kết nối',
+      isDestructive: true,
     );
+
+    if (confirmed == true) {
+      await ref.read(partnerSyncControllerProvider.notifier).disconnect();
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+    }
   }
 }

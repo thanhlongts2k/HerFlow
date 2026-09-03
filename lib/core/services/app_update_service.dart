@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:herflow/core/constants/app_constants.dart';
 
@@ -38,6 +39,14 @@ class AppUpdateService {
       'https://api.github.com/repos/thanhlongts2k/HerFlow/releases/latest';
   static const String _keyLastCheckTime = 'last_ota_check_timestamp';
   static const int _checkIntervalHours = 24;
+
+  /// Khởi chạy tiến trình tải Native OTA và tự động kích hoạt Package Installer
+  static Stream<OtaEvent> executeOtaDownload(String apkUrl) {
+    return OtaUpdate().execute(
+      apkUrl,
+      destinationFilename: 'moona-latest.apk',
+    );
+  }
 
   /// So sánh Semantic Versioning: trả về true nếu `latestVer` mới hơn `currentVer`
   static bool isNewerVersion(String currentVer, String latestVer) {
@@ -161,6 +170,7 @@ class AppUpdateService {
       );
     } catch (e) {
       debugPrint('AppUpdateService error during check: $e');
+      if (forceCheck) rethrow;
       return null;
     } finally {
       client?.close();

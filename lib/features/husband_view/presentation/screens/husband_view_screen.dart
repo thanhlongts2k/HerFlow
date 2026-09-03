@@ -57,24 +57,34 @@ class HusbandViewScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.shield_rounded, size: 18, color: AppColors.secondary),
                 const SizedBox(width: 6),
-                Text(
-                  'Góc Nhìn Của Anh',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
+                Flexible(
+                  child: Text(
+                    'Góc Nhìn Của Anh',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
             ),
-            Text(
-              'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: isDark ? Colors.white60 : Colors.black54,
+            // BUG-03 FIX: Cho phép maxLines: 2 và dùng ellipsis tránh bị cắt cụt 1 dòng
+            Flexible(
+              child: Text(
+                'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
         actions: [
+          // Nút kết nối / trạng thái ghép đôi
           IconButton(
             icon: Icon(
               savedCoupleId != null ? Icons.cloud_done_rounded : Icons.sync_rounded,
@@ -90,16 +100,19 @@ class HusbandViewScreen extends ConsumerWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Cài đặt ứng dụng',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
+          // Nút Settings chỉ hiển thị khi đang ở chế độ xem trước (isWifePreview)
+          // Khi ở role Chồng bình thường: dùng tab Cài đặt trong BottomNav
+          if (isWifePreview)
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Cài đặt ứng dụng',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
         ],
       ),
       body: cycleAsync.when(
@@ -238,7 +251,9 @@ class HusbandViewScreen extends ConsumerWidget {
     );
   }
 
-  /// Banner trạng thái kết nối
+  /// BUG-04 FIX: Header kết nối — phân biệt rõ 2 trạng thái:
+  /// - Đã kết nối: Hiển thị card trạng thái xanh tĩnh (không phải nút bấm ghép đôi)
+  /// - Chưa kết nối: Hiển thị banner CTA kêu gọi ghép đôi (bấm được)
   Widget _buildConnectionHeader(
     BuildContext context,
     String? savedCoupleId,
@@ -246,6 +261,84 @@ class HusbandViewScreen extends ConsumerWidget {
   ) {
     final isConnected = savedCoupleId != null && savedCoupleId.isNotEmpty;
 
+    if (isConnected) {
+      // ── TRẠNG THÁI ĐÃ KẾT NỐI: Card thông tin xanh lá, không phải nút bấm ──
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.success.withAlpha(isDark ? 35 : 18),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.success.withAlpha(isDark ? 80 : 55),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.success.withAlpha(isDark ? 50 : 30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.favorite_rounded,
+                color: AppColors.success,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Đang đồng hành cùng nhau 💕',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? const Color(0xFF81C784) : AppColors.success,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    'Live sync Firestore đang hoạt động',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Nút nhỏ để vào trang quản lý ghép đôi
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PairingScreen(initialIndex: 1)),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withAlpha(isDark ? 45 : 25),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.success.withAlpha(70)),
+                ),
+                child: Text(
+                  'Chi tiết',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF81C784) : AppColors.success,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── CHƯA KẾT NỐI: Banner CTA kêu gọi ghép đôi (bấm được) ──
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -257,38 +350,33 @@ class HusbandViewScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isConnected
-              ? AppColors.success.withAlpha(isDark ? 35 : 20)
-              : AppColors.secondary.withAlpha(isDark ? 30 : 15),
+          color: AppColors.secondary.withAlpha(isDark ? 30 : 15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isConnected
-                ? AppColors.success.withAlpha(isDark ? 70 : 50)
-                : AppColors.secondary.withAlpha(isDark ? 60 : 40),
+            color: AppColors.secondary.withAlpha(isDark ? 60 : 40),
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              isConnected ? Icons.check_circle_rounded : Icons.link_rounded,
-              color: isConnected ? AppColors.success : AppColors.secondary,
+            const Icon(
+              Icons.link_rounded,
+              color: AppColors.secondary,
               size: 18,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isConnected
-                    ? 'Đang đồng bộ Live Firestore cùng Vợ'
-                    : 'Ghép đôi với nàng qua mã 6 ký tự để nhận Live Status',
+                'Ghép đôi với nàng qua mã 6 ký tự để nhận Live Status',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isConnected
-                      ? (isDark ? const Color(0xFF81C784) : AppColors.success)
-                      : (isDark ? Colors.white70 : AppColors.secondaryDark),
+                  color: isDark ? Colors.white70 : AppColors.secondaryDark,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 6),
             const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
           ],
         ),

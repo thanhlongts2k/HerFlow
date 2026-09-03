@@ -187,23 +187,51 @@ class _LogPeriodModalState extends ConsumerState<LogPeriodModal> {
 
           const SizedBox(height: 24),
 
-          // 5. Nút Lưu
-          ElevatedButton(
-            onPressed: () {
-              ref.read(cycleControllerProvider.notifier).logPeriodRecord(
-                    startDate: _startDate,
-                    endDate: _isOngoing ? null : _endDate,
-                    flowIntensity: _intensity,
-                  );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Đã ghi nhận kỳ kinh bắt đầu từ ${DateFormat('dd/MM').format(_startDate)}'),
-                  backgroundColor: AppColors.primary,
+          // 5. Action Bar cân xứng ngang hàng
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text('Hủy', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
                 ),
-              );
-            },
-            child: const Text('Lưu Kỳ Kinh Nguyệt'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ref.read(cycleControllerProvider.notifier).logPeriodRecord(
+                            startDate: _startDate,
+                            endDate: _isOngoing ? null : _endDate,
+                            flowIntensity: _intensity,
+                          );
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Đã ghi nhận kỳ kinh bắt đầu từ ${DateFormat('dd/MM').format(_startDate)}'),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text('Lưu Kỳ Kinh', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -28,6 +28,8 @@ extension UserRoleExt on UserRole {
     }
   }
 
+  String get label => shortName;
+
   String get emoji {
     switch (this) {
       case UserRole.wife:

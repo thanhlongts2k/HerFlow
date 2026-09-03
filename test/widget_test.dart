@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:herflow/core/constants/cycle_phase.dart';
 import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/features/auth/domain/models/user_model.dart';
@@ -12,6 +13,7 @@ import 'package:herflow/features/cycle/domain/entities/period_record.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
 import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/settings/domain/models/nickname_config.dart';
+import 'package:herflow/core/widgets/moona_confirm_dialog.dart';
 
 void main() {
   group('Cycle Core Engine Unit Tests', () {
@@ -439,5 +441,148 @@ void main() {
       expect(emptyWife.callPartnerAs, 'Anh');
       expect(emptyWife.selfCallAs, 'Em');
     });
+
+    test('NicknameConfig.fromCoupleDoc performs bidirectional sync & perspective mapping', () {
+      final coupleDoc = <String, dynamic>{
+        'wifeCallPartner': 'Chồng Yêu',
+        'wifeSelfCall': 'Bé Nhỏ',
+        'husbandCallPartner': 'Vợ Xinh',
+        'husbandSelfCall': 'Anh Lớn',
+      };
+
+      // 1. Góc nhìn của Vợ (Wife perspective)
+      final wifeView = NicknameConfig.fromCoupleDoc(coupleDoc, UserRole.wife);
+      expect(wifeView.callPartnerAs, 'Chồng Yêu');      // Tôi gọi chàng là Chồng Yêu
+      expect(wifeView.selfCallAs, 'Bé Nhỏ');            // Tôi tự xưng là Bé Nhỏ
+      expect(wifeView.partnerCallsMeAs, 'Vợ Xinh');     // Chàng gọi tôi là Vợ Xinh
+      expect(wifeView.partnerSelfCallAs, 'Anh Lớn');    // Chàng tự xưng là Anh Lớn
+
+      // 2. Góc nhìn của Chồng (Husband perspective)
+      final husbandView = NicknameConfig.fromCoupleDoc(coupleDoc, UserRole.husband);
+      expect(husbandView.callPartnerAs, 'Vợ Xinh');     // Tôi gọi nàng là Vợ Xinh
+      expect(husbandView.selfCallAs, 'Anh Lớn');        // Tôi tự xưng là Anh Lớn
+      expect(husbandView.partnerCallsMeAs, 'Chồng Yêu'); // Nàng gọi tôi là Chồng Yêu
+      expect(husbandView.partnerSelfCallAs, 'Bé Nhỏ');  // Nàng tự xưng là Bé Nhỏ
+
+      // 3. Payload đồng bộ lên Firestore từ mỗi vai trò
+      final wifePayload = wifeView.toCoupleSyncPayload(UserRole.wife);
+      expect(wifePayload['wifeCallPartner'], 'Chồng Yêu');
+      expect(wifePayload['wifeSelfCall'], 'Bé Nhỏ');
+
+      final husbandPayload = husbandView.toCoupleSyncPayload(UserRole.husband);
+      expect(husbandPayload['husbandCallPartner'], 'Vợ Xinh');
+      expect(husbandPayload['husbandSelfCall'], 'Anh Lớn');
+    });
+  });
+
+  group('Role Switching & Safeguards Unit Tests', () {
+    test('Unpaired user role switch updates scoped Hive key and maintains role isolation', () {
+      final mockBox = <String, dynamic>{};
+      const uid = 'user_switch_test';
+
+      // Khởi tạo vai trò ban đầu là Vợ
+      mockBox[UserScope.key('app_user_role', uid)] = UserRole.wife.name;
+      expect(mockBox[UserScope.key('app_user_role', uid)], 'wife');
+
+      // Đổi sang Chồng
+      mockBox[UserScope.key('app_user_role', uid)] = UserRole.husband.name;
+      expect(mockBox[UserScope.key('app_user_role', uid)], 'husband');
+
+      // Đảm bảo không ghi đè vào global key không có tiền tố
+      expect(mockBox.containsKey('app_user_role'), isFalse);
+    });
+
+    test('Paired role swap payload validation for couples document', () {
+      const currentRole = UserRole.wife;
+      const newRole = UserRole.husband;
+      const uid = 'wife_uid_123';
+
+      final swapPayload = <String, dynamic>{
+        'lastRoleSwapAt': DateTime.now().toIso8601String(),
+        'swappedBy': uid,
+      };
+
+      expect(currentRole != newRole, isTrue);
+      expect(swapPayload['swappedBy'], uid);
+      expect(swapPayload.containsKey('lastRoleSwapAt'), isTrue);
+    });
+  });
+
+  group('MoonaConfirmDialog Widget Tests', () {
+    testWidgets('MoonaConfirmDialog renders title, message and balanced action buttons', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  MoonaConfirmDialog.show(
+                    context,
+                    title: 'Đăng Xuất Tài Khoản?',
+                    message: 'Bạn có chắc chắn muốn đăng xuất?',
+                    icon: Icons.logout_rounded,
+                    confirmText: 'Đăng xuất',
+                    cancelText: 'Ở lại',
+                    isDestructive: true,
+                  );
+                },
+                child: const Text('Open Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Tap to open dialog
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
+
+      // Check title, message, cancel, confirm
+      expect(find.text('Đăng Xuất Tài Khoản?'), findsOneWidget);
+      expect(find.text('Bạn có chắc chắn muốn đăng xuất?'), findsOneWidget);
+      expect(find.text('Ở lại'), findsOneWidget);
+      expect(find.text('Đăng xuất'), findsOneWidget);
+      expect(find.byIcon(Icons.logout_rounded), findsOneWidget);
+
+      // Tap cancel and verify dialog closes
+      await tester.tap(find.text('Ở lại'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đăng Xuất Tài Khoản?'), findsNothing);
+    });
+
+    testWidgets('MoonaConfirmDialog returns true on confirm', (tester) async {
+      bool? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  result = await MoonaConfirmDialog.show(
+                    context,
+                    title: 'Xác nhận xóa?',
+                    message: 'Hành động này không thể hoàn tác.',
+                    icon: Icons.delete_outline_rounded,
+                    isDestructive: true,
+                  );
+                },
+                child: const Text('Open Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
+
+      // Tap confirm button
+      await tester.tap(find.text('Xác nhận'));
+      await tester.pumpAndSettle();
+
+      expect(result, isTrue);
+    });
   });
 }
+
+

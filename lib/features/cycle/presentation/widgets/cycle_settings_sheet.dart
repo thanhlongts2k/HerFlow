@@ -151,34 +151,57 @@ class _CycleSettingsSheetState extends ConsumerState<CycleSettingsSheet> {
 
             const SizedBox(height: 20),
 
-            // Nút Lưu
-            ElevatedButton(
-              onPressed: () async {
-                ref.read(cycleControllerProvider.notifier).setCycleLength(_cycleLength);
-                ref.read(cycleControllerProvider.notifier).setPeriodDuration(_periodDuration);
+            // Action Bar cân xứng ngang hàng
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Hủy', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        ref.read(cycleControllerProvider.notifier).setCycleLength(_cycleLength);
+                        ref.read(cycleControllerProvider.notifier).setPeriodDuration(_periodDuration);
 
-                // Cập nhật lại lịch nhắc nhở PMS theo độ dài chu kỳ mới
-                if (_isPmsNotificationEnabled) {
-                  final cycleInfo = ref.read(cycleControllerProvider).valueOrNull;
-                  if (cycleInfo != null) {
-                    final updatedInfo = cycleInfo.copyWith(
-                      cycleLength: _cycleLength,
-                      periodDuration: _periodDuration,
-                    );
-                    await NotificationService.instance
-                        .schedulePmsWarning(pmsStartDate: updatedInfo.nextPmsStartDate);
-                  }
-                }
+                        // Cập nhật lại lịch nhắc nhở PMS theo độ dài chu kỳ mới
+                        if (_isPmsNotificationEnabled) {
+                          final cycleInfo = ref.read(cycleControllerProvider).valueOrNull;
+                          if (cycleInfo != null) {
+                            final updatedInfo = cycleInfo.copyWith(
+                              cycleLength: _cycleLength,
+                              periodDuration: _periodDuration,
+                            );
+                            await NotificationService.instance
+                                .schedulePmsWarning(pmsStartDate: updatedInfo.nextPmsStartDate);
+                          }
+                        }
 
-                if (context.mounted) Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Lưu Thay Đổi', style: TextStyle(fontWeight: FontWeight.w700)),
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Lưu Thay Đổi', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

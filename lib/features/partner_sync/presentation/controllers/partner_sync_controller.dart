@@ -8,6 +8,7 @@ import 'package:herflow/features/mood/presentation/controllers/mood_controller.d
 import 'package:herflow/features/partner_sync/data/partner_sync_repository.dart';
 import 'package:herflow/features/partner_sync/domain/models/pairing_model.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
+import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 
 /// Provider cung cấp PartnerSyncRepository
 final partnerSyncRepositoryProvider = Provider<PartnerSyncRepository>((ref) {
@@ -121,6 +122,7 @@ class PartnerSyncController extends StateNotifier<PairingState> {
       // Cập nhật coupleId và vai trò
       _ref.read(savedCoupleIdProvider.notifier).state = result.pairing.coupleId;
       _ref.read(savedUserRoleProvider.notifier).state = 'wife';
+      _ref.read(nicknameConfigProvider.notifier).startListeningToCouple(result.pairing.coupleId);
 
       state = state.copyWith(
         activePairingCode: result.pairing.pairingCode,
@@ -150,6 +152,7 @@ class PartnerSyncController extends StateNotifier<PairingState> {
 
       _ref.read(savedCoupleIdProvider.notifier).state = pairing.coupleId;
       _ref.read(savedUserRoleProvider.notifier).state = 'husband';
+      _ref.read(nicknameConfigProvider.notifier).startListeningToCouple(pairing.coupleId);
 
       // Tự động nhận diện vai trò Chồng: lưu vào Hive & State chuyển layout Chồng tức thì
       await _ref.read(userRoleProvider.notifier).setRole(UserRole.husband);
@@ -222,6 +225,7 @@ class PartnerSyncController extends StateNotifier<PairingState> {
     await _repository.disconnectCouple();
     _ref.read(savedCoupleIdProvider.notifier).state = null;
     _ref.read(savedUserRoleProvider.notifier).state = null;
+    _ref.read(nicknameConfigProvider.notifier).resetState();
     state = const PairingState();
   }
 }

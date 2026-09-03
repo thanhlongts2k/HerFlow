@@ -4,6 +4,58 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.3+18] - 2026-09-03 (Establish Business Matrix, Husband 4-Tab Layout & Visual UX Hardening)
+
+### [Added]
+- **🗺️ Ban Hành Bản Đồ Nghiệp Vụ Toàn Dự Án (`docs/APP_BUSINESS_MATRIX.md`):**
+  * Định nghĩa chi tiết ma trận phân quyền 2 vai trò: Vợ (RW dữ liệu chu kỳ/cảm xúc), Chồng (RO + Care Actions).
+  * Quy chuẩn trạng thái kết nối: Unpaired (Offline Demo) vs Paired (Realtime Sync qua `couples/{coupleId}`).
+  * Bản đồ điều hướng 4 Tab độc lập cho Vợ và Chồng trong `MainNavScreen`.
+  * Cơ chế đồng bộ đối xứng 4 trường danh xưng (Perspective Mapping) và bảo vệ dữ liệu cục bộ AES.
+- **🛡️ Cập Nhật Quy Tắc Ràng Buộc Kiến Trúc Cốt Lõi Vào `AGENTS.md`:**
+  * Bổ sung Điều 0: Bắt buộc đối chiếu `APP_BUSINESS_MATRIX.md` trước khi code/refactor.
+  * Nguyên tắc Zero Regression: Cô lập hoàn toàn luồng Vợ và luồng Chồng, không để sửa một bên làm gãy bên kia.
+  * Bảo đảm tính toàn vẹn đa tài khoản (`UserScope`) và đồng bộ hai chiều.
+
+### [Changed]
+- **🧭 Phân Tách Layout 4 Tab Hoàn Chỉnh Cho Vai Trò Chồng (`MainNavScreen`):**
+  * Xây dựng `_buildHusbandLayout()` với `IndexedStack` và `NavigationBar` 4 tab độc lập: Trang chủ, Cảm xúc, Dinh dưỡng, Cài đặt.
+  * Chồng có thể chuyển tab mượt mà, truy cập đầy đủ `SettingsScreen` và thực hiện Đăng xuất.
+- **💕 Nâng Cấp Tab 1 (Cảm xúc nàng - `MoodScreen`):**
+  * Chuyển toàn bộ các bộ chọn mức năng lượng, thẻ tâm trạng và triệu chứng sang chế độ **Read-Only** cho Chồng.
+  * Tích hợp bảng "Tín Hiệu Yêu Thương & Chăm Sóc Nàng" với các nút 1-chạm gửi cái ôm 🤗, mang nước ấm 🍵, nhắn nhủ nghỉ ngơi 🛋️, hoặc mở nhanh hộp thư gửi tin nhắn riêng.
+- **🥗 Nâng Cấp Tab 2 (Dinh dưỡng chăm sóc - `NutritionScreen`):**
+  * Điều chỉnh góc nhìn sang "Chàng chuẩn bị cho Nàng": Lời dặn dò quý ông theo 4 pha sinh học, danh mục thực phẩm nên mua & nấu, thức uống nên pha bưng tận tay và thực đơn gợi ý.
+
+### [Fixed]
+- **📱 BUG-01 & BUG-08:** Khắc phục triệt để hiện tượng BottomNav Chồng bị đóng băng/trỏ về 1 màn hình và mất lối vào Cài đặt.
+- **🔗 BUG-04:** Sửa logic hiển thị banner kết nối trong `HusbandViewScreen` — phân tách rõ trạng thái đã ghép đôi (card xanh tĩnh) và chưa ghép đôi (banner CTA).
+- **🔤 BUG-03:** Sửa lỗi phụ đề AppBar bị cắt ngắn bằng cách bọc trong `Flexible` + `maxLines: 2`.
+
+---
+
+## [0.6.2+17] - 2026-09-03 (Native OTA In-App Download, Role Switching & Bi-directional Nickname Sync)
+
+### [Added]
+- **📥 Native In-App OTA Update với Thanh Tiến Trình % Thực Tế:**
+  * Bổ sung gói `ota_update: ^5.0.0` và quyền `REQUEST_INSTALL_PACKAGES` trong `AndroidManifest.xml`.
+  * `AppUpdateDialog` hỗ trợ tự tải tệp APK và hiển thị thanh tiến trình % trực tiếp (`LinearProgressIndicator`).
+  * Tự động gọi Intent Package Installer của Android ngay khi hoàn tất tải về; có nút fallback tải qua trình duyệt ngoại vi nếu từ chối quyền.
+- **🔄 Mở Khóa Tính Năng Đổi Vai Trò (Vợ / Chồng) Trong Cài Đặt:**
+  * Thêm thẻ tương tác "Vai trò của bạn" kèm BottomSheet lựa chọn trực quan giữa 🌸 Vợ và 🛡️ Chồng.
+  * Phân luồng logic: Nếu chưa ghép đôi (`!isPaired`), chuyển đổi tức thì và lưu vào Hive scoped + Firestore `users/{uid}`. Nếu đã ghép đôi (`isPaired`), cảnh báo hoán đổi vị trí trước khi đồng bộ lên `couples/{coupleId}`.
+- **💑 Đồng Bộ Hai Chiều Hồ Sơ & Danh Xưng Cặp Đôi (Bi-directional Sync):**
+  * Chuẩn hóa schema trên `couples/{coupleId}` với 4 trường: `wifeCallPartner`, `wifeSelfCall`, `husbandCallPartner`, `husbandSelfCall`.
+  * Lắng nghe Realtime Stream qua `StreamSubscription` trên `couples/{coupleId}`, nạp tức thì vào `NicknameConfigProvider` mà không cần khởi động lại app.
+  * Logic Perspective Mapping: Vợ thấy cách Chồng gọi mình và Chồng xưng với mình; Chồng thấy cách Vợ gọi mình và Vợ xưng với mình, không bao giờ bị lệch pha danh xưng.
+- **✨ Chuẩn Hóa Toàn Diện Hệ Thống Hộp Thoại & Pop-up (MoonaConfirmDialog):**
+  * Xây dựng `MoonaConfirmDialog` kế thừa Material 3 và Soft Glassmorphic: Container tròn bo góc pastel chứa icon (~56x56), tiêu đề đậm căn giữa, thông điệp rõ ràng và Action Bar cân xứng ngang hàng (50:50) cao chuẩn 48px.
+  * Xóa bỏ 100% các `AlertDialog` ad-hoc gây tình trạng nút lệch dòng, bất cân xứng trên toàn dự án.
+  * Áp dụng đồng bộ: Hộp thoại Đăng xuất, Hủy kết nối cặp đôi, Hoán đổi vai trò, Đổi danh xưng tùy chỉnh, và các Modal chu kỳ.
+  * Bổ sung cơ chế phòng vệ cho `AppHaptics`: Kiểm tra `Hive.isBoxOpen` an toàn, chống crash khi khởi tạo hoặc chạy Unit Test.
+
+---
+
 ## [0.6.1+16] - 2026-09-03 (Cross-Account State Isolation, Late Period Logic & Android 11 Visibility)
 
 ### [Fixed]
