@@ -4,6 +4,25 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.1+16] - 2026-09-03 (Cross-Account State Isolation, Late Period Logic & Android 11 Visibility)
+
+### [Fixed]
+- **🛡️ Trị Dứt Điểm Race Condition Khi Chuyển Đổi Tài Khoản:**
+  * Bổ sung `UserScope.setActiveUid()` và `UserScope.clear()` khóa chặt UID người dùng tức thì khi đăng nhập/đăng xuất trước khi Provider re-evaluate.
+  * Trong `AuthController.signOut()` và đăng nhập mới, kích hoạt `_invalidateAllUserScopedProviders()` xóa sạch toàn bộ RAM State tree của tài khoản cũ.
+  * Loại bỏ hoàn toàn fallback sang key không có tiền tố trong `UserRoleNotifier`.
+- **📱 Cấu hình Package Visibility cho Android 11+:** Bổ sung `<queries>` trong `AndroidManifest.xml` hỗ trợ `launchUrl(LaunchMode.externalApplication)` tải OTA APK mượt mà.
+- **🔗 Tối ưu Vòng Đời Ghép Đôi (Pairing Lifecycle):**
+  * Stream realtime tự động phát hiện và điều hướng người tạo mã (Host) vào `MainNavScreen` ngay khi đối tác nhập mã kết nối thành công.
+  * Chặn triệt để hành vi tự ghép đôi với chính mình trong `connectWithPairingCode`.
+- **🌸 Ràng Buộc Sinh Học & Xử Lý Trễ Kinh (Late Period):**
+  * Chặn chọn ngày chu kỳ trong tương lai; ràng buộc giới hạn chu kỳ 21-45 ngày và hành kinh 2-10 ngày.
+  * Thêm logic `isLate` & `getDaysLate`: Màn hình Vợ hiển thị badge "Trễ kinh X ngày", Màn hình Chồng hiển thị thẻ tâm lý gợi ý vỗ về và chăm sóc chu đáo.
+- **💕 Danh Xưng Mặc Định Tinh Tế Theo Vai Trò:**
+  * Nàng gọi chàng mặc định là "Anh", Chàng gọi nàng mặc định là "Em bé". Chặn đứng hoàn toàn ô hiển thị bị trống.
+
+---
+
 ## [0.6.0+15] - 2026-09-03 (In-App OTA Updates, GitHub Actions CI/CD & Unpaired Logic Hardening)
 
 ### [Added]
@@ -24,10 +43,19 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
   * Hộp thoại Tín hiệu yêu thương (`CareSignalSheet`): Hiển thị banner cảnh báo và nút ghép đôi nhanh, vô hiệu hóa gửi tin khi chưa có đối tác.
 
 ### [Fixed]
-- **🛡️ Triệt Tiêu Hoàn Toàn Rò Rỉ Dữ Liệu Chéo Giữa Các Tài Khoản (Cross-Account State Pollution):**
-  * **Lớp 1 (User-Scoped Storage):** Xây dựng tiện ích `UserScope.key()` gắn `${uid}_` vào toàn bộ khóa lưu trữ cục bộ trong Hive (`NicknameController`, `PartnerSyncRepository`, `CycleLocalDataSource`, `UserRoleNotifier`).
-  * **Lớp 2 (Complete Logout Purge):** Khi đăng xuất, xóa sạch session userBox, dọn sạch khóa legacy và invalidate/reset toàn bộ Provider trong RAM (`savedCoupleIdProvider`, `nicknameConfigProvider`, `cycleControllerProvider`, etc.).
-  * **Lớp 3 (Cloud-Source of Truth):** Khi tài khoản mới đăng nhập, nạp đúng thông tin hồ sơ `users/{uid}` từ Firestore hoặc thiết lập trạng thái mặc định tinh khôi, ngăn 100% việc tài khoản 2 nhận nhầm dữ liệu tài khoản 1.
+- **🛡️ Trị Dứt Điểm Race Condition Khi Chuyển Đổi Tài Khoản:**
+  * Bổ sung `UserScope.setActiveUid()` và `UserScope.clear()` khóa chặt UID người dùng tức thì khi đăng nhập/đăng xuất trước khi Provider re-evaluate.
+  * Trong `AuthController.signOut()` và đăng nhập mới, kích hoạt `_invalidateAllUserScopedProviders()` xóa sạch toàn bộ RAM State tree của tài khoản cũ.
+  * Loại bỏ hoàn toàn fallback sang key không có tiền tố trong `UserRoleNotifier`.
+- **📱 Cấu hình Package Visibility cho Android 11+:** Bổ sung `<queries>` trong `AndroidManifest.xml` hỗ trợ `launchUrl(LaunchMode.externalApplication)` tải OTA APK mượt mà.
+- **🔗 Tối ưu Vòng Đời Ghép Đôi (Pairing Lifecycle):**
+  * Stream realtime tự động phát hiện và điều hướng người tạo mã (Host) vào `MainNavScreen` ngay khi đối tác nhập mã kết nối thành công.
+  * Chặn triệt để hành vi tự ghép đôi với chính mình trong `connectWithPairingCode`.
+- **🌸 Ràng Buộc Sinh Học & Xử Lý Trễ Kinh (Late Period):**
+  * Chặn chọn ngày chu kỳ trong tương lai; ràng buộc giới hạn chu kỳ 21-45 ngày và hành kinh 2-10 ngày.
+  * Thêm logic `isLate` & `getDaysLate`: Màn hình Vợ hiển thị badge "Trễ kinh X ngày", Màn hình Chồng hiển thị thẻ tâm lý gợi ý vỗ về và chăm sóc chu đáo.
+- **💕 Danh Xưng Mặc Định Tinh Tế Theo Vai Trò:**
+  * Nàng gọi chàng mặc định là "Anh", Chàng gọi nàng mặc định là "Em bé". Chặn đứng hoàn toàn ô hiển thị bị trống.
 - **⚙️ Sửa Lỗi CI Signing & Quyền Ghi GitHub Actions:**
   * Theo dõi `debug.keystore` dùng chung trong Git repository để `validateSigningRelease` thành công trên runner GitHub Actions.
   * Cấp quyền `permissions: contents: write` cho workflow để `softprops/action-gh-release` đăng tải bản phát hành thành công.

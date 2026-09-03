@@ -858,6 +858,8 @@ class HusbandViewScreen extends ConsumerWidget {
     String partnerName,
   ) {
     final daysLeft = cycleInfo.daysUntilNextPeriod(DateTime.now());
+    final daysLate = cycleInfo.getDaysLate(DateTime.now());
+    final isLate = daysLate > 0;
     final nextPeriodStr = DateFormat('dd/MM').format(cycleInfo.nextPeriodDate);
     final fertileStartStr = DateFormat('dd/MM').format(cycleInfo.fertileWindowStart);
     final fertileEndStr = DateFormat('dd/MM').format(cycleInfo.fertileWindowEnd);
@@ -870,11 +872,12 @@ class HusbandViewScreen extends ConsumerWidget {
             : Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.black.withAlpha(20),
+          color: isLate ? Colors.orange.withAlpha(isDark ? 90 : 60) : (isDark ? Colors.white12 : Colors.black.withAlpha(20)),
+          width: isLate ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(isDark ? 30 : 10),
+            color: (isLate ? Colors.orange : Colors.black).withAlpha(isDark ? 30 : 10),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -888,10 +891,14 @@ class HusbandViewScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(isDark ? 40 : 25),
+                  color: (isLate ? Colors.orange : AppColors.primary).withAlpha(isDark ? 40 : 25),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.primary),
+                child: Icon(
+                  isLate ? Icons.warning_amber_rounded : Icons.calendar_month_rounded,
+                  size: 18,
+                  color: isLate ? Colors.orange : AppColors.primary,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -915,28 +922,30 @@ class HusbandViewScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.phaseMenstrual.withAlpha(isDark ? 35 : 20),
+                    color: (isLate ? Colors.orange : AppColors.phaseMenstrual).withAlpha(isDark ? 35 : 20),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.phaseMenstrual.withAlpha(60)),
+                    border: Border.all(color: (isLate ? Colors.orange : AppColors.phaseMenstrual).withAlpha(60)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Kỳ kinh tới',
-                        style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                      Text(
+                        isLate ? 'Trạng thái kỳ kinh' : 'Kỳ kinh tới',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        nextPeriodStr,
-                        style: const TextStyle(
+                        isLate ? 'Trễ $daysLate ngày' : nextPeriodStr,
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.phaseMenstrual,
+                          color: isLate ? Colors.orange : AppColors.phaseMenstrual,
                         ),
                       ),
                       Text(
-                        daysLeft > 0 ? 'Còn $daysLeft ngày nữa' : 'Đang trong kỳ',
+                        isLate
+                            ? 'Dự kiến: $nextPeriodStr'
+                            : (daysLeft > 0 ? 'Còn $daysLeft ngày nữa' : 'Đang trong kỳ'),
                         style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -978,6 +987,51 @@ class HusbandViewScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // Thẻ tâm lý tinh tế khi nàng bị trễ kinh
+          if (isLate) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withAlpha(isDark ? 30 : 18),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.orange.withAlpha(70)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.favorite_rounded, color: Colors.orange, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Gợi ý yêu thương khi $partnerName trễ kinh:',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Chu kỳ có thể xê dịch do stress, thức khuya hoặc công việc. Chàng hãy ở bên vỗ về, chuẩn bị nước ấm và tránh hỏi dồn dập khiến nàng lo lắng nhé! 💕',
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.35,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 12),
 

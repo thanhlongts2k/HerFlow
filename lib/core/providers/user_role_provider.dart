@@ -18,11 +18,15 @@ class UserRoleNotifier extends StateNotifier<UserRole> {
 
   static UserRole _loadInitialRole(Box box) {
     final uid = UserScope.currentUid();
-    final scoped = box.get(UserScope.key(keyAppUserRole, uid));
-    if (scoped == UserRole.husband.name || scoped == 'husband') {
-      return UserRole.husband;
-    }
-    if (scoped == UserRole.wife.name || scoped == 'wife') {
+    if (uid.isNotEmpty) {
+      final scoped = box.get(UserScope.key(keyAppUserRole, uid));
+      if (scoped == UserRole.husband.name || scoped == 'husband') {
+        return UserRole.husband;
+      }
+      if (scoped == UserRole.wife.name || scoped == 'wife') {
+        return UserRole.wife;
+      }
+      // Clean Default cho user mới: Không bao giờ fallback sang key chung không có tiền tố!
       return UserRole.wife;
     }
 

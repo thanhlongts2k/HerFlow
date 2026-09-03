@@ -8,8 +8,24 @@ import 'package:herflow/core/constants/app_constants.dart';
 class UserScope {
   UserScope._();
 
-  /// Lấy UID người dùng hiện tại đang đăng nhập từ FirebaseAuth hoặc UserBox
+  static String? _activeUid;
+
+  /// Thiết lập chủ động UID hiện tại khi đăng nhập để triệt tiêu Race Condition
+  static void setActiveUid(String? uid) {
+    _activeUid = (uid != null && uid.trim().isNotEmpty) ? uid.trim() : null;
+  }
+
+  /// Xóa sạch active UID khi đăng xuất
+  static void clear() {
+    _activeUid = null;
+  }
+
+  /// Lấy UID người dùng hiện tại đang đăng nhập
   static String currentUid() {
+    if (_activeUid != null && _activeUid!.isNotEmpty) {
+      return _activeUid!;
+    }
+
     try {
       final authUid = FirebaseAuth.instance.currentUser?.uid;
       if (authUid != null && authUid.isNotEmpty) return authUid;

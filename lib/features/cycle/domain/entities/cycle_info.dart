@@ -47,13 +47,34 @@ class CycleInfo {
     return anchorStart.add(Duration(days: cycleLength));
   }
 
-  /// Số ngày còn lại đến kỳ kinh tiếp theo
+  /// Kiểm tra xem hiện tại có đang bị trễ kinh so với dự kiến không (khi chưa có kỳ kinh mới)
+  bool isLate(DateTime date) {
+    final normDate = AppDateUtils.normalize(date);
+    final diff = AppDateUtils.daysBetween(anchorStart, normDate);
+    return diff > cycleLength;
+  }
+
+  /// Số ngày trễ kinh (>= 1 nếu trễ, = 0 nếu đúng hạn hoặc chưa tới)
+  int getDaysLate(DateTime date) {
+    final normDate = AppDateUtils.normalize(date);
+    final diff = AppDateUtils.daysBetween(anchorStart, normDate);
+    if (diff > cycleLength) {
+      return diff - cycleLength;
+    }
+    return 0;
+  }
+
+  /// Số ngày còn lại đến kỳ kinh tiếp theo (không trả về số âm)
   int daysUntilNextPeriod(DateTime fromDate) {
     final normFrom = AppDateUtils.normalize(fromDate);
     final diff = AppDateUtils.daysBetween(anchorStart, normFrom);
     if (diff < 0) {
       // Nếu từ ngày trong quá khứ trước anchorStart
       return AppDateUtils.daysBetween(normFrom, anchorStart);
+    }
+    if (diff > cycleLength) {
+      // Đã quá hạn (trễ kinh) -> 0 ngày còn lại
+      return 0;
     }
     final currentCycleDay = diff % cycleLength;
     if (currentCycleDay == 0 && diff > 0) {

@@ -384,5 +384,60 @@ void main() {
       expect(effectiveNickname, NicknameConfig.defaultNickname);
       expect(effectiveNickname, isNot('Chồng yêu dấu'));
     });
+
+    test('UserScope.setActiveUid eliminates race condition in Auth State', () {
+      UserScope.clear();
+      expect(UserScope.currentUid(), '');
+
+      UserScope.setActiveUid('user_account_new');
+      expect(UserScope.currentUid(), 'user_account_new');
+      expect(UserScope.key('test_key'), 'user_account_new_test_key');
+
+      UserScope.clear();
+      expect(UserScope.currentUid(), '');
+    });
+  });
+
+  group('Late Period & Biological Validation Unit Tests', () {
+    final anchor = DateTime(2026, 8, 1);
+    final cycle = CycleInfo(
+      lastPeriodStart: anchor,
+      cycleLength: 28,
+      periodDuration: 5,
+    );
+
+    test('CycleInfo correctly detects late period and counts days late', () {
+      // Ngày thứ 28 (29/08/2026): Chưa trễ
+      final day28 = DateTime(2026, 8, 29);
+      expect(cycle.isLate(day28), isFalse);
+      expect(cycle.getDaysLate(day28), 0);
+
+      // Ngày thứ 29 (30/08/2026): Trễ 1 ngày
+      final day29 = DateTime(2026, 8, 30);
+      expect(cycle.isLate(day29), isTrue);
+      expect(cycle.getDaysLate(day29), 1);
+      expect(cycle.daysUntilNextPeriod(day29), 0);
+
+      // Ngày 04/09/2026 (ngày thứ 34): Trễ 6 ngày
+      final day34 = DateTime(2026, 9, 4);
+      expect(cycle.isLate(day34), isTrue);
+      expect(cycle.getDaysLate(day34), 6);
+      expect(cycle.daysUntilNextPeriod(day34), 0);
+    });
+
+    test('NicknameConfig provides role-based fallback: Wife calls Anh, Husband calls Em bé', () {
+      final wifeDefault = NicknameConfig.defaultForRole(UserRole.wife);
+      expect(wifeDefault.callPartnerAs, 'Anh');
+      expect(wifeDefault.selfCallAs, 'Em');
+
+      final husbandDefault = NicknameConfig.defaultForRole(UserRole.husband);
+      expect(husbandDefault.callPartnerAs, 'Em bé');
+      expect(husbandDefault.selfCallAs, 'Anh');
+
+      // Empty fallback preserves non-empty values
+      final emptyWife = NicknameConfig.fromMap({'callPartnerAs': '', 'selfCallAs': ''}, UserRole.wife);
+      expect(emptyWife.callPartnerAs, 'Anh');
+      expect(emptyWife.selfCallAs, 'Em');
+    });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 
@@ -21,20 +22,30 @@ class NicknameController extends StateNotifier<NicknameConfig> {
     loadForUser();
   }
 
-  /// Nạp cấu hình danh xưng cho người dùng (ưu tiên local scoped -> Firestore -> Mặc định sạch)
+  UserRole _resolveRole([String? explicitUid]) {
+    final uid = explicitUid ?? UserScope.currentUid();
+    final roleName = _settingsBox.get(UserScope.key('app_user_role', uid)) as String?;
+    if (roleName == 'husband') return UserRole.husband;
+    return UserRole.wife;
+  }
+
+  /// Nạp cấu hình danh xưng cho người dùng (ưu tiên local scoped -> Firestore -> Mặc định tinh tế theo vai trò)
   Future<void> loadForUser([String? explicitUid]) async {
     final uid = explicitUid ?? UserScope.currentUid();
+    final role = _resolveRole(uid);
+    final defaultCfg = NicknameConfig.defaultForRole(role);
+
     final callPartner = _settingsBox.get(UserScope.key(keyNicknameCallPartner, uid)) as String?;
     final selfCall = _settingsBox.get(UserScope.key(keyNicknameSelfCall, uid)) as String?;
 
     if (callPartner != null || selfCall != null) {
       state = NicknameConfig(
         callPartnerAs: (callPartner != null && callPartner.trim().isNotEmpty)
-            ? callPartner
-            : NicknameConfig.defaultNickname,
+            ? callPartner.trim()
+            : defaultCfg.callPartnerAs,
         selfCallAs: (selfCall != null && selfCall.trim().isNotEmpty)
-            ? selfCall
-            : NicknameConfig.defaultNickname,
+            ? selfCall.trim()
+            : defaultCfg.selfCallAs,
       );
       return;
     }
@@ -47,7 +58,7 @@ class NicknameController extends StateNotifier<NicknameConfig> {
           final data = doc.data();
           if (data != null && data['nicknames'] != null) {
             final map = Map<String, dynamic>.from(data['nicknames'] as Map);
-            final config = NicknameConfig.fromMap(map);
+            final config = NicknameConfig.fromMap(map, role);
             await _settingsBox.put(UserScope.key(keyNicknameCallPartner, uid), config.callPartnerAs);
             await _settingsBox.put(UserScope.key(keyNicknameSelfCall, uid), config.selfCallAs);
             state = config;
@@ -55,27 +66,39 @@ class NicknameController extends StateNotifier<NicknameConfig> {
           }
         }
       } catch (e) {
-        debugPrint('Load nicknames from Firestore error: $e');
+        debugPrint('Load nicknames from Firestore notice: $e');
       }
     }
 
-    // Mặc định sạch sẽ khi chưa có cấu hình riêng
-    state = const NicknameConfig();
+    // Mặc định tinh tế theo vai trò (Nàng gọi "Anh", Chàng gọi "Em bé")
+    state = defaultCfg;
   }
 
   Future<void> setCallPartnerAs(String name) async {
-    final trimmed = name.trim();
-    final value = trimmed.isNotEmpty ? trimmed : NicknameConfig.defaultNickname;
     final uid = UserScope.currentUid();
+    final role = _resolveRole(uid);
+    final defaultName = role == UserRole.husband
+        ? NicknameConfig.defaultForHusbandCallingWife
+        : NicknameConfig.defaultForWifeCallingHusband;
+
+    final trimmed = name.trim();
+    final value = trimmed.isNotEmpty ? trimmed : defaultName;
+
     await _settingsBox.put(UserScope.key(keyNicknameCallPartner, uid), value);
     state = state.copyWith(callPartnerAs: value);
     await _syncToCloud();
   }
 
   Future<void> setSelfCallAs(String name) async {
-    final trimmed = name.trim();
-    final value = trimmed.isNotEmpty ? trimmed : NicknameConfig.defaultNickname;
     final uid = UserScope.currentUid();
+    final role = _resolveRole(uid);
+    final defaultName = role == UserRole.husband
+        ? NicknameConfig.defaultForHusbandCallingSelf
+        : NicknameConfig.defaultForWifeCallingSelf;
+
+    final trimmed = name.trim();
+    final value = trimmed.isNotEmpty ? trimmed : defaultName;
+
     await _settingsBox.put(UserScope.key(keyNicknameSelfCall, uid), value);
     state = state.copyWith(selfCallAs: value);
     await _syncToCloud();
@@ -83,16 +106,32 @@ class NicknameController extends StateNotifier<NicknameConfig> {
 
   Future<void> applyConfig(NicknameConfig config, [String? explicitUid]) async {
     final uid = explicitUid ?? UserScope.currentUid();
-    await _settingsBox.put(UserScope.key(keyNicknameCallPartner, uid), config.callPartnerAs);
-    await _settingsBox.put(UserScope.key(keyNicknameSelfCall, uid), config.selfCallAs);
-    state = config;
+    final role = _resolveRole(uid);
+    final defaultCfg = NicknameConfig.defaultForRole(role);
+
+    final safePartner = config.callPartnerAs.trim().isNotEmpty
+        ? config.callPartnerAs.trim()
+        : defaultCfg.callPartnerAs;
+    final safeSelf = config.selfCallAs.trim().isNotEmpty
+        ? config.selfCallAs.trim()
+        : defaultCfg.selfCallAs;
+
+    final safeConfig = NicknameConfig(
+      callPartnerAs: safePartner,
+      selfCallAs: safeSelf,
+    );
+
+    await _settingsBox.put(UserScope.key(keyNicknameCallPartner, uid), safeConfig.callPartnerAs);
+    await _settingsBox.put(UserScope.key(keyNicknameSelfCall, uid), safeConfig.selfCallAs);
+    state = safeConfig;
   }
 
   Future<void> resetToDefault() async {
     final uid = UserScope.currentUid();
+    final role = _resolveRole(uid);
     await _settingsBox.delete(UserScope.key(keyNicknameCallPartner, uid));
     await _settingsBox.delete(UserScope.key(keyNicknameSelfCall, uid));
-    state = const NicknameConfig();
+    state = NicknameConfig.defaultForRole(role);
     await _syncToCloud();
   }
 

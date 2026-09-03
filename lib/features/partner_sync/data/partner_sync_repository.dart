@@ -202,6 +202,16 @@ class PartnerSyncRepository {
 
       final pairing = PairingModel.fromFirestore(doc);
 
+      // Chống tự ghép đôi với chính mình
+      final currentUid = UserScope.currentUid();
+      if (currentUid.isNotEmpty && pairing.wifeUserId == currentUid) {
+        throw Exception('Không thể tự kết nối với chính mình. Hãy gửi mã này cho người bạn đời!');
+      }
+      final myPairingCode = getSavedPairingCode();
+      if (myPairingCode != null && myPairingCode.trim().toUpperCase() == cleanCode) {
+        throw Exception('Không thể tự kết nối với chính mình. Hãy gửi mã này cho người bạn đời!');
+      }
+
       if (pairing.isExpired) {
         throw Exception('Mã kết nối này đã hết hạn sau 24 giờ. Vui lòng tạo mã mới!');
       }

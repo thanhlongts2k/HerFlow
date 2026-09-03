@@ -30,27 +30,31 @@ class CycleLocalDataSource {
   }
 
   Future<void> saveLastPeriodStart(DateTime date) async {
-    await _box.put(_k(AppConstants.keyLastPeriodStart), AppDateUtils.normalize(date).toIso8601String());
+    final now = AppDateUtils.normalize(DateTime.now());
+    final validDate = date.isAfter(now) ? now : AppDateUtils.normalize(date);
+    await _box.put(_k(AppConstants.keyLastPeriodStart), validDate.toIso8601String());
   }
 
   int getCycleLength() {
     final val = _box.get(_k(AppConstants.keyCycleLength));
-    if (val != null && val is int) return val;
+    if (val != null && val is int) return val.clamp(21, 45);
     return AppConstants.defaultCycleLength;
   }
 
   Future<void> saveCycleLength(int days) async {
-    await _box.put(_k(AppConstants.keyCycleLength), days);
+    final validDays = days.clamp(21, 45);
+    await _box.put(_k(AppConstants.keyCycleLength), validDays);
   }
 
   int getPeriodDuration() {
     final val = _box.get(_k(AppConstants.keyPeriodDuration));
-    if (val != null && val is int) return val;
+    if (val != null && val is int) return val.clamp(2, 10);
     return AppConstants.defaultPeriodDuration;
   }
 
   Future<void> savePeriodDuration(int days) async {
-    await _box.put(_k(AppConstants.keyPeriodDuration), days);
+    final validDays = days.clamp(2, 10);
+    await _box.put(_k(AppConstants.keyPeriodDuration), validDays);
   }
 
   /// Dọn dẹp dữ liệu rác mẫu cũ (02-06/08 và 28-31/08) cho user hiện tại

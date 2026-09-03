@@ -1,10 +1,11 @@
-// lib/features/partner_sync/presentation/screens/pairing_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/providers/user_role_provider.dart';
+import 'package:herflow/features/home/presentation/screens/main_nav_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/domain/models/pairing_model.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/husband_dashboard_screen.dart';
@@ -22,6 +23,8 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _codeInputController = TextEditingController();
+  StreamSubscription<PairingModel?>? _pairingSub;
+  bool _hasNavigatedAway = false;
 
   @override
   void initState() {
@@ -35,8 +38,38 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
     );
   }
 
+  void _listenToPairingStatus(String code) {
+    if (_pairingSub != null) return;
+    _pairingSub = ref.read(partnerSyncRepositoryProvider).watchPairingStatus(code).listen((pairing) {
+      if (!mounted) return;
+      if (pairing != null && pairing.status == PairingStatus.connected && !_hasNavigatedAway) {
+        _hasNavigatedAway = true;
+        ref.read(savedCoupleIdProvider.notifier).state = pairing.coupleId;
+        ref.read(partnerSyncRepositoryProvider).saveCoupleId(pairing.coupleId);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Người thương đã kết nối thành công! Đang chuyển vào màn hình chính...'),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MainNavScreen()),
+              (route) => false,
+            );
+          }
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _pairingSub?.cancel();
     _tabController.dispose();
     _codeInputController.dispose();
     super.dispose();
@@ -49,6 +82,11 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
     final pairingState = ref.watch(partnerSyncControllerProvider);
     final savedCoupleId = ref.watch(savedCoupleIdProvider);
     final currentRole = ref.watch(userRoleProvider);
+
+    final activeCode = pairingState.activePairingCode;
+    if (activeCode != null && activeCode.isNotEmpty && !pairingState.isOfflineCode) {
+      _listenToPairingStatus(activeCode);
+    }
 
     // Nếu là Chồng: Ẩn hoàn toàn TabBar, chỉ hiển thị giao diện kết nối với nàng
     if (currentRole == UserRole.husband) {

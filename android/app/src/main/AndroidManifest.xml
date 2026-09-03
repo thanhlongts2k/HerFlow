@@ -7,6 +7,18 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
 
+    <!-- Cấu hình Package Visibility cho Android 11+ (API 30+) phục vụ mở trình duyệt tải OTA APK -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
+
     <application
         android:label="Moona"
         android:name="${applicationName}"

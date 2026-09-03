@@ -207,6 +207,7 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
                 CycleHeroIndicator(
                   dayInfo: currentDayInfo,
                   daysLeft: daysLeft,
+                  daysLate: cycleInfo.getDaysLate(selectedDate),
                 ),
 
                 const SizedBox(height: 20),

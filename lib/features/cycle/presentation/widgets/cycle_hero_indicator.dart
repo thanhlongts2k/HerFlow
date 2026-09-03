@@ -7,11 +7,13 @@ import '../../domain/entities/cycle_day_info.dart';
 class CycleHeroIndicator extends StatelessWidget {
   final CycleDayInfo dayInfo;
   final int daysLeft;
+  final int daysLate;
 
   const CycleHeroIndicator({
     super.key,
     required this.dayInfo,
     required this.daysLeft,
+    this.daysLate = 0,
   });
 
   @override
@@ -109,12 +111,20 @@ class CycleHeroIndicator extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildBadge(
-                context,
-                icon: Icons.hourglass_top_rounded,
-                label: '$daysLeft ngày nữa tới kỳ mới',
-                color: AppColors.primary,
-              ),
+              if (daysLate > 0)
+                _buildBadge(
+                  context,
+                  icon: Icons.schedule_rounded,
+                  label: 'Trễ kinh $daysLate ngày',
+                  color: Colors.orange,
+                )
+              else
+                _buildBadge(
+                  context,
+                  icon: Icons.hourglass_top_rounded,
+                  label: daysLeft > 0 ? '$daysLeft ngày nữa tới kỳ mới' : 'Đang trong kỳ',
+                  color: AppColors.primary,
+                ),
               _buildBadge(
                 context,
                 icon: Icons.child_care_rounded,
