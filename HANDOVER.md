@@ -1,6 +1,6 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.3.0` (Widget, Care Signals, PMS Warning, Backup AES, APK Shrinking)
+> **Phiên bản hiện tại:** `v0.3.0+5` (Pairing Bugfix & SettingsScreen Refactor + Restored Feature Files)
 > **Thời điểm cập nhật:** 03/09/2026 — Phiên làm việc kết thúc, lưu ngữ cảnh đầy đủ
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)
 
@@ -11,11 +11,11 @@
 | Hạng mục | Kết quả |
 |---|---|
 | `flutter analyze` | ✅ **0 issues found!** |
-| `flutter test` | ✅ **10/10 PASSED (100%)** |
-| Release APK `app-arm64-v8a-release.apk` | ✅ **21.9 MB** (giảm từ 153 MB) |
-| Cài đặt thiết bị Xiaomi (arm64) | ✅ **Thành công, chạy mượt** |
-| `pubspec.yaml` version | ✅ **0.3.0+3** (cập nhật 03/09/2026) |
-| `build.gradle.kts` versionCode/versionName | ✅ Đọc tự động từ Flutter (`flutter.versionCode`, `flutter.versionName`) |
+| Commit HEAD | ✅ `4e612b5` — `feat(v0.3.0+5): fix pairing timeout, add SettingsScreen, restore v0.3.0 feature files` |
+| Pairing Timeout Bug | ✅ **FIXED** — `try-catch-finally` + 5s timeout + offline fallback `HFxxxx` |
+| `SettingsScreen` | ✅ **IMPLEMENTED** — 4 nhóm (Bảo mật, Đồng bộ đôi, Giao diện, Dữ liệu) |
+| `CycleSettingsSheet` | ✅ **REFACTORED** — Xóa biometric switch, chỉ giữ chu kỳ + PMS |
+| Restored v0.3.0 files | ✅ **12 new files** — care_signals, auth, onboarding, core utils, notifications |
 
 ---
 
