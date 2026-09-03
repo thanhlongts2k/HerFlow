@@ -7,6 +7,7 @@ import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/routes/app_routes.dart';
 import 'package:herflow/core/utils/haptic_feedback_utils.dart';
 import 'package:herflow/core/widgets/moona_brand_logo.dart';
+import '../../domain/models/user_model.dart';
 import '../controllers/auth_controller.dart';
 
 /// Màn hình Đăng Nhập Moona — Google Sign-In & Nhận Diện Cặp Đôi
@@ -33,7 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final user = await ref.read(authControllerProvider.notifier).signInWithGoogle();
       if (user != null && mounted) {
-        _navigateAfterAuth();
+        _navigateAfterAuth(user);
       }
     } catch (e) {
       if (mounted) {
@@ -63,12 +64,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     AppHaptics.mediumImpact();
 
     try {
-      await ref.read(authControllerProvider.notifier).signInAsDemo(
+      final user = await ref.read(authControllerProvider.notifier).signInAsDemo(
         displayName: 'Thành Long',
         email: 'long.thanh@gmail.com',
       );
       if (mounted) {
-        _navigateAfterAuth();
+        _navigateAfterAuth(user);
       }
     } catch (e) {
       if (mounted) {
@@ -81,15 +82,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void _navigateAfterAuth() {
+  void _navigateAfterAuth([UserModel? user]) {
     final settingsBox = Hive.box(AppConstants.settingsBoxName);
     final hasSelectedRole = settingsBox.get(AppConstants.keyHasSelectedRole, defaultValue: false) as bool;
     final isOnboardingCompleted = settingsBox.get(AppConstants.keyIsOnboardingCompleted, defaultValue: false) as bool;
 
-    if (!hasSelectedRole || !isOnboardingCompleted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.roleSelection);
-    } else {
+    // NẾU tài khoản đã có vai trò trên Cloud Firestore hoặc đã hoàn tất thiết lập cục bộ
+    final hasCloudRole = user?.role != null && (user!.role == 'wife' || user.role == 'husband');
+
+    if (hasCloudRole || (hasSelectedRole && isOnboardingCompleted)) {
       Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+    } else {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.roleSelection);
     }
   }
 

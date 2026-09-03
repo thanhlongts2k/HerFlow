@@ -26,7 +26,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     AppHaptics.selection();
     final settingsBox = Hive.box(AppConstants.settingsBoxName);
     await settingsBox.put(AppConstants.keyHasSelectedRole, true);
-    await ref.read(userRoleProvider.notifier).setRole(UserRole.wife);
+    final uid = ref.read(currentUserProvider)?.uid;
+    await ref.read(userRoleProvider.notifier).setRole(UserRole.wife, uid: uid);
 
     if (mounted) {
       // Chuyển sang 3 bước thiết lập chu kỳ cá nhân
@@ -101,7 +102,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                 final settingsBox = Hive.box(AppConstants.settingsBoxName);
                 await settingsBox.put(AppConstants.keyHasSelectedRole, true);
                 await settingsBox.put(AppConstants.keyIsOnboardingCompleted, true);
-                await ref.read(userRoleProvider.notifier).setRole(UserRole.husband);
+                final uid = ref.read(currentUserProvider)?.uid;
+                await ref.read(userRoleProvider.notifier).setRole(UserRole.husband, uid: uid);
 
                 if (mounted) {
                   Navigator.of(context).pushReplacement(
@@ -338,7 +340,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
                       await ref.read(cycleControllerProvider.notifier).setPeriodDuration(periodDuration);
 
                       // Gán vai trò Chồng
-                      await ref.read(userRoleProvider.notifier).setRole(UserRole.husband);
+                      final uid = ref.read(currentUserProvider)?.uid;
+                      await ref.read(userRoleProvider.notifier).setRole(UserRole.husband, uid: uid);
 
                       if (!mounted) return;
                       navigator.pushReplacementNamed(AppRoutes.home);

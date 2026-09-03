@@ -26,11 +26,43 @@ class AuthRepository {
         _firestore = firestore ?? FirebaseFirestore.instance;
 
   Box get _userBox => Hive.box(AppConstants.userBoxName);
+  Box get _settingsBox => Hive.box(AppConstants.settingsBoxName);
+
+  /// Đọc vai trò người dùng đã lưu trên Firestore (nếu có)
+  Future<String?> getUserRoleFromFirestore(String uid) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get()
+          .timeout(const Duration(seconds: 5));
+      if (doc.exists && doc.data() != null) {
+        return doc.data()?['role'] as String?;
+      }
+    } catch (e) {
+      debugPrint('getUserRoleFromFirestore notice: $e');
+    }
+    return null;
+  }
+
+  /// Cập nhật vai trò người dùng lên Firestore users/{uid}
+  Future<void> syncUserRoleToFirestore(String uid, String role) async {
+    try {
+      await _firestore.collection('users').doc(uid).set({
+        'role': role,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('syncUserRoleToFirestore notice: $e');
+    }
+  }
 
   /// Lấy thông tin người dùng hiện tại (từ Hive cục bộ hoặc FirebaseAuth)
   UserModel? getCurrentUser() {
     try {
       final isLoggedIn = _userBox.get(AppConstants.keyUserIsLoggedIn, defaultValue: false) as bool;
+      final savedRole = _userBox.get('user_role') as String? ?? _settingsBox.get('app_user_role') as String?;
+
       if (!isLoggedIn) {
         final fbUser = _firebaseAuth.currentUser;
         if (fbUser != null) {
@@ -39,6 +71,7 @@ class AuthRepository {
             displayName: fbUser.displayName ?? 'Người dùng Moona',
             email: fbUser.email ?? '',
             photoUrl: fbUser.photoURL,
+            role: savedRole,
           );
         }
         return null;
@@ -56,6 +89,7 @@ class AuthRepository {
         displayName: displayName,
         email: email,
         photoUrl: photoUrl,
+        role: savedRole,
       );
     } catch (e) {
       debugPrint('Error getting current user: $e');
@@ -85,18 +119,35 @@ class AuthRepository {
         throw Exception('Không nhận được thông tin người dùng từ Firebase');
       }
 
+      // 1. Kiểm tra vai trò đã lưu trước đó trên Firestore Cloud (nếu có)
+      final cloudRole = await getUserRoleFromFirestore(user.uid);
+
       final userModel = UserModel(
         uid: user.uid,
         displayName: user.displayName ?? googleUser.displayName ?? 'Người dùng Moona',
         email: user.email ?? googleUser.email,
         photoUrl: user.photoURL ?? googleUser.photoUrl,
+        role: cloudRole,
         lastLoginAt: DateTime.now(),
       );
 
-      // Lưu trữ cục bộ trên máy
+      // 2. Lưu trữ cục bộ trên máy
       await _saveUserLocally(userModel);
 
-      // Đồng bộ thông tin lên Firestore document users/{uid}
+      // 3. Khôi phục vai trò từ Cloud vào Hive cục bộ (nếu có)
+      if (cloudRole != null && (cloudRole == 'wife' || cloudRole == 'husband')) {
+        await _settingsBox.put('app_user_role', cloudRole);
+        await _settingsBox.put('partner_user_role', cloudRole);
+        await _settingsBox.put(AppConstants.keyHasSelectedRole, true);
+        await _settingsBox.put(AppConstants.keyIsOnboardingCompleted, true);
+      } else {
+        // Tài khoản mới chưa có vai trò: reset cờ để dẫn vào RoleSelectionScreen
+        await _settingsBox.delete('app_user_role');
+        await _settingsBox.delete('partner_user_role');
+        await _settingsBox.put(AppConstants.keyHasSelectedRole, false);
+      }
+
+      // 4. Đồng bộ thông tin lên Firestore document users/{uid}
       await _syncUserToFirestore(userModel);
 
       return userModel;
@@ -113,11 +164,14 @@ class AuthRepository {
     String? photoUrl,
   }) async {
     final uid = 'demo_${DateTime.now().millisecondsSinceEpoch}';
+    final savedRole = _settingsBox.get('app_user_role') as String?;
+
     final userModel = UserModel(
       uid: uid,
       displayName: displayName,
       email: email,
       photoUrl: photoUrl ?? 'https://api.dicebear.com/7.x/adventurer/png?seed=$displayName',
+      role: savedRole,
       lastLoginAt: DateTime.now(),
       createdAt: DateTime.now(),
     );
@@ -137,26 +191,39 @@ class AuthRepository {
     } else {
       await box.delete(AppConstants.keyUserPhotoUrl);
     }
+    if (user.role != null) {
+      await box.put('user_role', user.role!);
+    } else {
+      await box.delete('user_role');
+    }
     await box.put(AppConstants.keyUserIsLoggedIn, true);
   }
 
   /// Đồng bộ hồ sơ lên Firestore
   Future<void> _syncUserToFirestore(UserModel user) async {
     try {
-      await _firestore.collection('users').doc(user.uid).set({
+      final payload = <String, dynamic>{
         'uid': user.uid,
         'displayName': user.displayName,
         'email': user.email,
         'photoUrl': user.photoUrl,
         'lastLoginAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
+      if (user.role != null) {
+        payload['role'] = user.role;
+      }
+
+      await _firestore.collection('users').doc(user.uid).set(
+        payload,
+        SetOptions(merge: true),
+      ).timeout(const Duration(seconds: 5));
     } catch (e) {
       debugPrint('Sync user to Firestore notice: $e');
     }
   }
 
-  /// Đăng xuất khỏi hệ thống
+  /// Đăng xuất khỏi hệ thống & Xóa sạch cache người dùng và vai trò
   Future<void> signOut() async {
     try {
       await _firebaseAuth.signOut();
@@ -170,11 +237,20 @@ class AuthRepository {
       debugPrint('Google sign out error: $e');
     }
 
+    // 1. Xóa thông tin tài khoản đăng nhập
     final box = _userBox;
     await box.put(AppConstants.keyUserIsLoggedIn, false);
     await box.delete(AppConstants.keyUserUid);
     await box.delete(AppConstants.keyUserDisplayName);
     await box.delete(AppConstants.keyUserEmail);
     await box.delete(AppConstants.keyUserPhotoUrl);
+    await box.delete('user_role');
+
+    // 2. Xóa sạch cache vai trò và cờ onboarding để tài khoản tiếp theo không bị nhận nhầm
+    final settingsBox = _settingsBox;
+    await settingsBox.delete('app_user_role');
+    await settingsBox.delete('partner_user_role');
+    await settingsBox.delete(AppConstants.keyHasSelectedRole);
+    await settingsBox.delete(AppConstants.keyIsOnboardingCompleted);
   }
 }

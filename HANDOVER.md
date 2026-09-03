@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.5.2+12` (Clean State Ready For Commit)  
-> **Thời điểm cập nhật:** 03/09/2026 — Hoàn tất tự rà soát an ninh, dọn dẹp mã nguồn & đồng bộ tài liệu  
+> **Phiên bản hiện tại:** `v0.5.3+13` (Account-Bound Role Sync Verified)  
+> **Thời điểm cập nhật:** 03/09/2026 — Chuẩn hóa lưu trữ & khôi phục vai trò theo tài khoản Cloud  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -11,7 +11,9 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase sạch 100%, 0 errors, 0 warnings |
-| **Unit Testing (`flutter test`)** | ✅ **20/20 tests PASSED** | Đạt 100% pass, bao gồm test serialization `CareSignalModel` mới |
+| **Unit Testing (`flutter test`)** | ✅ **20/20 tests PASSED** | Đạt 100% pass, bao gồm test serialization `UserModel` kèm `role` |
+| **Ràng buộc vai trò theo tài khoản (Cloud-Bound)** | ✅ **HOÀN TẤT** | Gắn chặt `users/{uid}.role` ("wife" | "husband"), khôi phục tự động khi đăng nhập máy khác |
+| **Xóa sạch cache vai trò khi Sign Out** | ✅ **HOÀN TẤT** | Reset triệt để `app_user_role` và cờ onboarding tránh tài khoản sau bị nhận nhầm |
 | **Xác thực Google Sign-In & Firebase Auth** | ✅ **HOÀN TẤT** | Hỗ trợ Google Sign-In thật và Demo Mode dự phòng |
 | **Role Onboarding & Chu kỳ độc lập** | ✅ **HOÀN TẤT** | Thẻ chọn vai trò dạng ngang nhỏ gọn (~100-110dp); Chàng tự lập chu kỳ |
 | **Động cơ danh xưng (Nickname Engine)** | ✅ **HOÀN TẤT** | 7 Presets + Tự nhập, đồng bộ Firestore và Live Preview đối thoại |
@@ -19,7 +21,6 @@
 | **Vòng lặp phản hồi 1 chạm (Wife Banner)** | ✅ **HOÀN TẤT** | 4 nút phản hồi nhanh (🥺, 🧋, 🥰, 🛌) đồng bộ tức thì sang máy Chồng |
 | **Đồng bộ Launcher Icon Moona** | ✅ **HOÀN TẤT** | Logo vầng trăng khuyết vàng trên đĩa tròn gradient hồng-tím (`android: true`) |
 | **Độ ổn định Runtime (R8 ProGuard Fix)** | ✅ **HOÀN TẤT** | Tắt minifyEnabled an toàn, loại bỏ triệt để lỗi crash `WorkDatabase` |
-| **Kiểm toán bảo mật & rò rỉ dữ liệu** | ✅ **PASSED** | `.gitignore` bảo vệ đầy đủ, không hardcode secrets, không in PII |
 | **Deploy thử nghiệm thực tế** | ✅ **SUCCESS** | Nạp và chạy mượt mà trên thiết bị qua `scripts/deploy.ps1 -Target all` |
 
 ---
@@ -48,6 +49,14 @@
 * **Giải pháp:** 
   - Tại `CycleCalendarView`: Loại bỏ nút điều hướng `<` `>` trùng lặp (vì `TableCalendar` đã có thanh điều hướng riêng), bọc tiêu đề và nút chỉnh sửa trong `Expanded` + `Flexible(child: Text(..., overflow: TextOverflow.ellipsis))`.
   - Tại `HusbandViewScreen` và `CycleHeroIndicator`: Thay thế toàn bộ cụm `Row` chứa các chip/badge trạng thái bằng `Wrap(spacing: 8, runSpacing: 6)`, đảm bảo giao diện tự động xuống dòng linh hoạt khi không gian ngang bị thu hẹp.
+
+### 2.5. Ràng buộc vai trò theo tài khoản Cloud (Account-Bound Role Persistence)
+* **Hiện tượng:** Khi cài lại ứng dụng hoặc đăng nhập trên thiết bị mới, người dùng dù đã có tài khoản vẫn bị ép chọn lại vai trò ở Onboarding; hoặc khi đăng xuất, tài khoản tiếp theo bị dính vai trò cũ của thiết bị.
+* **Nguyên nhân:** Vai trò `UserRole` chỉ được lưu trong `_settingsBox` (Hive cục bộ), không đọc/ghi lên document `users/{uid}` trên Firestore; và hàm `signOut()` chỉ xóa `_userBox` mà không reset cache trong `_settingsBox`.
+* **Giải pháp:**
+  - Bổ sung trường `role` vào `UserModel` và đồng bộ tức thì lên Firestore document `users/{uid}` với `SetOptions(merge: true)` mỗi khi `setRole` được gọi.
+  - Khi đăng nhập thành công hoặc khi app khởi động, tự động đọc `users/{uid}.role` từ Cloud: Nếu đã có vai trò, cập nhật vào State và chuyển thẳng vào `AppRoutes.home`, bỏ qua `RoleSelectionScreen`.
+  - Khi Đăng xuất (`signOut`): Xóa sạch `app_user_role`, `partner_user_role`, `keyHasSelectedRole`, `keyIsOnboardingCompleted` và gọi `userRoleProvider.notifier.resetRole()`.
 
 ---
 

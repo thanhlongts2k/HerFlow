@@ -4,6 +4,29 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.5.3+13] - 2026-09-03 (Account-Bound Role Synchronization & Cross-Device Cloud Persistence)
+
+### [Added]
+- **☁️ Ràng Buộc Vai Trò Theo Tài Khoản Cloud (`Account-Bound User Role`):**
+  * Bổ sung trường `role` ("wife" | "husband") trong [UserModel](file:///d:/Sources/HerFlow/lib/features/auth/domain/models/user_model.dart) và đồng bộ trực tiếp lên Cloud Firestore document `users/{uid}`.
+  * Thêm hàm `getUserRoleFromFirestore(uid)` và `syncUserRoleToFirestore(uid, role)` trong [AuthRepository](file:///d:/Sources/HerFlow/lib/features/auth/data/auth_repository.dart).
+  * `UserRoleNotifier.setRole(role, {uid})`: Tự động đẩy vai trò lên Cloud Firestore document `users/{uid}` ngay khi người dùng chọn vai trò.
+
+### [Changed]
+- **🚀 Luồng Đăng Nhập & Khôi Phục Vai Trò Đa Thiết Bị:**
+  * Khi đăng nhập Google thành công, hệ thống tự động đọc `users/{uid}.role` từ Firestore.
+  * Nếu đã có vai trò: Cập nhật ngay vào Hive + `userRoleProvider`, bỏ qua hoàn toàn màn hình chọn vai trò và điều hướng thẳng vào `AppRoutes.home`.
+  * Nếu là tài khoản mới tinh: Điều hướng vào `RoleSelectionScreen`.
+- **🔄 Khôi Phục Vai Trò Ngay Khi Khởi Động (`lib/main.dart`):**
+  * Trường hợp app bị xóa cài lại hoặc đăng nhập trên thiết bị mới, `main()` tự động khôi phục vai trò từ Cloud Firestore để mở thẳng màn hình chính.
+
+### [Fixed]
+- **🧹 Dọn Sạch Cache Khi Đăng Xuất (`Sign Out`):**
+  * Khi người dùng bấm Đăng xuất tại Cài đặt, hệ thống xóa triệt để `app_user_role`, `partner_user_role`, `keyHasSelectedRole`, `keyIsOnboardingCompleted` và gọi `userRoleProvider.notifier.resetRole()`.
+  * Ngăn chặn 100% tình trạng tài khoản sau đăng nhập bị nhận nhầm vai trò lưu tạm của tài khoản trước.
+
+---
+
 ## [0.5.2+12] - 2026-09-03 (Husband Quick Chat, 1-Touch Response Loop, Brand Launcher Icons & Stability)
 
 ### [Added]

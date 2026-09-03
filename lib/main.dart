@@ -11,6 +11,7 @@ import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/screens/biometric_lock_screen.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'core/theme/theme_controller.dart';
 
 void main() async {
@@ -28,15 +29,13 @@ void main() async {
   // Khởi tạo cơ sở dữ liệu cục bộ Hive (Offline-first)
   await Hive.initFlutter();
 
-  // Mở các Box lưu trữ dữ liệu an toàn trên máy
-  await Future.wait([
-    Hive.openBox(AppConstants.cycleBoxName),
-    Hive.openBox(AppConstants.moodBoxName),
-    Hive.openBox(AppConstants.settingsBoxName),
-    Hive.openBox(AppConstants.userBoxName),
-  ]);
+  // Mở các Box lưu trữ cần thiết
+  await Hive.openBox(AppConstants.cycleBoxName);
+  await Hive.openBox(AppConstants.moodBoxName);
+  await Hive.openBox(AppConstants.settingsBoxName);
+  await Hive.openBox(AppConstants.userBoxName);
 
-  // Khởi tạo Firebase phòng thủ ngoại lệ
+  // Khởi tạo Firebase
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -55,9 +54,36 @@ void main() async {
   final settingsBox = Hive.box(AppConstants.settingsBoxName);
 
   final isLoggedIn = userBox.get(AppConstants.keyUserIsLoggedIn, defaultValue: false) as bool;
-  final hasSelectedRole = settingsBox.get(AppConstants.keyHasSelectedRole, defaultValue: false) as bool;
-  final isOnboardingCompleted =
+  bool hasSelectedRole = settingsBox.get(AppConstants.keyHasSelectedRole, defaultValue: false) as bool;
+  bool isOnboardingCompleted =
       settingsBox.get(AppConstants.keyIsOnboardingCompleted, defaultValue: false) as bool;
+
+  // Khôi phục vai trò từ Cloud Firestore nếu đã đăng nhập nhưng Hive chưa có vai trò
+  if (isLoggedIn && !hasSelectedRole) {
+    final uid = userBox.get(AppConstants.keyUserUid) as String?;
+    if (uid != null && uid.isNotEmpty) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get()
+            .timeout(const Duration(seconds: 4));
+        if (doc.exists && doc.data() != null) {
+          final cloudRole = doc.data()?['role'] as String?;
+          if (cloudRole != null && (cloudRole == 'wife' || cloudRole == 'husband')) {
+            await settingsBox.put('app_user_role', cloudRole);
+            await settingsBox.put('partner_user_role', cloudRole);
+            await settingsBox.put(AppConstants.keyHasSelectedRole, true);
+            await settingsBox.put(AppConstants.keyIsOnboardingCompleted, true);
+            hasSelectedRole = true;
+            isOnboardingCompleted = true;
+          }
+        }
+      } catch (e) {
+        debugPrint('Cloud role restoration on startup notice: $e');
+      }
+    }
+  }
 
   String initialRoute;
   if (!isLoggedIn) {

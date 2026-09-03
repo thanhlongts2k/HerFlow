@@ -322,13 +322,14 @@ void main() {
   });
 
   group('UserModel Domain Tests', () {
-    test('Serialization and equality', () {
+    test('Serialization and equality with role', () {
       final now = DateTime(2026, 9, 3);
       final user = UserModel(
         uid: 'user_123',
         displayName: 'Thành Long',
         email: 'long@gmail.com',
         photoUrl: 'https://example.com/avatar.png',
+        role: 'husband',
         createdAt: now,
       );
 
@@ -336,12 +337,14 @@ void main() {
       expect(map['uid'], 'user_123');
       expect(map['displayName'], 'Thành Long');
       expect(map['email'], 'long@gmail.com');
+      expect(map['role'], 'husband');
 
       final restored = UserModel.fromMap(map);
       expect(restored.uid, user.uid);
       expect(restored.displayName, user.displayName);
       expect(restored.email, user.email);
       expect(restored.photoUrl, user.photoUrl);
+      expect(restored.role, 'husband');
     });
   });
 }

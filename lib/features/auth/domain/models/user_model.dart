@@ -6,6 +6,7 @@ class UserModel {
   final String displayName;
   final String email;
   final String? photoUrl;
+  final String? role; // 'wife' | 'husband'
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
 
@@ -14,6 +15,7 @@ class UserModel {
     required this.displayName,
     required this.email,
     this.photoUrl,
+    this.role,
     this.createdAt,
     this.lastLoginAt,
   });
@@ -23,6 +25,7 @@ class UserModel {
     'displayName': displayName,
     'email': email,
     'photoUrl': photoUrl,
+    'role': role,
     'createdAt': createdAt?.toIso8601String(),
     'lastLoginAt': lastLoginAt?.toIso8601String(),
   };
@@ -32,6 +35,7 @@ class UserModel {
     displayName: map['displayName'] as String? ?? 'Người dùng Moona',
     email: map['email'] as String? ?? '',
     photoUrl: map['photoUrl'] as String?,
+    role: map['role'] as String?,
     createdAt: map['createdAt'] != null
         ? DateTime.tryParse(map['createdAt'] as String)
         : null,
@@ -45,6 +49,7 @@ class UserModel {
     String? displayName,
     String? email,
     String? photoUrl,
+    String? role,
     DateTime? createdAt,
     DateTime? lastLoginAt,
   }) {
@@ -53,6 +58,7 @@ class UserModel {
       displayName: displayName ?? this.displayName,
       email: email ?? this.email,
       photoUrl: photoUrl ?? this.photoUrl,
+      role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
