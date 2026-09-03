@@ -234,6 +234,49 @@ void main() {
       expect(restored.isFromHusband, isFalse);
     });
 
+    test('Bidirectional Love Notes Thread List<CareSignalModel> roundtrip', () {
+      final msg1 = CareSignalModel(
+        id: 'msg-1',
+        coupleId: 'couple-789',
+        type: CareSignalType.custom,
+        customNote: 'Em đau lưng quá anh ơi 🥺',
+        sentAt: DateTime(2026, 9, 3, 20, 0),
+        senderRole: 'wife',
+        senderNickname: 'Em bé',
+        targetNickname: 'Anh',
+      );
+
+      final msg2 = CareSignalModel(
+        id: 'msg-2',
+        coupleId: 'couple-789',
+        type: CareSignalType.reply,
+        customNote: 'Anh pha nước ấm cho em liền 🍵',
+        sentAt: DateTime(2026, 9, 3, 20, 2),
+        senderRole: 'husband',
+        senderNickname: 'Anh',
+        targetNickname: 'Em bé',
+      );
+
+      final thread = [msg2, msg1]; // Sắp xếp giảm dần theo thời gian (mới nhất lên đầu)
+      expect(thread.length, 2);
+      expect(thread.first.id, 'msg-2');
+      expect(thread.first.type, CareSignalType.reply);
+      expect(thread.first.isFromHusband, isTrue);
+      expect(thread.first.customNote, 'Anh pha nước ấm cho em liền 🍵');
+      expect(thread.last.id, 'msg-1');
+      expect(thread.last.isFromHusband, isFalse);
+
+      // Serialize list to maps
+      final mappedList = thread.map((e) => e.toMap()).toList();
+      final restoredList = mappedList.map((e) => CareSignalModel.fromMap(e)).toList();
+
+      expect(restoredList.length, 2);
+      expect(restoredList[0].customNote, 'Anh pha nước ấm cho em liền 🍵');
+      expect(restoredList[0].type, CareSignalType.reply);
+      expect(restoredList[1].customNote, 'Em đau lưng quá anh ơi 🥺');
+      expect(restoredList[1].type, CareSignalType.custom);
+    });
+
     test('AES-256 and SHA-256 checksum integrity verification', () {
       final key = enc.Key.fromUtf8('MoonaSec2026!Key@SecretFlow2026!');
       final iv = enc.IV.fromUtf8('MoonaIV2026Init!');

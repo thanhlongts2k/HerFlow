@@ -436,91 +436,43 @@ class PartnerSyncRepository {
     }
   }
 
-  /// Chồng phản hồi nhanh 1 chạm lên tín hiệu của Vợ
+  /// Phản hồi tín hiệu yêu thương 2 chiều: Tạo một Document MỚI ĐỘC LẬP trong Thread hội thoại
   Future<void> respondCareSignal({
     required String signalId,
     required String responseMessage,
+    String? senderRole,
+    String? senderNickname,
+    String? targetNickname,
   }) async {
-    final coupleId = getSavedCoupleId();
-    final pairingCode = _settingsBox.get(keyPairingCode) as String?;
-    final now = DateTime.now();
-    final updatePayload = {
-      'responseMessage': responseMessage,
-      'respondedAt': now.toIso8601String(),
-      'isRead': true,
-    };
-
-    // 1. Cập nhật Hive local
-    final localData = _settingsBox.get(keyLatestLocalSignal);
-    if (localData is Map) {
-      final map = Map<String, dynamic>.from(localData);
-      map['responseMessage'] = responseMessage;
-      map['respondedAt'] = now.toIso8601String();
-      map['isRead'] = true;
-      await _settingsBox.put(keyLatestLocalSignal, map);
-    }
-
-    if ((coupleId == null || coupleId.isEmpty) && (pairingCode == null || pairingCode.isEmpty)) {
-      throw Exception('Chưa kết nối với người thương.');
-    }
-
-    bool success = false;
-    Object? lastError;
-
-    // 2. Cập nhật Firestore couples collection
-    if (coupleId != null && coupleId.isNotEmpty) {
-      try {
-        await _firestore
-            .collection('couples')
-            .doc(coupleId)
-            .collection('care_signals')
-            .doc(signalId)
-            .set(updatePayload, SetOptions(merge: true))
-            .timeout(_kFirestoreTimeout);
-        success = true;
-      } catch (e) {
-        lastError = e;
-        debugPrint('PartnerSyncRepository: respondCareSignal couples error: $e');
-      }
-    }
-
-    // 3. Cập nhật Firestore pairings collection
-    if (pairingCode != null && pairingCode.isNotEmpty) {
-      try {
-        await _firestore
-            .collection('pairings')
-            .doc(pairingCode)
-            .collection('care_signals')
-            .doc(signalId)
-            .set(updatePayload, SetOptions(merge: true))
-            .timeout(_kFirestoreTimeout);
-        success = true;
-      } catch (e) {
-        lastError = e;
-        debugPrint('PartnerSyncRepository: respondCareSignal pairings error: $e');
-      }
-    }
-
-    if (!success && lastError != null) {
-      throw Exception('Không thể gửi phản hồi lên đám mây. Vui lòng kiểm tra kết nối mạng!');
-    }
+    final coupleId = getSavedCoupleId() ?? '';
+    final newSignal = CareSignalModel(
+      id: const Uuid().v4(),
+      coupleId: coupleId,
+      type: CareSignalType.reply,
+      customNote: responseMessage,
+      sentAt: DateTime.now(),
+      isRead: false,
+      senderRole: senderRole ?? 'husband',
+      senderNickname: senderNickname,
+      targetNickname: targetNickname,
+    );
+    await sendCareSignal(newSignal);
   }
 
-  /// Lắng nghe tín hiệu yêu thương mới nhất từ Firestore theo thời gian thực (fallback Hive)
-  Stream<CareSignalModel?> watchLatestCareSignal(String coupleId) {
+  /// Lắng nghe danh sách tin nhắn / tín hiệu trong Thread 2 chiều (mặc định 20 bản ghi)
+  Stream<List<CareSignalModel>> watchCoupleSignalsStream(String coupleId, {int limit = 20}) {
     final pairingCode = _settingsBox.get(keyPairingCode) as String?;
 
     if (coupleId.isEmpty && (pairingCode == null || pairingCode.isEmpty)) {
       final local = _settingsBox.get(keyLatestLocalSignal);
       if (local is Map) {
         try {
-          return Stream.value(CareSignalModel.fromMap(Map<String, dynamic>.from(local)));
+          return Stream.value([CareSignalModel.fromMap(Map<String, dynamic>.from(local))]);
         } catch (_) {}
       }
-      return Stream.value(null);
+      return Stream.value([]);
     }
 
-    // Ưu tiên lắng nghe subcollection của coupleId hoặc pairingCode
     final targetRef = coupleId.isNotEmpty
         ? _firestore.collection('couples').doc(coupleId).collection('care_signals')
         : _firestore.collection('pairings').doc(pairingCode).collection('care_signals');
@@ -529,29 +481,38 @@ class PartnerSyncRepository {
       if (snapshot.docs.isEmpty) {
         final local = _settingsBox.get(keyLatestLocalSignal);
         if (local is Map) {
-          return CareSignalModel.fromMap(Map<String, dynamic>.from(local));
+          try {
+            return [CareSignalModel.fromMap(Map<String, dynamic>.from(local))];
+          } catch (_) {}
         }
-        return null;
+        return <CareSignalModel>[];
       }
 
-      // Sắp xếp in-memory theo sentAt giảm dần để tránh lỗi composite index Firestore
       final list = snapshot.docs
           .map((doc) => CareSignalModel.fromMap(doc.data()))
           .toList();
       list.sort((a, b) => b.sentAt.compareTo(a.sentAt));
-      final latest = list.first;
+      final capped = list.take(limit).toList();
 
-      // Cập nhật bộ đệm Hive local
-      _settingsBox.put(keyLatestLocalSignal, latest.toMap());
-      return latest;
+      if (capped.isNotEmpty) {
+        _settingsBox.put(keyLatestLocalSignal, capped.first.toMap());
+      }
+      return capped;
     }).handleError((e) {
-      debugPrint('PartnerSyncRepository: watchLatestCareSignal error: $e');
+      debugPrint('PartnerSyncRepository: watchCoupleSignalsStream error: $e');
       final local = _settingsBox.get(keyLatestLocalSignal);
       if (local is Map) {
-        return CareSignalModel.fromMap(Map<String, dynamic>.from(local));
+        try {
+          return [CareSignalModel.fromMap(Map<String, dynamic>.from(local))];
+        } catch (_) {}
       }
-      return null;
+      return <CareSignalModel>[];
     });
+  }
+
+  /// Lắng nghe tín hiệu yêu thương mới nhất từ Firestore theo thời gian thực (fallback Hive)
+  Stream<CareSignalModel?> watchLatestCareSignal(String coupleId) {
+    return watchCoupleSignalsStream(coupleId, limit: 1).map((list) => list.firstOrNull);
   }
 
   /// Ngắt kết nối ghép đôi giữa hai thiết bị

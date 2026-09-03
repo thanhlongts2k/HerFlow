@@ -8,6 +8,7 @@ import 'package:herflow/core/utils/haptic_feedback_utils.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import 'package:herflow/features/care_signals/presentation/controllers/care_signal_controller.dart';
 import 'package:herflow/features/care_signals/presentation/widgets/care_signal_sheet.dart';
+import 'package:herflow/features/care_signals/presentation/widgets/love_notes_thread_modal.dart';
 import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
@@ -73,11 +74,7 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
 
     final bool showHusbandBanner = isPaired &&
         latestSignal != null &&
-        dismissedId != latestSignal.id &&
-        (latestSignal.isFromHusband ||
-            (latestSignal.isResponded &&
-                latestSignal.responseMessage != null &&
-                latestSignal.responseMessage!.isNotEmpty));
+        dismissedId != latestSignal.id;
 
     return Scaffold(
       appBar: AppBar(
@@ -100,16 +97,22 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
           ],
         ),
         actions: [
-          // Nút Care Signal (tín hiệu yêu thương)
+          // Nút Hộp Thư Yêu Thương 2 Chiều (Love Notes Thread)
           IconButton(
             icon: Icon(
               Icons.favorite_rounded,
               color: isPaired ? AppColors.primary : AppColors.primary.withAlpha(120),
             ),
             tooltip: isPaired
-                ? 'Gửi tín hiệu yêu thương đến chồng'
-                : 'Ghép đôi để gửi tín hiệu yêu thương',
-            onPressed: () => CareSignalSheet.show(context),
+                ? 'Mở Hộp Thư Yêu Thương với ${nicknameConfig.callPartnerAs}'
+                : 'Ghép đôi để mở hộp thư yêu thương',
+            onPressed: () {
+              if (isPaired) {
+                LoveNotesThreadModal.show(context);
+              } else {
+                CareSignalSheet.show(context);
+              }
+            },
           ),
           // Badge Người thương kết nối
           if (savedCoupleId != null && savedCoupleId.isNotEmpty)
@@ -368,7 +371,8 @@ class _HusbandResponseBannerState extends ConsumerState<_HusbandResponseBanner> 
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isQuestion = widget.signal.isFromHusband && !widget.signal.isResponded;
+    final isFromHusband = widget.signal.isFromHusband;
+    final isQuestion = isFromHusband && !widget.signal.isResponded;
     final senderName = widget.signal.senderNickname ?? widget.partnerNickname;
 
     return Container(
@@ -396,140 +400,158 @@ class _HusbandResponseBannerState extends ConsumerState<_HusbandResponseBanner> 
       ),
       child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                AppHaptics.selection();
+                LoveNotesThreadModal.show(context);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(30),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(isQuestion ? '💬' : '💖', style: const TextStyle(fontSize: 16)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isQuestion
-                                ? '$senderName vừa nhắn hỏi thăm 💕'
-                                : 'Lời nhắn từ $senderName 💕',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13.5,
-                              color: AppColors.primary,
-                            ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(30),
+                            shape: BoxShape.circle,
                           ),
-                          Text(
-                            widget.signal.respondedAt != null
-                                ? 'Đã phản hồi'
-                                : (isQuestion ? 'Vừa xong • 1 chạm trả lời ngay' : 'Vừa xong'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Bong bóng tin nhắn
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.black.withAlpha(80)
-                        : Colors.white.withAlpha(200),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: AppColors.primary.withAlpha(isDark ? 60 : 80),
-                    ),
-                  ),
-                  child: Text(
-                    isQuestion
-                        ? (widget.signal.customNote ?? 'Đang nghĩ đến em...')
-                        : (widget.signal.isFromHusband
-                            ? 'Bạn: "${widget.signal.responseMessage}"'
-                            : (widget.signal.responseMessage ?? '')),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black87,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-
-                // NẾU LÀ CÂU HỎI TỪ CHỒNG & CHƯA PHẢN HỒI: HIỂN THỊ 4 NÚT PHẢN HỒI NHANH 1 CHẠM
-                if (isQuestion) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Phản hồi nhanh 1 chạm cho anh:',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: theme.textTheme.bodyMedium?.color?.withAlpha(200),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _quickWifeReplies.map((reply) {
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isResponding ? null : () => _respond(reply),
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withAlpha(isDark ? 35 : 20),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: AppColors.primary.withAlpha(isDark ? 80 : 50),
-                              ),
-                            ),
-                            child: Text(
-                              reply,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
-                            ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            isFromHusband ? (isQuestion ? '💬' : '💖') : '🌸',
+                            style: const TextStyle(fontSize: 16),
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ] else ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.signal.isFromHusband
-                        ? 'Lời hỏi thăm: "${widget.signal.customNote}"'
-                        : 'Phản hồi cho: "${widget.signal.customNote ?? widget.signal.type.label}"',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontStyle: FontStyle.italic,
-                      color: theme.textTheme.bodySmall?.color,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isFromHusband
+                                    ? (isQuestion
+                                        ? '$senderName vừa nhắn hỏi thăm 💕'
+                                        : 'Lời nhắn từ $senderName 💕')
+                                    : 'Bạn vừa nhắn cho ${widget.partnerNickname} 💕',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13.5,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              Text(
+                                isFromHusband
+                                    ? (widget.signal.respondedAt != null
+                                        ? 'Đã phản hồi'
+                                        : (isQuestion ? 'Vừa xong • 1 chạm trả lời ngay' : 'Vừa xong'))
+                                    : 'Đang đợi ${widget.partnerNickname} đọc & phản hồi... ⏳',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                      ],
                     ),
-                  ),
-                ],
-              ],
+                    const SizedBox(height: 10),
+
+                    // Bong bóng tin nhắn
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.black.withAlpha(80)
+                            : Colors.white.withAlpha(200),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.primary.withAlpha(isDark ? 60 : 80),
+                        ),
+                      ),
+                      child: Text(
+                        widget.signal.customNote ?? widget.signal.type.label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+
+                    // NẾU LÀ CÂU HỎI TỪ CHỒNG & CHƯA PHẢN HỒI: HIỂN THỊ 4 NÚT PHẢN HỒI NHANH 1 CHẠM
+                    if (isQuestion) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Phản hồi nhanh 1 chạm cho anh:',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: theme.textTheme.bodyMedium?.color?.withAlpha(200),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _quickWifeReplies.map((reply) {
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _isResponding ? null : () => _respond(reply),
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withAlpha(isDark ? 35 : 20),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: AppColors.primary.withAlpha(isDark ? 80 : 50),
+                                  ),
+                                ),
+                                child: Text(
+                                  reply,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(Icons.forum_outlined, size: 13, color: AppColors.primary.withAlpha(180)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Chạm để mở Hộp Thư Yêu Thương 💬',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary.withAlpha(200),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           Positioned(

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -313,21 +314,15 @@ class SettingsScreen extends ConsumerWidget {
                 fontWeight: isConnected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
+            onTap: isConnected
+                ? () => _showConnectionManagementSheet(context, ref)
+                : null,
             trailing: isConnected
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PairingScreen(
-                                initialIndex: currentRole == UserRole.husband ? 1 : 0,
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: () => _showConnectionManagementSheet(context, ref),
                         child: const Text(
                           'Quản lý',
                           style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
@@ -1416,6 +1411,317 @@ class SettingsScreen extends ConsumerWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  /// Modal BottomSheet Quản Lý Trạng Thái Kết Nối Đôi Lứa
+  void _showConnectionManagementSheet(BuildContext context, WidgetRef ref) {
+    AppHaptics.selection();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final savedCoupleId = ref.read(savedCoupleIdProvider);
+    final pairingState = ref.read(partnerSyncControllerProvider);
+    final nicknameConfig = ref.read(nicknameConfigProvider);
+    final currentRole = ref.read(userRoleProvider);
+
+    final partnerName = nicknameConfig.callPartnerAs.isNotEmpty
+        ? nicknameConfig.callPartnerAs
+        : (currentRole == UserRole.husband ? 'Em bé' : 'Anh');
+
+    final activeCode = pairingState.activePairingCode;
+    final rawCoupleId = savedCoupleId ?? '';
+
+    // Ưu tiên hiển thị mã 6 ký tự nếu còn lưu, nếu không thì hiển thị 8 ký tự của coupleId
+    final String displayCode = (activeCode != null && activeCode.isNotEmpty)
+        ? activeCode
+        : (rawCoupleId.isNotEmpty
+            ? (rawCoupleId.length >= 8
+                ? rawCoupleId.substring(0, 8).toUpperCase()
+                : rawCoupleId.toUpperCase())
+            : 'MOONA-PAIR');
+
+    // Chuỗi để sao chép vào Clipboard (luôn đảm bảo không null, không rỗng)
+    final String codeToCopy = (activeCode != null && activeCode.isNotEmpty)
+        ? activeCode
+        : (rawCoupleId.isNotEmpty ? rawCoupleId : 'N/A');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 80 : 30),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Thanh Handle Bar
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withAlpha(80),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Icon & Tiêu đề
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.success.withAlpha(isDark ? 40 : 25),
+                ),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.success,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Quản Lý Kết Nối Đôi Lứa 💕',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Đang kết nối cùng $partnerName',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Hộp hiển thị Mã Ghép Đôi / Mã Cặp Đôi
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.cardDark
+                      : AppColors.primaryContainer.withAlpha(45),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.primary.withAlpha(isDark ? 80 : 100),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'MÃ KẾT NỐI LIÊN KẾT',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                        color: AppColors.primary.withAlpha(200),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      displayCode,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 4,
+                        fontFamily: 'monospace',
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          AppHaptics.light();
+                          await Clipboard.setData(ClipboardData(text: codeToCopy));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Row(
+                                  children: [
+                                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                    SizedBox(width: 8),
+                                    Text('Đã sao chép mã liên kết vào khay nhớ tạm! 📋'),
+                                  ],
+                                ),
+                                backgroundColor: AppColors.secondary,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('Error copying code: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                      label: const Text(
+                        'Sao chép mã',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Thông tin trạng thái kỹ thuật
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withAlpha(10) : Colors.grey.withAlpha(20),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Vai trò của bạn:',
+                          style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
+                        ),
+                        Text(
+                          currentRole == UserRole.husband ? 'Chồng 🛡️' : 'Vợ 🌸',
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Kênh đồng bộ:',
+                          style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
+                        ),
+                        const Text(
+                          'Firestore Realtime Sync ⚡',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Nút Hủy Kết Nối (Unpair) với xác nhận cảnh báo đỏ
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    AppHaptics.heavy();
+                    final confirmed = await MoonaConfirmDialog.show(
+                      context,
+                      title: 'Hủy Kết Nối Cặp Đôi?',
+                      message:
+                          'Bạn và $partnerName sẽ ngắt kết nối đồng bộ dữ liệu thời gian thực. Sau khi hủy, cả hai sẽ cần nhập lại mã ghép đôi mới nếu muốn kết nối lại.',
+                      icon: Icons.link_off_rounded,
+                      confirmText: 'Hủy kết nối',
+                      cancelText: 'Giữ kết nối',
+                      isDestructive: true,
+                    );
+                    if (confirmed == true) {
+                      if (modalContext.mounted) {
+                        Navigator.pop(modalContext);
+                      }
+                      await ref.read(partnerSyncControllerProvider.notifier).disconnect();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Đã hủy kết nối cặp đôi thành công.'),
+                            backgroundColor: AppColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.link_off_rounded, color: AppColors.error, size: 20),
+                  label: const Text(
+                    'Hủy kết nối cặp đôi',
+                    style: TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.error.withAlpha(120)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Nút Đóng
+              TextButton(
+                onPressed: () => Navigator.pop(modalContext),
+                child: Text(
+                  'Đóng',
+                  style: TextStyle(
+                    color: theme.textTheme.bodySmall?.color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

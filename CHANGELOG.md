@@ -4,6 +4,29 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.4+19] - 2026-09-03 (Bidirectional Mini Love Notes Thread & Outgoing Blindspot Elimination)
+
+### [Added]
+- **💬 Hộp Thư Yêu Thương 2 Chiều (`LoveNotesThreadModal`):**
+  * Nâng cấp luồng tin nhắn thành hộp thoại Timeline 2 chiều mini hoàn chỉnh giữa Vợ và Chồng.
+  * Phân biệt rõ ràng bong bóng chat của Bản thân (bên phải, màu hồng thương hiệu) và Người thương (bên trái, pastel).
+  * Hiển thị thiệp tín hiệu (Care Signal Badge) nổi bật cho các yêu cầu hành động (Ôm, Nước ấm, Cà phê...).
+  * Thanh soạn thảo cố định đáy modal tích hợp Quick Suggestion Chips và TextField gõ tự do (chống tràn bàn phím).
+- **🔄 Phản Hồi Tạo Document Độc Lập:**
+  * Sửa đổi cơ chế phản hồi nhanh của Chồng/Vợ: Mỗi lượt phản hồi tạo một Document mới độc lập trong subcollection `care_signals` thay vì merge đè vào tin cũ.
+  * Bổ sung `CareSignalType.reply` và Stream `coupleCareSignalsStreamProvider` lắng nghe tới 30 tin nhắn gần nhất.
+- **✨ Triệt Tiêu Lỗi Outgoing Blindspot:**
+  * Banner trên trang chủ của Vợ (`CycleScreen`) và Chồng (`HusbandViewScreen`) cập nhật trạng thái thời gian thực cả khi vừa gửi đi lẫn khi nhận được tin.
+  * Nhấn vào Banner hoặc Icon Trái tim trên AppBar lập tức mở `LoveNotesThreadModal`.
+
+### [Fixed]
+- **🛠️ Khắc Phục Dứt Điểm Lỗi Crash Khi Bấm Nút [Quản lý] Trạng Thái Kết Nối:**
+  * Thay thế chuyển hướng `PairingScreen` bằng Modal BottomSheet `_showConnectionManagementSheet` chuyên dụng trong Cài đặt.
+  * Hiển thị mã liên kết rút gọn kèm nút sao chép 1 chạm an toàn (bọc `try/catch` Clipboard, chống null fallback và hiện SnackBar).
+  * Xác thực hủy kết nối cặp đôi với cảnh báo đỏ qua `MoonaConfirmDialog`.
+
+---
+
 ## [0.6.3+18] - 2026-09-03 (Establish Business Matrix, Husband 4-Tab Layout & Visual UX Hardening)
 
 ### [Added]

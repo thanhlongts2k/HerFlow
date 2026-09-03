@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.6.3+18` (Visual UX Audit Fixes — Husband Navigation & Pairing Banner)  
-> **Thời điểm cập nhật:** 03/09/2026 — Khắc phục dứt điểm 3 cụm lỗi Critical P0/P1 từ VISUAL_UX_AUDIT_REPORT.md  
+> **Phiên bản hiện tại:** `v0.6.4+19` (Bidirectional Mini Love Notes Thread & Outgoing Blindspot Elimination)  
+> **Thời điểm cập nhật:** 03/09/2026 — Nâng cấp Hộp thư yêu thương 2 chiều mini & phản hồi độc lập  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -11,8 +11,10 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **31/31 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Love Note roundtrip) |
+| **Unit Testing (`flutter test`)** | ✅ **32/32 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Bidirectional Love Notes Thread) |
 | **Bản Đồ Nghiệp Vụ Toàn Dự Án** | ✅ **CHUẨN HÓA** | Tạo `docs/APP_BUSINESS_MATRIX.md` phân định quyền 2 Role, Unpaired vs Paired, Data Boundary & Perspective Mapping |
+| **Hộp Thư Tình Yêu 2 Chiều (Love Notes Thread)** | ✅ **HOÀN TẤT** | Nâng cấp toàn diện: Luồng đối thoại 2 chiều mini, Timeline bong bóng chuẩn chat, triệt tiêu lỗi Outgoing Blindspot, hỗ trợ phản hồi tạo document mới |
+| **Quản Lý Kết Nối Cặp Đôi (Connection Modal)** | ✅ **FIXED & NÂNG CẤP** | Xóa bỏ crash khi bấm nút [Quản lý] trong Cài đặt; Modal BottomSheet hiển thị mã liên kết, sao chép 1 chạm an toàn (Clipboard try/catch) & MoonaConfirmDialog hủy kết nối |
 | **Tin Nhắn Tùy Biến Cho Vợ (Love Note)** | ✅ **HOÀN TẤT** | Nàng tự do gõ tin nhắn (max 150 ký tự), quick chips gợi ý, chống tràn bàn phím, bong bóng tin nhắn hiển thị nổi bật trên máy Chồng |
 | **BUG-01 + BUG-08: Navigation Chồng** | ✅ **FIXED** | `MainNavScreen` giờ có `_buildHusbandLayout()` riêng: Scaffold + BottomNav 4 tab (Trang chủ, Cảm xúc, Dinh dưỡng, Cài đặt). Chồng chuyển tab bình thường |
 | **BUG-04: Banner ghép đôi thừa** | ✅ **FIXED** | `_buildConnectionHeader()` phân nhánh rõ 2 trạng thái: `isConnected=true` → Card xanh tĩnh "Đang đồng hành 💕"; `isConnected=false` → Banner CTA ghép đôi |

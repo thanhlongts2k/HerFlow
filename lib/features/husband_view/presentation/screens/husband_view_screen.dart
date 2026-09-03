@@ -18,6 +18,7 @@ import 'package:herflow/features/cycle/presentation/widgets/cycle_calendar_view.
 import 'package:herflow/features/cycle/presentation/widgets/cycle_phase_legend.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
+import 'package:herflow/features/care_signals/presentation/widgets/love_notes_thread_modal.dart';
 import '../widgets/husband_quick_chat_sheet.dart';
 
 /// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
@@ -589,6 +590,45 @@ class HusbandViewScreen extends ConsumerWidget {
               ],
             ),
           ],
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () {
+              AppHaptics.selection();
+              LoveNotesThreadModal.show(context);
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: (signal.isFromHusband ? AppColors.primary : AppColors.secondary)
+                    .withAlpha(isDark ? 30 : 15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: (signal.isFromHusband ? AppColors.primary : AppColors.secondary)
+                      .withAlpha(50),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.forum_outlined,
+                    size: 15,
+                    color: signal.isFromHusband ? AppColors.primary : AppColors.secondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Mở Hộp Thư Trò Chuyện với $partnerName 💬',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: signal.isFromHusband ? AppColors.primary : AppColors.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

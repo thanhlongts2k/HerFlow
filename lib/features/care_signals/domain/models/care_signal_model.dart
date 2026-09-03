@@ -10,6 +10,7 @@ enum CareSignalType {
   remind,         // Nhắc nhở nhẹ nhàng
   husbandMessage, // Lời hỏi thăm từ Người thương
   custom,         // Tin nhắn tùy biến nàng tự gõ
+  reply,          // Phản hồi yêu thương 2 chiều
 }
 
 extension CareSignalTypeExt on CareSignalType {
@@ -23,6 +24,7 @@ extension CareSignalTypeExt on CareSignalType {
       case CareSignalType.remind:         return 'Nhắc nhở nhẹ nhàng 🔔';
       case CareSignalType.husbandMessage: return 'Hỏi thăm & Nhắn nhủ nàng 💬';
       case CareSignalType.custom:         return 'Lời nhắn tâm tình 💌';
+      case CareSignalType.reply:          return 'Phản hồi yêu thương 💬';
     }
   }
 
@@ -36,6 +38,7 @@ extension CareSignalTypeExt on CareSignalType {
       case CareSignalType.remind:         return '🔔';
       case CareSignalType.husbandMessage: return '💬';
       case CareSignalType.custom:         return '💌';
+      case CareSignalType.reply:          return '💬';
     }
   }
 }
