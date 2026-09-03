@@ -226,7 +226,7 @@ class HusbandViewScreen extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () {
                     final text = '''
-🌸 Tóm tắt thể trạng HerFlow hôm nay:
+🌸 Tóm tắt thể trạng Moona hôm nay:
 - Giai đoạn: ${phase.vietnameseName} (Ngày $cycleDay)
 - Tâm trạng: ${moodEntry.mood} (Năng lượng: ${moodEntry.energyLevel}/5)
 - Lời nhắc yêu thương: ${phase.husbandAdvice}

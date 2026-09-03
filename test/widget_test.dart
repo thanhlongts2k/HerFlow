@@ -1,6 +1,10 @@
 // test/widget_test.dart
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herflow/core/constants/cycle_phase.dart';
+import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
 import 'package:herflow/features/cycle/domain/entities/period_record.dart';
 
@@ -58,6 +62,22 @@ void main() {
       expect(cycle.daysUntilNextPeriod(day15), 14);
     });
 
+    test('PMS Pre-Warning window and start date calculation', () {
+      // Ngày kế tiếp kỳ kinh = 29/09/2026
+      expect(cycle.nextPeriodDate, DateTime(2026, 9, 29));
+
+      // Ngày bắt đầu PMS = 29/09 - 7 ngày = 22/09/2026
+      expect(cycle.nextPmsStartDate, DateTime(2026, 9, 22));
+
+      // Ngày 23/09 (còn 6 ngày nữa đến kỳ kinh) -> Nằm trong PMS window
+      final pmsDay = DateTime(2026, 9, 23);
+      expect(cycle.isPmsWindow(pmsDay), isTrue);
+
+      // Ngày 10/09 (còn 19 ngày nữa) -> Không phải PMS window
+      final nonPmsDay = DateTime(2026, 9, 10);
+      expect(cycle.isPmsWindow(nonPmsDay), isFalse);
+    });
+
     test('CycleDayInfo calculation provides workout & hormone insights', () {
       final dayInfo = cycle.getDayInfo(baseDate);
       expect(dayInfo.phase, CyclePhase.menstrual);
@@ -78,6 +98,52 @@ void main() {
       expect(record.durationInDays, 5);
       expect(record.containsDate(DateTime(2026, 8, 3)), isTrue);
       expect(record.containsDate(DateTime(2026, 8, 6)), isFalse);
+    });
+  });
+
+  group('v0.3.0 Care Signals & Backup Unit Tests', () {
+    test('CareSignalModel serialization roundtrip', () {
+      final signal = CareSignalModel(
+        id: 'sig-test-1',
+        coupleId: 'couple-123',
+        type: CareSignalType.heatPack,
+        message: 'Đau bụng cần chườm ấm',
+        createdAt: DateTime(2026, 9, 3, 10, 30),
+        isRead: false,
+      );
+
+      final map = signal.toMap();
+      expect(map['id'], 'sig-test-1');
+      expect(map['type'], 'heatPack');
+
+      final restored = CareSignalModel.fromMap(map);
+      expect(restored.id, signal.id);
+      expect(restored.type, CareSignalType.heatPack);
+      expect(restored.message, signal.message);
+      expect(restored.isRead, isFalse);
+    });
+
+    test('AES-256 and SHA-256 checksum integrity verification', () {
+      final key = enc.Key.fromUtf8('MoonaSec2026!Key@SecretFlow2026!');
+      final iv = enc.IV.fromUtf8('MoonaIV2026Init!');
+      final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+
+      const payload = '{"app":"Moona","test":true}';
+      final checksum = sha256.convert(utf8.encode(payload)).toString();
+
+      final envelope = jsonEncode({'checksum': checksum, 'payload': payload});
+      final encrypted = encrypter.encrypt(envelope, iv: iv);
+
+      // Giải mã
+      final decrypted = encrypter.decrypt64(encrypted.base64, iv: iv);
+      final envelopeDecoded = jsonDecode(decrypted) as Map<String, dynamic>;
+
+      expect(envelopeDecoded['checksum'], checksum);
+      expect(envelopeDecoded['payload'], payload);
+
+      // Verify checksum
+      final verifyHash = sha256.convert(utf8.encode(envelopeDecoded['payload'] as String)).toString();
+      expect(verifyHash, checksum);
     });
   });
 }

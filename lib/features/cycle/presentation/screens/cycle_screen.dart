@@ -10,6 +10,7 @@ import '../widgets/cycle_hero_indicator.dart';
 import '../widgets/cycle_phase_legend.dart';
 import '../widgets/cycle_settings_sheet.dart';
 import '../widgets/log_period_modal.dart';
+import 'package:herflow/features/care_signals/presentation/widgets/care_signal_sheet.dart';
 
 /// Màn hình chính Theo Dõi Chu Kỳ Sinh Học 4 Pha (Cycle Screen)
 class CycleScreen extends ConsumerWidget {
@@ -24,11 +25,12 @@ class CycleScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'HerFlow',
+              'Moona',
               style: theme.textTheme.headlineMedium?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w800,
@@ -42,6 +44,11 @@ class CycleScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite_rounded, color: AppColors.primary),
+            tooltip: 'Gửi tín hiệu yêu thương đến chồng',
+            onPressed: () => CareSignalSheet.show(context),
+          ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
             tooltip: 'Tùy chỉnh chu kỳ',

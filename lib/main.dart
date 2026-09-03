@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/constants/app_constants.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/screens/biometric_lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,15 +40,29 @@ void main() async {
     debugPrint('Firebase initialization notice: $e');
   }
 
+  // Khởi tạo NotificationService và kênh thông báo PMS
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('NotificationService init notice: $e');
+  }
+
+  // Kiểm tra trạng thái hoàn thành Onboarding
+  final settingsBox = Hive.box(AppConstants.settingsBoxName);
+  final isOnboardingCompleted =
+      settingsBox.get(AppConstants.keyIsOnboardingCompleted, defaultValue: false) as bool;
+
   runApp(
-    const ProviderScope(
-      child: HerFlowApp(),
+    ProviderScope(
+      child: MoonaApp(isOnboardingCompleted: isOnboardingCompleted),
     ),
   );
 }
 
-class HerFlowApp extends StatelessWidget {
-  const HerFlowApp({super.key});
+class MoonaApp extends StatelessWidget {
+  final bool isOnboardingCompleted;
+
+  const MoonaApp({super.key, required this.isOnboardingCompleted});
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +72,13 @@ class HerFlowApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      initialRoute: AppRoutes.home,
+      initialRoute: isOnboardingCompleted ? AppRoutes.home : AppRoutes.onboarding,
       onGenerateRoute: AppRoutes.onGenerateRoute,
+      builder: (context, child) {
+        return BiometricLockScreen(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

@@ -1,12 +1,12 @@
 // lib/core/constants/app_constants.dart
 
-/// Các hằng số cấu hình hệ thống và Box Hive lưu trữ của HerFlow
+/// Các hằng số cấu hình hệ thống và Box Hive lưu trữ của Moona
 class AppConstants {
   AppConstants._();
 
   // App Metadata
-  static const String appName = 'HerFlow';
-  static const String appVersion = '1.0.0';
+  static const String appName = 'Moona';
+  static const String appVersion = '0.3.0';
   static const String appTagline = 'Chu Kỳ • Cảm Xúc • Dinh Dưỡng Phụ Nữ';
 
   // Hive Box Names
@@ -27,4 +27,7 @@ class AppConstants {
   static const String keyPeriodDuration = 'period_duration';
   static const String keyThemeMode = 'theme_mode';
   static const String keyIsHusbandMode = 'is_husband_mode';
+  static const String keyIsOnboardingCompleted = 'is_onboarding_completed';
+  static const String keyIsBiometricEnabled = 'is_biometric_enabled';
+  static const String keyOnboardingGoal = 'onboarding_goal';
 }

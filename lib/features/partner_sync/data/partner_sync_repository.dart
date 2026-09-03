@@ -139,23 +139,67 @@ class PartnerSyncRepository {
     }
   }
 
+  static const String keyIsPendingSync = 'is_pending_sync';
+  static const String keyPendingStatusData = 'pending_status_data';
+
+  /// Kiểm tra xem có dữ liệu đang chờ đồng bộ hay không
+  bool isPendingSync() => _settingsBox.get(keyIsPendingSync, defaultValue: false) as bool;
+
   // === 3. ĐỒNG BỘ DỮ LIỆU THỜI GIAN THỰC (REALTIME STATUS SYNC) ===
   /// Vợ tự động đẩy trạng thái hôm nay lên Cloud (couples/{coupleId}/status/today)
-  Future<void> pushTodayStatus(PartnerStatusModel status) async {
-    try {
-      final coupleId = status.coupleId.isNotEmpty ? status.coupleId : getSavedCoupleId();
-      if (coupleId == null || coupleId.isEmpty) return;
+  Future<void> pushTodayStatus(PartnerStatusModel status, {bool isOnline = true}) async {
+    final coupleId = status.coupleId.isNotEmpty ? status.coupleId : getSavedCoupleId();
+    if (coupleId == null || coupleId.isEmpty) return;
 
+    if (!isOnline) {
+      // Lưu cờ và dữ liệu vào hàng đợi ngoại tuyến của Hive
+      await _settingsBox.put(keyIsPendingSync, true);
+      await _settingsBox.put(keyPendingStatusData, status.toMap());
+      return;
+    }
+
+    try {
       await _firestore
           .collection('couples')
           .doc(coupleId)
           .collection('status')
           .doc('today')
           .set(status.toMap(), SetOptions(merge: true));
+
+      // Đẩy thành công -> xóa cờ pending
+      await _settingsBox.put(keyIsPendingSync, false);
+      await _settingsBox.delete(keyPendingStatusData);
     } on FirebaseException catch (_) {
-      // Offline cache tự xử lý ngầm, không crash app
+      // Offline fallback: lưu lại cờ pending
+      await _settingsBox.put(keyIsPendingSync, true);
+      await _settingsBox.put(keyPendingStatusData, status.toMap());
     } catch (_) {
-      // Phòng thủ an toàn không làm gián đoạn trải nghiệm người dùng
+      await _settingsBox.put(keyIsPendingSync, true);
+      await _settingsBox.put(keyPendingStatusData, status.toMap());
+    }
+  }
+
+  /// Tự động xả hàng đợi khi mạng được khôi phục
+  Future<void> flushPendingSync() async {
+    if (!isPendingSync()) return;
+    final data = _settingsBox.get(keyPendingStatusData);
+    if (data is Map) {
+      final coupleId = getSavedCoupleId();
+      if (coupleId == null || coupleId.isEmpty) return;
+
+      try {
+        await _firestore
+            .collection('couples')
+            .doc(coupleId)
+            .collection('status')
+            .doc('today')
+            .set(Map<String, dynamic>.from(data), SetOptions(merge: true));
+
+        await _settingsBox.put(keyIsPendingSync, false);
+        await _settingsBox.delete(keyPendingStatusData);
+      } catch (_) {
+        // Vẫn giữ pending nếu kết nối chưa ổn định
+      }
     }
   }
 

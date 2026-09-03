@@ -67,6 +67,15 @@ class CycleInfo {
     return day >= (ovulationDayNumber - 5) && day <= (ovulationDayNumber + 1);
   }
 
+  /// Ngày bắt đầu dự kiến của giai đoạn Tiền kinh nguyệt (PMS - 7 ngày trước kỳ kinh mới)
+  DateTime get nextPmsStartDate => nextPeriodDate.subtract(const Duration(days: 7));
+
+  /// Kiểm tra xem một ngày có nằm trong Cửa sổ Tiền kinh nguyệt (PMS Window - 1 đến 7 ngày trước kỳ kinh tiếp theo)
+  bool isPmsWindow(DateTime date) {
+    final daysLeft = daysUntilNextPeriod(date);
+    return daysLeft >= 1 && daysLeft <= 7;
+  }
+
   /// Thuật toán phân loại 4 pha sinh học chính xác theo từng ngày trong chu kỳ
   CyclePhase getPhaseForDate(DateTime date) {
     final day = getCycleDay(date);

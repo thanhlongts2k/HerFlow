@@ -2,12 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
+import 'package:herflow/core/utils/haptic_feedback_utils.dart';
+import 'package:herflow/core/widgets/offline_banner.dart';
 import 'package:herflow/features/cycle/presentation/screens/cycle_screen.dart';
 import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/mood/presentation/screens/mood_screen.dart';
 import 'package:herflow/features/nutrition/presentation/screens/nutrition_screen.dart';
 
-/// Quản lý Tab Navigation chính của ứng dụng HerFlow
+/// Quản lý Tab Navigation chính của ứng dụng Moona
 final currentBottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
 class MainNavScreen extends ConsumerWidget {
@@ -25,13 +27,21 @@ class MainNavScreen extends ConsumerWidget {
     final currentIndex = ref.watch(currentBottomNavIndexProvider);
 
     return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: _screens,
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: currentIndex,
+              children: _screens,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (index) {
+          AppHaptics.selection();
           ref.read(currentBottomNavIndexProvider.notifier).state = index;
         },
         destinations: const [

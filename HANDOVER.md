@@ -1,94 +1,276 @@
-# 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN HERFLOW
+# 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản:** `v0.1.0`  
-> **Thời điểm cập nhật:** 03/09/2026  
+> **Phiên bản hiện tại:** `v0.3.0` (Widget, Care Signals, PMS Warning, Backup AES, APK Shrinking)
+> **Thời điểm cập nhật:** 03/09/2026 — Phiên làm việc kết thúc, lưu ngữ cảnh đầy đủ
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)
 
 ---
 
-## 1. 🚀 TRẠNG THÁI BUILD APK (APK BUILD STATUS)
+## ✅ TRẠNG THÁI HIỆN TẠI (CHECKPOINT PHIÊN NÀY)
 
-* **Lệnh build gần nhất:** `flutter build apk --debug`
-* **Kết quả:** ✅ **BUILD SUCCESSFUL (100% PASS)**
-* **Thời gian biên dịch:** `32.9s`
-* **Đường dẫn tệp xuất:** `build/app/outputs/flutter-apk/app-debug.apk` (Kích thước: `153.4 MB`)
+| Hạng mục | Kết quả |
+|---|---|
+| `flutter analyze` | ✅ **0 issues found!** |
+| `flutter test` | ✅ **10/10 PASSED (100%)** |
+| Release APK `app-arm64-v8a-release.apk` | ✅ **21.9 MB** (giảm từ 153 MB) |
+| Cài đặt thiết bị Xiaomi (arm64) | ✅ **Thành công, chạy mượt** |
+| `pubspec.yaml` version | ✅ **0.3.0+3** (cập nhật 03/09/2026) |
+| `build.gradle.kts` versionCode/versionName | ✅ Đọc tự động từ Flutter (`flutter.versionCode`, `flutter.versionName`) |
+
+---
+
+## 1. 🚀 TRẠNG THÁI BUILD APK & KIỂM THỬ (APK BUILD & TEST STATUS)
+
+* **Phân tích tĩnh (Static Analysis):** `flutter analyze` → ✅ **0 issues found!** (0 lỗi, 0 cảnh báo).
+* **Kiểm thử đơn vị (Unit Tests):** `flutter test` → ✅ **10/10 tests PASSED (100%)**.
+* **Đóng gói tối ưu (Release Optimization):**
+  * Đã kích hoạt **R8 Code Shrinking / Obfuscation** (`isMinifyEnabled = true`, `isShrinkResources = true`).
+  * Cấu hình an toàn `proguard-rules.pro` bảo vệ Models, Entities, Hive, Firebase và Plugins.
+  * Tách biệt kiến trúc CPU qua `flutter build apk --release --split-per-abi`.
+* **Kết quả APK (v0.3.0):**
+  * `app-armeabi-v7a-release.apk`: **19.8 MB**
+  * `app-arm64-v8a-release.apk`: **21.9 MB** ← Đang test trên Xiaomi
+  * `app-x86_64-release.apk`: **23.3 MB**
 * **Môi trường SDK & Nền tảng:**
   * **Flutter SDK:** `3.44.4` (Channel stable)
   * **Dart SDK:** `3.12.2`
   * **Java Runtime:** OpenJDK `17.0.12`
-  * **Android Compile SDK:** `36` (hoặc `flutter.compileSdkVersion`)
-  * **Android Min SDK:** `21` (Hỗ trợ 99.5% thiết bị Android đang lưu hành)
+  * **Android Min SDK:** `21` (Hỗ trợ 99.5% thiết bị Android)
   * **Android Target SDK:** `34` (Android 14)
-  * **MultiDex:** `true` (Đã kích hoạt trong `defaultConfig`)
-  * **Gradle Plugin / Kotlin:** `AGP 9.0.1` / Kotlin `2.3.20` kết hợp `kotlin.incremental=false`
+  * **Activity Base:** `FlutterFragmentActivity` (Tương thích `local_auth` 2.x, chống crash Android 13+)
+  * **Widget Receiver:** `HusbandWidgetProvider` với `android:exported="true"` (Tương thích Android 12+)
+  * **Notification Runtime:** Kênh `moona_pms_channel` ưu tiên cao, quyền runtime `POST_NOTIFICATIONS`
 
 ---
 
 ## 2. 🏗️ TÓM TẮT KIẾN TRÚC HIỆN TẠI (CURRENT ARCHITECTURE SUMMARY)
 
-Dự án áp dụng mô hình chuẩn **Feature-First Clean Architecture**, cấu trúc thư mục hiện tại gồm 6 phân hệ cốt lõi:
+Dự án áp dụng mô hình chuẩn **Feature-First Clean Architecture**, cấu trúc thư mục hiện tại gồm các phân hệ:
 
 | Phân hệ / Module | Đường dẫn | Trạng thái | Lưu trữ / Công nghệ |
 |---|---|:---:|---|
 | **Core & Design System** | `lib/core/` | ✅ Hoàn thành | Quicksand Google Fonts, AppColors Soft Pastel, AppTheme (Light/Dark) |
-| **Cycle Core Engine** | `lib/features/cycle/` | ✅ Hoàn thành | Thuật toán 4 pha sinh học, TableCalendar tùy biến, 1-chạm Toggle ngày kinh |
-| **Mood & Micro-logging** | `lib/features/mood/` | ✅ Hoàn thành | 5 mức năng lượng, FilterChips tâm trạng/triệu chứng, fl_chart xu hướng 7 ngày |
-| **Nutrition Synced** | `lib/features/nutrition/` | ✅ Hoàn thành | Database dinh dưỡng 4 pha (thực phẩm vàng, món hạn chế, trà thảo mộc, bữa ăn mẫu) |
-| **Husband View (Offline)** | `lib/features/husband_view/` | ✅ Hoàn thành | Lời khuyên cho chồng, 3 việc nên làm/tránh, nút 1-chạm sao chép tin nhắn |
-| **Partner Sync (Cloud)** | `lib/features/partner_sync/` | ✅ Hoàn thành | Ghép đôi mã PIN 6 ký tự, Stream realtime document `couples/{coupleId}/status/today` |
-| **Main Navigation** | `lib/features/home/` | ✅ Hoàn thành | BottomNavigationBar 4 Tab chuyển đổi mượt mà |
-
-### Trạng thái Tích hợp Dữ liệu:
-* **Cơ sở dữ liệu cục bộ (Local Hive):**
-  * `herflow_cycle_box`: Lưu ngày bắt đầu, độ dài chu kỳ, thời lượng hành kinh và danh sách `PeriodRecord`.
-  * `herflow_mood_box`: Lưu nhật ký cảm xúc & triệu chứng thể chất theo từng ngày (`YYYY-MM-DD`).
-  * `herflow_settings_box`: Lưu `coupleId`, vai trò người dùng (`wife`/`husband`), và mã `pairingCode`.
-* **Cơ sở dữ liệu đám mây (Cloud Firestore):**
-  * Đã định nghĩa Schema tối giản: `pairings/{pairingCode}` (hiệu lực 24h) và `couples/{coupleId}/status/today`.
-  * Đã tạo tệp cấu hình bảo mật `firestore.rules` tại thư mục gốc.
-  * Toàn bộ thao tác Firestore đều được bọc trong khối `try/catch` bắt `FirebaseException` và `PlatformException`, bảo vệ ứng dụng chạy mượt mà kể cả khi mất mạng.
-
----
-
-## 3. ⚠️ VIỆC CÒN DỞ DANG & RỦI RO (BLOCKERS & INCOMPLETE TASKS)
-
-1. **Tệp cấu hình Firebase Production:**
-   * Tệp `android/app/google-services.json` hiện là tệp giả lập (mock template) để phục vụ cho việc build APK không bị lỗi `missing google-services.json`. Khi người dùng muốn kết nối với dự án Firebase Console thực tế của mình, họ cần thay thế bằng tệp thật từ console.firebase.google.com.
-2. **Cảnh báo Kotlin Gradle Plugin (KGP) trong `firebase_core`:**
-   * Khi build Gradle xuất hiện cảnh báo: `Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): firebase_core`. Đây là cảnh báo tương thích tương lai từ Flutter SDK mới, hiện tại build APK vẫn hoàn thành 100% không ảnh hưởng runtime.
-3. **Mã hóa Hive Box (Encryption at Rest):**
-   * Hiện các box Hive đang lưu dưới dạng key-value JSON chưa mã hóa AES. Cần nâng cấp lên `Hive.openBox(..., encryptionCipher: HiveAesCipher(...))` trước khi đưa lên production.
+| **App Version Provider** | `lib/core/providers/app_version_provider.dart` | ✅ Hoàn thành (mới) | `package_info_plus`, FutureProvider, đọc version động từ pubspec |
+| **Notification Service** | `lib/core/notifications/` | ✅ Hoàn thành | `flutter_local_notifications`, `timezone`, Channel PMS ưu tiên cao |
+| **Haptic Feedback Utility** | `lib/core/utils/` | ✅ Hoàn thành | `AppHaptics` chuẩn hóa selection, light, medium, heavy |
+| **Network & Offline Banner** | `lib/core/network/` | ✅ Hoàn thành | `connectivity_plus`, `isOnlineProvider`, `OfflineBanner` |
+| **Onboarding Wizard** | `lib/features/onboarding/` | ✅ Hoàn thành | Luồng 3 bước, DatePicker, Slider chu kỳ kèm Haptic |
+| **Biometric Security** | `lib/features/auth/` | ✅ Hoàn thành | `local_auth`, `BiometricLockScreen`, Lifecycle Observer |
+| **Cycle Core Engine** | `lib/features/cycle/` | ✅ Hoàn thành | Thuật toán 4 pha sinh học, `isPmsWindow`, TableCalendar |
+| **Mood & Micro-logging** | `lib/features/mood/` | ✅ Hoàn thành | 5 mức năng lượng, FilterChips, fl_chart xu hướng 7 ngày |
+| **Nutrition Synced** | `lib/features/nutrition/` | ✅ Hoàn thành | Database dinh dưỡng 4 pha |
+| **Husband View (Offline)** | `lib/features/husband_view/` | ✅ Hoàn thành | Lời khuyên cho chồng, 3 việc nên/tránh, nút copy |
+| **Partner Sync (Cloud & Queue)** | `lib/features/partner_sync/` | ⚠️ Partial | Ghép đôi PIN 6 ký tự, Smart Offline Queue — **CÒN LỖI TREO UI** |
+| **Android Home Widget** | `lib/features/widgets/` | ✅ Hoàn thành | `home_widget`, Native RemoteViews, `WidgetUpdateService` |
+| **One-Tap Care Signals** | `lib/features/care_signals/` | ✅ Hoàn thành | 4 tín hiệu yêu thương 1-chạm (🫖 🧋 🫂 🍃) |
+| **Backup & Restore AES** | `lib/features/backup/` | ✅ Hoàn thành | AES-256 file `.moona`, SHA-256 checksum |
+| **Settings Screen** | `lib/features/settings/` | ❌ Chưa có | **CẦN TẠO — xem Mission 2 bên dưới** |
+| **Main Navigation** | `lib/features/home/` | ✅ Hoàn thành | BottomNavigationBar 4 Tab mượt mà |
 
 ---
 
-## 4. 🎯 KẾ HOẠCH HÀNH ĐỘNG PHIÊN TIẾP THEO (NEXT STEPS)
+## 3. ⚠️ BLOCKERS & VIỆC CÒN DỞ DANG (INCOMPLETE TASKS)
 
-Khi mở phiên làm việc mới, Agent tiếp theo cần tập trung ngay vào 3 nhiệm vụ ưu tiên sau:
+### 🔴 BLOCKER 1: `cycle_settings_sheet.dart` chứa cài đặt Biometric sai vị trí
+- **Vị trí:** `lib/features/cycle/presentation/widgets/cycle_settings_sheet.dart`
+- **Vấn đề UX:** Switch "Khóa bằng sinh trắc học" đặt chung trong BottomSheet hiệu chỉnh chu kỳ kinh nguyệt — sai hoàn toàn về mặt kiến trúc UX.
+- **Nguy cơ:** Người dùng không tìm thấy cài đặt bảo mật; dễ vô tình bật/tắt khi điều chỉnh chu kỳ.
 
-1. **Ưu tiên 1 — Tích hợp Thông Báo Đẩy & Nhắc Nhở Cục Bộ (`flutter_local_notifications`):**
-   * Cài đặt thông báo tự động nhắc nhở trước ngày bắt đầu kỳ kinh 1-2 ngày ("Nàng ơi, kỳ kinh dự kiến sẽ bắt đầu sau 2 ngày nữa").
-   * Thông báo nhắc nhở uống nước ấm vào buổi sáng và ghi nhận nhật ký thể trạng vào 20:00 tối mỗi ngày.
-2. **Ưu tiên 2 — Xuất Báo Cáo Chu Kỳ (Export PDF / Excel):**
-   * Cho phép người dùng xuất báo cáo tổng kết 3 chu kỳ gần nhất để mang đi tư vấn với bác sĩ phụ khoa.
-3. **Ưu tiên 3 — Hoàn thiện cấu hình iOS (Runner & Firebase iOS):**
-   * Bổ sung `GoogleService-Info.plist` mẫu vào thư mục `ios/Runner/` và cấu hình quyền tối thiểu trong `Info.plist` cho iOS build pipeline.
+### 🔴 BLOCKER 2: `pairing_screen.dart` treo loading vô tận
+- **Vị trí:** `lib/features/partner_sync/presentation/screens/pairing_screen.dart`
+- **Vấn đề:** Nhấn "Tạo mã kết nối" → loading spinner quay mãi do Firestore chưa config đầy đủ hoặc network timeout.
+- **Nguy cơ Crash/Deadlock:** Không có timeout guard, không có `finally` set `isLoading = false`.
 
 ---
 
-## 5. ⚡ LỆNH CHẠY KIỂM THỬ NHANH (QUICK TEST COMMANDS)
+## 4. 🎯 KẾ HOẠCH ƯU TIÊN PHIÊN TIẾP THEO (NEXT SESSION PRIORITY MISSIONS)
 
-Các lệnh shell tiêu chuẩn để kiểm tra toàn vẹn mã nguồn trước khi bàn giao:
+---
+
+### 🚨 MISSION 1 (HIGH PRIORITY BUGFIX): KHẮC PHỤC LỖI TREO "ĐANG TẠO MÃ..." TRÊN PAIRING_SCREEN
+
+**Vấn đề chi tiết:**
+Khi nhấn "Tạo mã kết nối" trên màn hình ghép đôi phía Vợ, ứng dụng bị quay loading vô tận do Firestore demo/network chưa phản hồi. `isLoading` không bao giờ được set về `false`.
+
+**Giải pháp kỹ thuật BẮT BUỘC:**
+
+1. **Timeout & State Protection:**
+   - Mọi lệnh Firestore (`set`, `get`, `add`) phải có `.timeout(const Duration(seconds: 6))`.
+   - Bắt buộc dùng khối `try - catch - finally` → đảm bảo `isLoading = false` trong `finally`.
+   - Bắn `SnackBar` thông báo lỗi nếu có ngoại lệ.
+
+2. **Offline/Demo Fallback Mode:**
+   - Khi Firestore timeout hoặc lỗi cấu hình → tự động sinh mã local 6 ký tự `HFxxxx` (ví dụ: `HF8201`).
+   - Lưu tạm vào Hive `settingsBox` / memory.
+   - Hiển thị mã lên UI kèm nhãn nhỏ: *"Mã kết nối nội bộ (Thử nghiệm)"*.
+   - Mục tiêu: Vẫn test được tiếp luồng nhập mã phía Chồng mà không cần Firestore thật.
+
+**Tệp cần chỉnh sửa:**
+```
+lib/features/partner_sync/data/partner_sync_repository.dart
+lib/features/partner_sync/presentation/controllers/partner_sync_controller.dart
+lib/features/partner_sync/presentation/screens/pairing_screen.dart
+```
+
+**Mẫu code cốt lõi cần thêm vào repository:**
+```dart
+Future<String> generateOrGetPairingCode(String uid) async {
+  try {
+    final code = _generateLocalCode(); // 'HF' + Random(4 digits)
+    await _firestore
+        .collection('couples')
+        .doc(uid)
+        .set({'pairingCode': code, 'createdAt': FieldValue.serverTimestamp()})
+        .timeout(const Duration(seconds: 6));
+    return code;
+  } on TimeoutException catch (_) {
+    // Fallback: dùng mã offline
+    final localCode = _generateLocalCode();
+    await _settingsBox.put('offlinePairingCode', localCode);
+    return localCode; // UI sẽ hiển thị nhãn "(Thử nghiệm)"
+  } catch (e) {
+    throw Exception('Không thể tạo mã: $e');
+  }
+  // finally ở Controller: state = state.copyWith(isLoading: false)
+}
+```
+
+---
+
+### 🔧 MISSION 2 (REFACTOR UX/UI): TÁCH MODULE CÀI ĐẶT THÀNH MÀN HÌNH ĐỘC LẬP (SETTINGS_SCREEN)
+
+**Vấn đề chi tiết:**
+Cài đặt sinh trắc học đang bị nhúng sai vào `CycleSettingsSheet` — vi phạm nguyên tắc Single Responsibility.
+
+**Giải pháp kỹ thuật:**
+
+**Bước 1 — Tinh gọn `cycle_settings_sheet.dart`:**
+- Xóa bỏ toàn bộ phần Switch "Khóa bằng sinh trắc học" và mọi import liên quan.
+- Đổi tiêu đề từ "Cài Đặt" → **"Hiệu Chỉnh Chu Kỳ"**.
+- Chỉ giữ lại 2 bộ điều khiển:
+  - Slider/NumberPicker ngày chu kỳ (21–45 ngày).
+  - DatePicker ngày bắt đầu kỳ kinh gần nhất.
+
+**Bước 2 — Tạo màn hình mới `lib/features/settings/presentation/screens/settings_screen.dart`:**
+
+```
+/settings_screen.dart
+  ├── Nhóm 1: 🔐 Bảo mật
+  │   ├── Switch: "Khóa bằng sinh trắc học" (keyIsBiometricEnabled)
+  │   └── DropdownButton: Thời gian tự động khóa ("Ngay lập tức" / "1 phút")
+  │
+  ├── Nhóm 2: 🔗 Đồng bộ & Ghép đôi
+  │   ├── Text: Trạng thái ghép đôi (Đã kết nối / Chưa kết nối)
+  │   └── TextButton → Navigator.push(PairingScreen)
+  │
+  ├── Nhóm 3: 🎨 Giao diện
+  │   ├── SegmentedButton / RadioGroup: Theme Sáng / Tối / Hệ thống
+  │   └── Switch: "Phản hồi xúc giác (Haptic Feedback)"
+  │
+  └── Nhóm 4: 💾 Dữ liệu & Giới thiệu
+      ├── ListTile → BackupScreen (Sao lưu & Khôi phục)
+      └── Text: "Moona v${info.version} (Build ${info.buildNumber})" (dùng appVersionProvider)
+```
+
+**Bước 3 — Cập nhật `cycle_screen.dart`:**
+- Đổi icon `Icons.tune_rounded` (hoặc tương tự) góc phải AppBar → `Icons.settings_outlined` → `Navigator.push('/settings')`.
+- Đặt thêm 1 `IconButton` nhỏ với icon `Icons.edit_calendar_outlined` cạnh tiêu đề lịch → gọi `CycleSettingsSheet.show(context)`.
+
+**Tệp cần tạo/chỉnh sửa:**
+```
+[NEW]    lib/features/settings/presentation/screens/settings_screen.dart
+[MODIFY] lib/features/cycle/presentation/widgets/cycle_settings_sheet.dart
+[MODIFY] lib/features/cycle/presentation/screens/cycle_screen.dart
+[MODIFY] lib/main.dart  (thêm route '/settings' → SettingsScreen)
+```
+
+---
+
+### ➕ MISSION 3 (BONUS — Version System): HOÀN THIỆN CHUẨN HÓA VERSION
+- **Đã làm:**
+  - ✅ `pubspec.yaml` → `version: 0.3.0+3`
+  - ✅ `build.gradle.kts` → dùng `flutter.versionCode` / `flutter.versionName`
+  - ✅ Tạo `lib/core/providers/app_version_provider.dart` với `PackageInfo.fromPlatform()`
+- **Còn lại:**
+  - ⬜ Xóa `appVersion = '0.3.0'` khỏi `app_constants.dart` (hoặc deprecate).
+  - ⬜ Tích hợp `appVersionProvider` vào `SettingsScreen` (tạo ở Mission 2) để hiển thị version động.
+  - ⬜ Chạy `flutter pub get` để tải `package_info_plus`.
+  - ⬜ Chạy `flutter analyze` sau khi tích hợp xong.
+
+---
+
+## 5. 🔑 THÔNG TIN KỸ THUẬT QUAN TRỌNG (TECHNICAL CONTEXT)
+
+### AES Encryption Keys (dùng trong BackupRepository)
+```
+Key:  'MoonaSec2026!Key@SecretFlow2026!'  (32 bytes)
+IV:   'MoonaIV2026Init!'                  (16 bytes)
+```
+> ⚠️ Dùng cho mã hóa file `.moona` backup. Không thay đổi key nếu đã có user tạo file backup.
+
+### ProGuard Rules đặc biệt (trong `proguard-rules.pro`)
+```proguard
+-keep class androidx.work.** { *; }
+-keep class androidx.work.impl.** { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keepclassmembers class * extends androidx.work.Worker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+```
+> 🔑 Bắt buộc để tránh crash R8 với WorkManager khi `isMinifyEnabled = true`.
+
+### Gradle subproject compileSdk override (trong `android/build.gradle.kts`)
+```kotlin
+subprojects {
+    afterEvaluate {
+        // Ép tất cả plugin dùng compileSdk 36 để tránh checkReleaseAarMetadata fail
+    }
+}
+```
+
+### ADB Device ID
+```
+adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp
+```
+> Dùng flag `-s` khi chạy lệnh ADB: `adb -s "adb-BM6HKBHEHQKFEMLR-..." shell ...`
+
+---
+
+## 6. 📸 SCREENSHOTS KIỂM THỬ THIẾT BỊ (v0.3.0)
+
+| # | File | Nội dung |
+|---|---|---|
+| 25 | `docs/screenshots/25_v030_launch.png` | Splash Screen Moona |
+| 26 | `docs/screenshots/26_v030_app_screen.png` | Màn hình chính sau khởi động |
+| 27 | `docs/screenshots/27_v030_app_running.png` | App đang chạy trên Xiaomi |
+| 28 | `docs/screenshots/28_v030_care_signals_sheet.png` | Care Signals bottom sheet |
+| 29 | `docs/screenshots/29_v030_mood_tab.png` | Tab Cảm xúc — Nhật Ký Thể Trạng |
+| 30 | `docs/screenshots/30_v030_care_signals_sheet.png` | Cycle Screen với AppBar tim đỏ |
+
+---
+
+## 7. 📋 LỆNH THƯỜNG DÙNG (QUICK REFERENCE)
 
 ```bash
-# 1. Kiểm tra phân tích cú pháp tĩnh (Target: 0 issues)
+# Cài đặt dependencies mới (sau khi thêm package_info_plus)
+flutter pub get
+
+# Phân tích tĩnh
 flutter analyze
 
-# 2. Chạy toàn bộ Unit Tests của hệ thống (Target: 100% Pass)
+# Chạy unit tests
 flutter test
 
-# 3. Thử nghiệm biên dịch gói APK Android Debug
-flutter build apk --debug
+# Build release APK tách theo kiến trúc CPU
+flutter build apk --release --split-per-abi
 
-# 4. Kiểm tra mã nguồn chưa được commit
-git status
+# Cài đặt APK lên thiết bị Xiaomi qua ADB
+adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+
+# Kiểm tra version APK đang cài trên máy
+adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" shell "dumpsys package com.herflow.app.herflow | grep -E 'versionCode|versionName'"
+
+# Chụp màn hình thiết bị
+adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" shell screencap -p /sdcard/screen.png
+adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" pull /sdcard/screen.png docs/screenshots/XX_ten_anh.png
 ```

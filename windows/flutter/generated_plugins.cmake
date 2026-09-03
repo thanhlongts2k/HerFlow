@@ -4,7 +4,11 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
+  connectivity_plus
   firebase_core
+  local_auth_windows
+  share_plus
+  url_launcher_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

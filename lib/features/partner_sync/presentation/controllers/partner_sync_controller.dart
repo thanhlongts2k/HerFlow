@@ -1,10 +1,12 @@
 // lib/features/partner_sync/presentation/controllers/partner_sync_controller.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:herflow/core/network/network_connectivity_provider.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/mood/presentation/controllers/mood_controller.dart';
 import 'package:herflow/features/partner_sync/data/partner_sync_repository.dart';
 import 'package:herflow/features/partner_sync/domain/models/pairing_model.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
+import 'package:herflow/features/widgets/services/widget_update_service.dart';
 
 /// Provider cung cấp PartnerSyncRepository
 final partnerSyncRepositoryProvider = Provider<PartnerSyncRepository>((ref) {
@@ -23,6 +25,14 @@ final savedUserRoleProvider = StateProvider<String?>((ref) {
   return repo.getSavedUserRole();
 });
 
+/// Provider kiểm tra cờ pending sync
+final isPendingSyncProvider = Provider<bool>((ref) {
+  final repo = ref.watch(partnerSyncRepositoryProvider);
+  // Re-evaluate whenever online status changes
+  ref.watch(isOnlineProvider);
+  return repo.isPendingSync();
+});
+
 /// StreamProvider lắng nghe trực tiếp trạng thái hôm nay của đối phương theo thời gian thực
 final partnerLiveStatusStreamProvider = StreamProvider<PartnerStatusModel?>((ref) {
   final repo = ref.watch(partnerSyncRepositoryProvider);
@@ -31,7 +41,12 @@ final partnerLiveStatusStreamProvider = StreamProvider<PartnerStatusModel?>((ref
   if (coupleId == null || coupleId.isEmpty) {
     return Stream.value(null);
   }
-  return repo.watchPartnerTodayStatus(coupleId);
+  return repo.watchPartnerTodayStatus(coupleId).map((status) {
+    if (status != null) {
+      WidgetUpdateService.updateFromPartnerStatus(status);
+    }
+    return status;
+  });
 });
 
 /// Trạng thái của phiên ghép đôi (State model)
@@ -73,7 +88,14 @@ class PartnerSyncController extends StateNotifier<PairingState> {
   final Ref _ref;
 
   PartnerSyncController(this._repository, this._ref)
-      : super(PairingState(activePairingCode: _repository.getSavedPairingCode()));
+      : super(PairingState(activePairingCode: _repository.getSavedPairingCode())) {
+    // Lắng nghe khôi phục kết nối mạng để tự động xả hàng đợi Offline Queue
+    _ref.listen<bool>(isOnlineProvider, (previous, next) {
+      if (next == true && (previous == false || previous == null)) {
+        _repository.flushPendingSync();
+      }
+    });
+  }
 
   /// 1. Vợ tạo mã ghép đôi mới
   Future<void> generatePairingCode() async {
@@ -124,7 +146,7 @@ class PartnerSyncController extends StateNotifier<PairingState> {
     }
   }
 
-  /// 3. Tự động đồng bộ trạng thái hôm nay của Vợ lên Cloud Firestore
+  /// 3. Tự động đồng bộ trạng thái hôm nay của Vợ lên Cloud Firestore (Hỗ trợ Offline Queue)
   Future<void> syncCurrentWifeStatusToCloud() async {
     final coupleId = _repository.getSavedCoupleId();
     if (coupleId == null || coupleId.isEmpty) return;
@@ -149,7 +171,9 @@ class PartnerSyncController extends StateNotifier<PairingState> {
       updatedAt: DateTime.now(),
     );
 
-    await _repository.pushTodayStatus(status);
+    final isOnline = _ref.read(isOnlineProvider);
+    await _repository.pushTodayStatus(status, isOnline: isOnline);
+    await WidgetUpdateService.updateFromPartnerStatus(status);
   }
 
   /// 4. Hủy kết nối cặp đôi

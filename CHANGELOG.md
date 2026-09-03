@@ -1,6 +1,106 @@
-# Changelog — HerFlow
+# Changelog — Moona
 
-Toàn bộ những thay đổi đáng chú ý của dự án **HerFlow** được ghi nhận tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) và tuân thủ [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được ghi nhận tại đây theo chuẩn [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) và tuân thủ [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.3.0+4] - 2026-09-03 (Security Audit & Hardening)
+
+### [Security]
+- **🚨 Khắc phục rò rỉ Firebase API key:** `android/app/google-services.json` đã bị commit vào lịch sử git (commit `70f4f04`). Đã thực hiện `git rm --cached` và bổ sung vào `.gitignore`.
+- **Cô lập AES Encryption Key:** Di chuyển hardcoded key `MoonaSec2026!Key@SecretFlow2026!` từ `backup_repository.dart` sang `lib/core/security/backup_encryption_config.dart` — tách biệt bí mật khỏi logic nghiệp vụ với security notice và migration roadmap.
+
+### [Added]
+- `android/app/google-services.json.example` — File mẫu với placeholder để đồng nghiệp setup local mà không cần file thật.
+- `lib/core/security/backup_encryption_config.dart` — Lớp `BackupEncryptionConfig` quản lý tập trung cấu hình mã hóa AES-256-CBC của Moona.
+
+### [Changed]
+- `.gitignore`: Bổ sung toàn bộ danh mục bảo mật: Firebase configs, Keystore files (`.jks`, `.keystore`, `key.properties`), `.env*`, `*.moona`, `*.hive`.
+- `AGENTS.md`: Bổ sung **Điều khoản 8 — AN TOÀN BẢO MẬT & QUẢN LÝ KHÓA BÍ MẬT** với 4 mục: chống hardcode secrets, bảo vệ config định danh, kiểm soát `android:exported`, và Security Scan SOP.
+- Đổi tên project trong `AGENTS.md` và `CHANGELOG.md` từ "HerFlow" → "Moona" để đồng bộ rebranding.
+
+---
+
+## [0.3.0+3] - 2026-09-03 (Version System Patch)
+
+
+### [Added]
+- `package_info_plus: ^8.0.0` — đọc version động từ hệ thống thay vì hardcode string.
+- `lib/core/providers/app_version_provider.dart` — `FutureProvider<AppVersionInfo>` cung cấp `version`, `buildNumber`, `displayString` (`"Moona v0.3.0 (Build 3)"`).
+
+### [Changed]
+- `pubspec.yaml`: `version: 1.0.0+1` → `0.3.0+3` — Single Source of Truth, đồng bộ với Semantic Versioning thực tế.
+- `build.gradle.kts`: Xác nhận đã dùng `flutter.versionCode` / `flutter.versionName` — không hardcode Android native.
+
+---
+
+## [0.3.0] - 2026-09-03
+
+
+### [Added]
+- **Android Home Screen Widget (Husband Glance Widget):**
+  - Tích hợp `home_widget: ^0.7.0`.
+  - Thiết kế layout Native Android XML bo tròn 24dp Material You (`res/layout/widget_husband_glance.xml`) và `res/xml/husband_widget_info.xml`.
+  - Khởi tạo `HusbandWidgetProvider.kt` với `android:exported="true"` tương thích hoàn toàn Android 12+ chống từ chối cài đặt.
+  - Module `WidgetUpdateService` tự động đồng bộ pha sinh học, mức năng lượng và lời khuyên chăm sóc của Chồng từ xa lên màn hình chính.
+- **Tín hiệu yêu thương 1-chạm (One-Tap Care Signals):**
+  - Thiết kế 4 tín hiệu định sẵn: 🫖 *Chườm ấm*, 🧋 *Đồ ngọt / trà sữa*, 🫂 *Cần một cái ôm*, 🍃 *Cần yên tĩnh*.
+  - Giao diện `CareSignalSheet` phía Vợ với 4 thẻ pastel mềm mại kèm phản hồi xúc giác `HapticFeedback.mediumImpact()`.
+  - Đồng bộ real-time Firestore lên `CareSignalBannerCard` trên Dashboard của Chồng kèm nút "Đã nhận được ❤️".
+- **Hệ thống cảnh báo sớm PMS (PMS Pre-Warning System):**
+  - Thuật toán sinh học `isPmsWindow(DateTime date)` và `nextPmsStartDate` trong `CycleInfo` (cảnh báo trước kỳ kinh 7 ngày).
+  - Tích hợp `flutter_local_notifications: ^18.0.1` và `timezone: ^0.10.0` với kênh thông báo ưu tiên cao `moona_pms_channel`.
+  - Tự động xin quyền runtime `POST_NOTIFICATIONS` trên Android 13+ và lên lịch nhắc nhở lúc 08:00 sáng.
+  - Tích hợp Switch kích hoạt thông báo trong `CycleSettingsSheet`.
+- **Sao lưu & Khôi phục dữ liệu cục bộ (Backup & Restore):**
+  - Tích hợp `file_picker: ^8.1.7`, `share_plus: ^10.1.4`, `encrypt: ^5.0.3`, `crypto: ^3.0.6`.
+  - `BackupRepository`: Đóng gói dữ liệu chu kỳ & cảm xúc từ Hive, tính checksum SHA-256, mã hóa AES-256 (CBC mode) ra tệp `.moona`.
+  - Luồng khôi phục dữ liệu: Giải mã AES-256, kiểm tra tính toàn vẹn SHA-256 và tự động làm mới (invalidate) toàn bộ state Riverpod.
+  - Giao diện `BackupScreen` trực quan với thẻ giải thích bảo mật ngân hàng.
+- **Chuẩn hóa phản hồi xúc giác (AppHaptics):**
+  - Thư viện tiện ích `AppHaptics` quy chuẩn: `selection()` khi chuyển tab navigation, `light()` khi cuộn slider, `medium()` khi gửi tín hiệu / tick chu kỳ.
+- **Tối ưu hóa dung lượng Release APK:**
+  - Bật R8 code shrinking `isMinifyEnabled = true` và `isShrinkResources = true` trong `build.gradle.kts`.
+  - Cấu hình bảo vệ `proguard-rules.pro` cho Domain/Data models, Hive, Firebase và Plugins.
+
+### [Changed]
+- Khai báo quyền `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `VIBRATE` trong `AndroidManifest.xml`.
+- Cập nhật `AppConstants.appVersion = '0.3.0'`.
+
+### [Fixed]
+- Khắc phục lỗi độ dài khóa AES-256 (chuẩn 32 byte / 256 bits) trong `BackupRepository` và kiểm thử tự động.
+
+---
+
+### [Added]
+- **Tái định vị thương hiệu (Rebranding) "Moona":**
+  - Cập nhật `android:label="Moona"` trong `android/app/src/main/AndroidManifest.xml`.
+  - Cập nhật tiêu đề AppBar, Header và tin nhắn chia sẻ mặc định sang tên gọi thân thương "Moona".
+  - Bổ sung và cấu hình `flutter_native_splash: ^2.4.4` với màu nền kem vani (`#FDFBF7`) cho Light Mode và Warm Espresso (`#1A1617`) cho Dark Mode, chạy tạo cấu hình Android native thành công.
+- **Giám sát mạng & Hàng đợi đồng bộ ngoại tuyến (Smart Offline Sync Queue):**
+  - Bổ sung package `connectivity_plus: ^6.1.0`.
+  - Module `lib/core/network/network_connectivity_provider.dart` theo dõi kết nối mạng WiFi/Mobile/Ethernet thời gian thực.
+  - Widget `OfflineBanner` dạng thanh cảnh báo mỏng, tinh tế xuất hiện ở đỉnh màn hình khi mất mạng: *"Chế độ ngoại tuyến — Dữ liệu sẽ tự động đồng bộ khi có mạng"*.
+  - Cơ chế Smart Offline Queue trong `PartnerSyncRepository`: Tự động lưu cờ `isPendingSync` và bộ đệm trạng thái vào Hive khi offline; tự động lắng nghe và xả hàng đợi (`flushPendingSync`) đẩy lên Firestore ngay khi mạng phục hồi.
+- **Luồng chào đón người dùng mới (Onboarding Wizard 3 bước):**
+  - Bước 1: Chọn ngày bắt đầu kỳ kinh gần nhất qua DatePicker trực quan.
+  - Bước 2: Thanh trượt slider chọn độ dài chu kỳ trung bình (21 - 40 ngày, mặc định 28 ngày) tích hợp **phản hồi xúc giác rung nhẹ (`HapticFeedback.lightImpact()`)** khi kéo trượt.
+  - Bước 3: Thẻ chọn mục tiêu đồng hành (Chăm sóc sức khỏe & dinh dưỡng, Ổn định cảm xúc, Đồng bộ cùng Chồng).
+  - Tự động lưu thiết lập khởi đầu vào `cycleBox` và chuyển thẳng vào Dashboard chính.
+- **Bảo mật sinh trắc học cao cấp (Biometric Authentication):**
+  - Bổ sung package `local_auth: ^2.3.0`.
+  - Dịch vụ `BiometricService` kiểm tra phần cứng vân tay/FaceID và thực hiện xác thực với rung nhẹ xúc giác `HapticFeedback.lightImpact()` khi mở khóa thành công.
+  - Màn hình khóa mờ pastel `BiometricLockScreen` bảo vệ 100% dữ liệu chu kỳ và cảm xúc cá nhân.
+  - Quản lý vòng đời ứng dụng (`WidgetsBindingObserver` / `AppLifecycleListener`): Tự động khóa lại và yêu cầu xác thực khi ứng dụng resume từ background.
+  - Bổ sung Switch "Khóa bằng sinh trắc học" trong `CycleSettingsSheet`.
+
+### [Changed]
+- **Nâng cấp Android Activity:** Đổi lớp kế thừa trong `MainActivity.kt` từ `FlutterActivity()` sang `FlutterFragmentActivity()` để tương thích hoàn hảo với `local_auth` trên Android 13+, triệt tiêu hoàn toàn lỗi crash khi bung pop-up sinh trắc học.
+- Bổ sung quyền `<uses-permission android:name="android.permission.USE_BIOMETRIC"/>` trong `AndroidManifest.xml`.
+- Cập nhật `AppConstants` với phiên bản `0.2.0`, `appName = 'Moona'` và các key SharedPreferences/Hive mới.
+
+### [Fixed]
+- Khắc phục cảnh báo thuộc tính deprecated `axisAlignment` chuyển sang `alignment: Alignment.topCenter` trong `SizeTransition` tại `offline_banner.dart`.
 
 ---
 

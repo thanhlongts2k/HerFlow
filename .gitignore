@@ -43,3 +43,33 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ============================================================
+# 🔐 SECURITY — SENSITIVE FILES (DO NOT COMMIT)
+# ============================================================
+
+# Firebase & Google Services (MUST NEVER be committed)
+# Copy from google-services.json.example and fill in real values locally
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# Android Keystore & Signing Config
+android/key.properties
+*.jks
+*.keystore
+
+# Environment & Local Secrets
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+local.properties
+
+# Moona Backup Files (user data — never commit)
+*.moona
+
+# Hive encrypted database files (user data — never commit)
+*.hive
+*.lock

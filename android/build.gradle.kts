@@ -16,6 +16,26 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            val android = project.extensions.findByName("android")
+            if (android != null) {
+                for (method in android.javaClass.methods) {
+                    if (method.name == "setCompileSdkVersion" || method.name == "setCompileSdk" || method.name == "compileSdkVersion") {
+                        try {
+                            if (method.parameterCount == 1 && (method.parameterTypes[0] == Int::class.javaPrimitiveType || method.parameterTypes[0] == Integer::class.java)) {
+                                method.invoke(android, 36)
+                                break
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+        }
+    }
+}
+
+subprojects {
     project.evaluationDependsOn(":app")
 }
 

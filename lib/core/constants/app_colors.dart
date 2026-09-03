@@ -42,6 +42,7 @@ class AppColors {
 
   // === BACKGROUND & SURFACE (LIGHT MODE) ===
   static const Color bgLight = Color(0xFFFDFBF7); // Kem vani dịu mắt
+  static const Color backgroundLight = bgLight;
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color cardLight = Color(0xFFFFFFFF);
   static const Color dividerLight = Color(0xFFF0EBE5);
@@ -53,6 +54,7 @@ class AppColors {
 
   // === BACKGROUND & SURFACE (DARK MODE) ===
   static const Color bgDark = Color(0xFF191418); // Nền ấm tối chocolate/espresso
+  static const Color backgroundDark = bgDark;
   static const Color surfaceDark = Color(0xFF251F24);
   static const Color cardDark = Color(0xFF2C242A);
   static const Color dividerDark = Color(0xFF382F36);

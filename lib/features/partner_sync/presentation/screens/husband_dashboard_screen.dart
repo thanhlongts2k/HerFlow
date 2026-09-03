@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
+import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
+import 'package:herflow/features/care_signals/presentation/controllers/care_signal_controller.dart';
+import 'package:herflow/features/care_signals/presentation/widgets/care_signal_banner_card.dart';
 
 /// Màn hình Dashboard Realtime dành riêng cho Chồng lắng nghe trực tiếp từ Firestore
 class HusbandDashboardScreen extends ConsumerWidget {
@@ -13,6 +16,8 @@ class HusbandDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final liveStatusAsync = ref.watch(partnerLiveStatusStreamProvider);
+    final careSignalAsync = ref.watch(latestCareSignalStreamProvider);
+    final careSignal = careSignalAsync.valueOrNull;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -30,7 +35,7 @@ class HusbandDashboardScreen extends ConsumerWidget {
               ),
             ),
             const Text(
-              'Đồng bộ trực tiếp từ HerFlow của Vợ',
+              'Đồng bộ trực tiếp từ Moona của Vợ',
               style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
             ),
           ],
@@ -69,43 +74,47 @@ class HusbandDashboardScreen extends ConsumerWidget {
         ),
         data: (status) {
           if (status == null) {
-            return _buildWaitingForWifeView(context, isDark);
+            return _buildWaitingForWifeView(context, isDark, careSignal);
           }
-          return _buildRealtimeDashboard(context, status, isDark);
+          return _buildRealtimeDashboard(context, status, isDark, careSignal);
         },
       ),
     );
   }
 
   /// Trạng thái chờ vợ cập nhật dữ liệu hôm nay
-  Widget _buildWaitingForWifeView(BuildContext context, bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.secondaryContainer.withAlpha(isDark ? 50 : 120),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.hourglass_bottom_rounded, size: 48, color: AppColors.secondary),
+  Widget _buildWaitingForWifeView(
+    BuildContext context,
+    bool isDark,
+    CareSignalModel? careSignal,
+  ) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          if (careSignal != null) CareSignalBannerCard(signal: careSignal),
+          const SizedBox(height: 30),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.secondaryContainer.withAlpha(isDark ? 50 : 120),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 18),
-            const Text(
-              'Đang Chờ Vợ Ghi Nhận Hôm Nay',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Thiết bị đã kết nối thành công! Ngay khi vợ mở HerFlow và cập nhật thể trạng, thông tin sẽ hiển thị tức thì tại đây.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
-            ),
-          ],
-        ),
+            child: const Icon(Icons.hourglass_bottom_rounded, size: 48, color: AppColors.secondary),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Đang Chờ Vợ Ghi Nhận Hôm Nay',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Thiết bị đã kết nối thành công! Ngay khi vợ mở Moona và cập nhật thể trạng, thông tin sẽ hiển thị tức thì tại đây.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
+          ),
+        ],
       ),
     );
   }
@@ -115,6 +124,7 @@ class HusbandDashboardScreen extends ConsumerWidget {
     BuildContext context,
     PartnerStatusModel status,
     bool isDark,
+    CareSignalModel? careSignal,
   ) {
     final theme = Theme.of(context);
     final phaseColor = _getPhaseColor(status.currentPhase);
@@ -126,6 +136,9 @@ class HusbandDashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 0. TÍN HIỆU YÊU THƯƠNG TỪ VỢ
+          if (careSignal != null) CareSignalBannerCard(signal: careSignal),
+
           // 1. HERO CARD: PHA CHU KỲ & NĂNG LƯỢNG
           Container(
             padding: const EdgeInsets.all(20),
