@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Quy tắc bảo mật cho bộ sưu tập ghép đôi (Pairings)
+    match /pairings/{pairingCode} {
+      // Cho phép đọc nếu có mã pairingCode chính xác (6 ký tự)
+      allow read: if pairingCode.size() == 6;
+
+      // Cho phép tạo mã mới: Mã phải đúng 6 ký tự, có wifeUserId và coupleId
+      allow create: if pairingCode.size() == 6
+                    && request.resource.data.wifeUserId is string
+                    && request.resource.data.coupleId is string
+                    && request.resource.data.status == 'pending';
+
+      // Cho phép cập nhật chuyển trạng thái sang 'connected'
+      allow update: if request.resource.data.status == 'connected';
+
+      // Tuyệt đối không cho phép xóa từ client (để server/Cloud Functions dọn dẹp sau 24h)
+      allow delete: if false;
+    }
+
+    // 2. Quy tắc bảo mật cho dữ liệu trạng thái cặp đôi (Couples)
+    match /couples/{coupleId} {
+      allow read, write: if coupleId.size() > 0;
+
+      match /status/{document} {
+        // Cho phép đọc/ghi trạng thái tóm tắt nếu có coupleId hợp lệ
+        allow read, write: if coupleId.size() > 0;
+      }
+    }
+  }
+}
