@@ -303,3 +303,28 @@ adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" shell "dumpsys packag
 adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" shell screencap -p /sdcard/screen.png
 adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" pull /sdcard/screen.png docs/screenshots/XX_ten_anh.png
 ```
+
+---
+
+## 8. 🎯 KẾ HOẠCH BỨC PHÁ TIẾP THEO (v0.5.0 SPRINT BREAKDOWN)
+
+Chi tiết hồ sơ kiến trúc và đặc tả đã được lưu tại: [`docs/ROADMAP_v0.5.0.md`](file:///d:/Sources/HerFlow/docs/ROADMAP_v0.5.0.md).
+
+### 🚀 Sprint 2A: Onboarding Phân Quyền & Hệ Thống Danh Xưng Tùy Biến
+- [ ] **2A.1 Model & Addressing Engine:** `NicknameConfig` + `AddressingEngine` (Preset: "Người thương", "Em bé", "Bé iu", "Vợ yêu", "Chồng yêu", "Anh yêu" + Tự xưng).
+- [ ] **2A.2 UI Cài Đặt:** Thẻ cấu hình Danh xưng 2 chiều trong `SettingsScreen`.
+- [ ] **2A.3 Màn Hình Chào Mừng Lần Đầu (First-Launch Screen):** Chọn vai trò: `[ 🌸 Tôi là Phụ nữ ]` hoặc `[ 🛡️ Tôi là Người thương ]`.
+- [ ] **2A.4 Điều Hướng Onboarding Tách Biệt:** Phụ nữ đi qua thiết lập chu kỳ -> CycleScreen; Người thương vào thẳng nhập mã ghép đôi -> Gentleman's Companion.
+
+### 💌 Sprint 2B: Chồng Chủ Động Hỏi Han & Vợ Phản Hồi 1 Chạm
+- [ ] **2B.1 Model & Firestore:** `CareInquiryModel` & Subcollection `care_inquiries`.
+- [ ] **2B.2 Husband Dashboard:** Hộp "Chăm sóc nàng hôm nay" với câu hỏi thông minh thích ứng theo 4 pha chu kỳ + ô nhập tin ngắn.
+- [ ] **2B.3 Wife Dashboard:** In-app Card câu hỏi thăm kèm 4 nút phản hồi nhanh 1 chạm (🥺 Hơi mệt, 🧋 Thèm ngọt, 🥰 Nhớ anh, 🛌 Đang nghỉ).
+- [ ] **2B.4 Nghiệm thu Realtime:** Kiểm thử đồng bộ 2 thiết bị (Xiaomi + Giả lập).
+
+### 🔑 Sprint 3: Google Sign-In & Đồng Bộ Avatar Cặp Đôi
+- [ ] **3.1 Cấu hình Firebase Auth & Google Sign-In:** SHA-1 / SHA-256 trên Firebase Console.
+- [ ] **3.2 Profile Sync:** Lưu PhotoUrl, Email, Display Name vào `users/{uid}` và `couples/{coupleId}`.
+- [ ] **3.3 Avatar đôi UI:** Hiển thị Avatar đôi trên AppBar của Vợ và Hero Card của Chồng.
+- [ ] **3.4 Release v0.5.0:** Đóng gói bản phát hành chính thức.
+
