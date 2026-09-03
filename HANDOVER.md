@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.4.0+9` (Realtime 2-Way Feedback Loop & Multi-Device Sync)
-> **Thời điểm cập nhật:** 03/09/2026 — Hoàn thành Vòng lặp phản hồi 2 chiều & Đồng bộ Live 2 thiết bị
+> **Phiên bản hiện tại:** `v0.5.0+10` (Google Sign-In, Role Onboarding, Nickname Engine & Independent Partner Cycle)
+> **Thời điểm cập nhật:** 03/09/2026 — Hoàn thành v0.5.0 Toàn diện
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)
 
 ---
@@ -10,21 +10,22 @@
 
 | Hạng mục | Kết quả |
 |---|---|
-| `flutter analyze` | ✅ **0 issues found!** |
-| `flutter test` | ✅ **15/15 tests PASSED (100%)** |
+| `flutter analyze` | ✅ **0 issues found!** (Clean 100%) |
+| `flutter test` | ✅ **19/19 tests PASSED (100%)** |
+| Google Sign-In & Auth | ✅ **HOÀN TẤT** — `LoginScreen`, `AuthRepository`, Google/Demo sign-in, Hive/Firestore sync |
+| Role Onboarding | ✅ **HOÀN TẤT** — `RoleSelectionScreen`, Phụ nữ vs Người thương (Ghép đôi / Tự thiết lập) |
+| Nickname Engine | ✅ **HOÀN TẤT** — `NicknameConfig`, 7 presets + tự gõ, Live Preview, Firestore sync |
+| Independent Cycle for Partner | ✅ **HOÀN TẤT** — Chồng tự cài chu kỳ nàng, xem lịch chu kỳ & hiệu chỉnh linh hoạt |
 | Deploy Đa Thiết Bị | ✅ **SUCCESS** — Xiaomi 2201116TG + Android Emulator-5554 song song |
-| Vợ đổi Thể Trạng/Năng Lượng | ✅ **REALTIME SYNC** — Pin năng lượng & tâm trạng trên máy Chồng nhảy tức thì |
-| Vợ gửi Tín Hiệu Yêu Thương | ✅ **REALTIME SYNC** — Máy Chồng hiện Hộp tín hiệu + 4 nút phản hồi nhanh 1 chạm |
-| Chồng phản hồi 1 chạm | ✅ **REALTIME SYNC** — Máy Vợ nhận ngay Banner ngọt ngào kèm Haptic & tự ẩn sau 10s |
-| Dual-Path Firestore Sync | ✅ **HOÀN TẤT** — Đồng bộ an toàn song song `couples` và `pairings`, sắp xếp in-memory |
-| Multi-Device Deploy Script | ✅ **HOÀN TẤT** — `scripts/deploy.ps1 -Target all` nạp APK song song lên toàn bộ thiết bị |
+| SHA-1 Debug Keystore | `EA:A9:EA:AB:B7:B9:9A:1F:F1:81:64:BF:76:2E:E1:75:C5:32:7F:47` |
+| SHA-256 Debug Keystore | `4C:A0:DA:B2:A3:D4:94:7D:B4:08:89:D2:11:A8:13:03:AB:77:05:FD:5B:A0:F5:87:F7:D8:D4:1D:0A:76:99:89` |
 
 ---
 
 ## 1. 🚀 TRẠNG THÁI BUILD APK & KIỂM THỬ (APK BUILD & TEST STATUS)
 
 * **Phân tích tĩnh (Static Analysis):** `flutter analyze` → ✅ **0 issues found!** (0 lỗi, 0 cảnh báo).
-* **Kiểm thử đơn vị (Unit Tests):** `flutter test` → ✅ **14/14 tests PASSED (100%)**.
+* **Kiểm thử đơn vị (Unit Tests):** `flutter test` → ✅ **19/19 tests PASSED (100%)**.
 * **Đóng gói tối ưu (Release Optimization):**
   * Đã kích hoạt **R8 Code Shrinking / Obfuscation** (`isMinifyEnabled = true`, `isShrinkResources = true`).
   * Cấu hình an toàn `proguard-rules.pro` bảo vệ Models, Entities, Hive, Firebase và Plugins.
@@ -306,25 +307,57 @@ adb -s "adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp" pull /sdcard/screen.p
 
 ---
 
-## 8. 🎯 KẾ HOẠCH BỨC PHÁ TIẾP THEO (v0.5.0 SPRINT BREAKDOWN)
+## 7.1. 🔒 CƠ CHẾ RÀNG BUỘC VAI TRÒ THEO TÀI KHOẢN & DỌN DẸP UI TẠM THỜI (POST-AUTH CLEANUP)
 
-Chi tiết hồ sơ kiến trúc và đặc tả đã được lưu tại: [`docs/ROADMAP_v0.5.0.md`](file:///d:/Sources/HerFlow/docs/ROADMAP_v0.5.0.md).
+### 1. Nguyên tắc ràng buộc vai trò (Account-Bound Role):
+* Khi hoàn tất Google Sign-In & Onboarding lần đầu: `userRole` (`UserRole.wife` / `UserRole.husband`) được khóa chặt vào Document `users/{uid}` trên Firestore và Hive cục bộ (`keyUserRole`).
+* Khi người dùng đổi máy, xóa cache hoặc cài lại app: Chỉ cần đăng nhập lại tài khoản Google, app tự phục hồi đúng vai trò đã lưu và mở thẳng giao diện tương ứng (không bắt người dùng chọn lại vai trò).
 
-### 🚀 Sprint 2A: Onboarding Phân Quyền & Hệ Thống Danh Xưng Tùy Biến
-- [ ] **2A.1 Model & Addressing Engine:** `NicknameConfig` + `AddressingEngine` (Preset: "Người thương", "Em bé", "Bé iu", "Vợ yêu", "Chồng yêu", "Anh yêu" + Tự xưng).
-- [ ] **2A.2 UI Cài Đặt:** Thẻ cấu hình Danh xưng 2 chiều trong `SettingsScreen`.
-- [ ] **2A.3 Màn Hình Chào Mừng Lần Đầu (First-Launch Screen):** Chọn vai trò: `[ 🌸 Tôi là Phụ nữ ]` hoặc `[ 🛡️ Tôi là Người thương ]`.
-- [ ] **2A.4 Điều Hướng Onboarding Tách Biệt:** Phụ nữ đi qua thiết lập chu kỳ -> CycleScreen; Người thương vào thẳng nhập mã ghép đôi -> Gentleman's Companion.
+### 2. Chính sách dọn dẹp thành phần thử nghiệm tạm (Deprecation Policy):
+* **Xóa nút chuyển vai trò tạm:** Khi luồng Login + Role Onboarding đi vào hoạt động ổn định, xóa bỏ hoàn toàn nút Floating Action Chip chuyển role nhanh (`🌸 Mode: Vợ ⇄` / `🛡️ Mode: Chồng ⇄`) trên màn hình chính (`CycleScreen`, `HusbandViewScreen`).
+* **Màn hình Cài đặt:** Chuyển mục chọn role thành thẻ thông tin tĩnh dạng **Read-only Badge** hiển thị vai trò hiện tại của tài khoản. Người dùng chỉ có thể đổi vai trò khi thực hiện **Đăng xuất (Sign Out)** hoặc **Reset tài khoản**.
 
-### 💌 Sprint 2B: Chồng Chủ Động Hỏi Han & Vợ Phản Hồi 1 Chạm
-- [ ] **2B.1 Model & Firestore:** `CareInquiryModel` & Subcollection `care_inquiries`.
-- [ ] **2B.2 Husband Dashboard:** Hộp "Chăm sóc nàng hôm nay" với câu hỏi thông minh thích ứng theo 4 pha chu kỳ + ô nhập tin ngắn.
-- [ ] **2B.3 Wife Dashboard:** In-app Card câu hỏi thăm kèm 4 nút phản hồi nhanh 1 chạm (🥺 Hơi mệt, 🧋 Thèm ngọt, 🥰 Nhớ anh, 🛌 Đang nghỉ).
-- [ ] **2B.4 Nghiệm thu Realtime:** Kiểm thử đồng bộ 2 thiết bị (Xiaomi + Giả lập).
+---
 
-### 🔑 Sprint 3: Google Sign-In & Đồng Bộ Avatar Cặp Đôi
-- [ ] **3.1 Cấu hình Firebase Auth & Google Sign-In:** SHA-1 / SHA-256 trên Firebase Console.
-- [ ] **3.2 Profile Sync:** Lưu PhotoUrl, Email, Display Name vào `users/{uid}` và `couples/{coupleId}`.
-- [ ] **3.3 Avatar đôi UI:** Hiển thị Avatar đôi trên AppBar của Vợ và Hero Card của Chồng.
-- [ ] **3.4 Release v0.5.0:** Đóng gói bản phát hành chính thức.
+## 8. 🏷️ QUY CHUẨN ĐÁNH SỐ PHIÊN BẢN (SEMANTIC VERSIONING STANDARD)
+
+Toàn bộ dự án Moona tuân thủ nghiêm ngặt quy tắc Semantic Versioning `MAJOR.MINOR.PATCH+BUILD`:
+* **MAJOR (`X.0.0`):** Thay đổi kiến trúc lớn, phá vỡ cấu trúc dữ liệu cũ (Breaking changes).
+* **MINOR (`0.X.0`):** Bổ sung cụm phân hệ tính năng lớn mới:
+  * `v0.4.0`: Phân vai trò Vợ/Chồng, 2-Way Realtime Care Signals & Deploy song song 2 thiết bị.
+  * `v0.5.0`: Google Sign-In, Role Onboarding, Nickname Engine, Chu kỳ độc lập cho Người thương.
+  * `v0.6.0`: Quét QR Pairing, Interaction History & Emotion Insights Engine, Báo cáo đối soát & Xuất dữ liệu.
+* **PATCH (`0.0.X`):** Vá lỗi (Bug fixes), tối ưu hiệu năng nhỏ.
+* **BUILD (`+N`):** Số lần build APK/Deploy tăng dần tự động (+9 -> +10 -> +11...).
+* **Nguyên tắc cốt lõi:** Tuyệt đối không tự ý nhảy số MINOR/MAJOR giữa các commit phụ khi chưa hoàn thành trọn vẹn scope tính năng và chưa vượt qua 100% tests.
+
+---
+
+## 9. 🎯 KẾ HOẠCH BỨC PHÁ TIẾP THEO (SPRINT BREAKDOWN)
+
+Hồ sơ kiến trúc & đặc tả kỹ thuật chi tiết: [`docs/ROADMAP_v0.5.0.md`](file:///d:/Sources/HerFlow/docs/ROADMAP_v0.5.0.md).
+
+### 🏆 Sprint 2 (v0.5.0) — [✅ ĐÃ HOÀN THÀNH & NGHIỆM THU]
+- [x] **2.1 Google Sign-In & Auth Repository:** `LoginScreen` Liquid Glass + Demo fallback, lưu `userBox` và Firestore `users/{uid}`.
+- [x] **2.2 Role Onboarding:** `RoleSelectionScreen` chào đón với Avatar người dùng và 2 thẻ lựa chọn [Phụ nữ / Người thương].
+- [x] **2.3 Chu kỳ độc lập:** Chàng tự cài đặt chu kỳ của nàng, xem thẻ tóm tắt và mở modal Lịch chu kỳ sinh học.
+- [x] **2.4 Nickname Engine:** Model `NicknameConfig`, 7 presets + tự gõ, Live Preview, đồng bộ Firestore `couples/{coupleId}`.
+- [x] **2.5 Đồng bộ UI:** Couple badge trên AppBar Vợ, Banner phản hồi dùng danh xưng Chồng, Hero Card Chồng hiển thị Avatar nàng.
+
+### 🚀 Sprint 3 (v0.6.0) — [CHUẨN BỊ TRIỂN KHAI]
+- [ ] **Sprint 3A: Cấp Quyền Ngữ Cảnh & Ghép Đôi Bằng Mã QR (QR Pairing)**
+  * [3A.1] Post-Login Contextual Dialog giải thích & xin quyền `POST_NOTIFICATIONS` (Android 13+).
+  * [3A.2] Tích hợp `qr_flutter`: Sinh mã QR động tại tab Vợ (`pairingCode`, `wifeUid`, `wifeName`, `timestamp`).
+  * [3A.3] Tích hợp `mobile_scanner`: Camera quét mã QR tại tab Chồng kèm Dialog xin quyền `CAMERA` theo ngữ cảnh.
+  * [3A.4] Tự động decode JSON payload và ghép đôi tức thời trong 1 chạm.
+- [ ] **Sprint 3B: Lịch Sử Tương Tác & Phán Đoán Cảm Xúc (Insights Engine)**
+  * [3B.1] Firestore subcollection `couples/{coupleId}/interactions/{interactionId}` & Repository.
+  * [3B.2] Tự động lưu vết mọi tín hiệu yêu thương, phản hồi và câu hỏi thăm kèm `cyclePhase` và `cycleDay`.
+  * [3B.3] Thuật toán Emotion Pattern Recognition nhận diện vùng nhạy cảm cao (Vulnerability Cluster) qua 3 chu kỳ.
+  * [3B.4] Cơ chế 24h Early Warning: Thông báo thông minh cảnh báo sớm cho Chồng trước pha Hoàng thể/PMS 24h.
+- [ ] **Sprint 3C: Báo Cáo Đối Soát Chu Kỳ & Xuất Nhập Dữ Liệu (Data Export & Audit)**
+  * [3C.1] UI Báo cáo đối soát: Bảng so sánh Chu kỳ lý thuyết cấu hình vs Chu kỳ thực tế ghi nhận qua các tháng.
+  * [3C.2] Module xuất/nhập tệp sao lưu mã hóa cao cấp `.moona` (AES-256).
+  * [3C.3] Module xuất bảng tính xem nhanh (.json, .csv) phục vụ khám phụ khoa hoặc gửi bác sĩ.
+  * [3C.4] Kiểm thử toàn diện 100% pass, `flutter analyze` 0 issues, bump release `v0.6.0+11`.
 
