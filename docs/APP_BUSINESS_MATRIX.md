@@ -70,10 +70,9 @@ Hệ thống điều hướng cấp cao nhất (`MainNavScreen`) sử dụng 2 c
 | **Cảm xúc (Mood)** | Mức năng lượng (1-5) hôm nay | **RW** | **RO** | Hive `mood_records_box` + Firestore | Đồng bộ realtime lên Live Status |
 | | Thẻ tâm trạng (Thư thái, cáu gắt...) | **RW** | **RO** | Hive `mood_records_box` + Firestore | Đồng bộ realtime lên Live Status |
 | | Triệu chứng thể chất (Đau bụng, mụn...) | **RW** | **RO** | Hive `mood_records_box` | Hiển thị tóm tắt cho Chồng |
-| | Ghi chú nhật ký riêng tư (Notes) | **RW** | **None** | Hive `mood_records_box` (AES Encrypted) | Cục bộ 100%, không đồng bộ |
-| **Tín hiệu (Signals)** | Gửi yêu cầu chăm sóc (Ôm, Trà, Snuggle) | **RW (Tạo)** | **RO (Nhận)** | Firestore `couples/{id}/signals` | Realtime 2 chiều |
-| | Phản hồi tín hiệu ("Anh đang đến đây") | **RO (Nhận)** | **RW (Gửi)** | Firestore `couples/{id}/signals` | Realtime 2 chiều |
-| | Gửi tin nhắn hỏi thăm nhanh | **RO (Nhận)** | **RW (Gửi)** | Firestore `couples/{id}/signals` | Realtime 2 chiều |
+| **Tín hiệu (Signals)** | Gửi yêu cầu chăm sóc & Tin nhắn tự gõ (Love Note max 150 ký tự) | **RW (Tạo)** | **RO (Nhận)** | Firestore `couples/{id}/care_signals` | Realtime 2 chiều |
+| | Phản hồi tín hiệu ("Anh biết rồi ❤️", "Anh qua ngay 🚗") | **RO (Nhận)** | **RW (Gửi)** | Firestore `couples/{id}/care_signals` | Realtime 2 chiều |
+| | Gửi tin nhắn hỏi thăm nhanh | **RO (Nhận)** | **RW (Gửi)** | Firestore `couples/{id}/care_signals` | Realtime 2 chiều |
 | **Danh xưng (Nicknames)** | Mình gọi bạn ấy là gì (`callPartnerAs`) | **RW** | **RW** | Hive `settings_box` + Firestore | Realtime 2 chiều (Perspective Mapping) |
 | | Mình tự xưng là gì (`selfCallAs`) | **RW** | **RW** | Hive `settings_box` + Firestore | Realtime 2 chiều (Perspective Mapping) |
 | **Ghép đôi (Pairing)** | Sinh mã 6 ký tự kết nối | **RW (Host)** | **None** | Firestore `pairings/{code}` (TTL 24h) | Tạm thời phục vụ ghép đôi |

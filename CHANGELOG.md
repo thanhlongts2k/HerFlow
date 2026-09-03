@@ -7,6 +7,14 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 ## [0.6.3+18] - 2026-09-03 (Establish Business Matrix, Husband 4-Tab Layout & Visual UX Hardening)
 
 ### [Added]
+- **💌 Tính Năng Gửi Tin Nhắn Tùy Biến Cho Vợ (Wife Custom Love Note & Care Signal Sheet):**
+  * Nâng cấp `CareSignalSheet`: Bổ sung ô nhập liệu tự do (tối đa 150 ký tự, có bộ đếm) để Nàng nhắn bất cứ điều gì cho Chàng (thèm đồ ăn, cần ôm, tâm sự...).
+  * 6 Quick Suggestion Chips gợi ý cảm xúc nhanh một chạm.
+  * Tối ưu UX bàn phím: Chống tràn pixel và che khuất nút gửi khi bàn phím ảo bung lên.
+  * Nút "Gửi cho [Anh] 💕" cá nhân hóa theo danh xưng, cờ chống spam và thông báo gửi thành công.
+- **💬 Hiển Thị Bong Bóng Tin Nhắn Tình Cảm Trên Giao Diện Chồng (Husband Love Note Bubble):**
+  * Hiển thị nổi bật lời nhắn Nàng tự gõ với định dạng trích dẫn ngọt ngào (`💌 Lời nhắn từ [Em bé]: "[Nội dung]"`).
+  * Bộ nút phản hồi nhanh 1 chạm: *"❤️ Anh biết rồi nhé"*, *"🚗 Anh qua với em ngay"*, *"🛵 Anh đang mua đồ ăn về nè"*, *"🫂 Gửi nàng cái ôm thật chặt"*, *"☕ Anh pha nước ấm cho em liền"*.
 - **🗺️ Ban Hành Bản Đồ Nghiệp Vụ Toàn Dự Án (`docs/APP_BUSINESS_MATRIX.md`):**
   * Định nghĩa chi tiết ma trận phân quyền 2 vai trò: Vợ (RW dữ liệu chu kỳ/cảm xúc), Chồng (RO + Care Actions).
   * Quy chuẩn trạng thái kết nối: Unpaired (Offline Demo) vs Paired (Realtime Sync qua `couples/{coupleId}`).

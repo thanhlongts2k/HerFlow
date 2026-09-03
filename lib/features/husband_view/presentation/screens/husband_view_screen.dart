@@ -462,11 +462,57 @@ class HusbandViewScreen extends ConsumerWidget {
             ],
           ),
 
+          // BONG BÓNG TIN NHẮN TÌNH CẢM NỔI BẬT NÀNG TỰ GÕ (LOVE NOTE BUBBLE)
           if (!signal.isFromHusband && signal.customNote != null && signal.customNote!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Ghi chú: "${signal.customNote}"',
-              style: const TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF2B1C2E) : const Color(0xFFFFF0F5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primary.withAlpha(isDark ? 90 : 80),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(isDark ? 30 : 20),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('💌', style: TextStyle(fontSize: 15)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Lời nhắn từ $partnerName:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? const Color(0xFFFFB4C8) : AppColors.primaryDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '"${signal.customNote}"',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black87,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
 
@@ -535,9 +581,10 @@ class HusbandViewScreen extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                _buildQuickReplyChip(context, ref, signal.id, '❤️ Anh biết rồi nhé'),
+                _buildQuickReplyChip(context, ref, signal.id, '🚗 Anh qua với em ngay'),
                 _buildQuickReplyChip(context, ref, signal.id, '🛵 Anh đang mua đồ ăn về nè'),
                 _buildQuickReplyChip(context, ref, signal.id, '🫂 Gửi nàng cái ôm thật chặt'),
-                _buildQuickReplyChip(context, ref, signal.id, '💖 Ngoan đợi anh về nhé'),
                 _buildQuickReplyChip(context, ref, signal.id, '☕ Anh pha nước ấm cho em liền'),
               ],
             ),

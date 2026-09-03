@@ -204,6 +204,36 @@ void main() {
       expect(restored.targetNickname, 'Vợ yêu');
     });
 
+    test('Wife CareSignalModel custom message / love note serialization roundtrip', () {
+      final signal = CareSignalModel(
+        id: 'sig-wife-custom-1',
+        coupleId: 'couple-456',
+        type: CareSignalType.custom,
+        customNote: 'Thèm trà sữa trân châu đường đen size L nha anh ơi 🧋',
+        sentAt: DateTime(2026, 9, 3, 14, 20),
+        senderRole: 'wife',
+        senderNickname: 'Bé iu',
+        targetNickname: 'Anh iu',
+      );
+
+      expect(signal.isFromHusband, isFalse);
+      expect(signal.customMessage, 'Thèm trà sữa trân châu đường đen size L nha anh ơi 🧋');
+      expect(signal.senderName, 'Bé iu');
+
+      final map = signal.toMap();
+      expect(map['customMessage'], signal.customNote);
+      expect(map['senderName'], 'Bé iu');
+      expect(map['signalType'], 'custom');
+
+      final restored = CareSignalModel.fromMap(map);
+      expect(restored.id, 'sig-wife-custom-1');
+      expect(restored.type, CareSignalType.custom);
+      expect(restored.customMessage, signal.customNote);
+      expect(restored.senderName, 'Bé iu');
+      expect(restored.targetNickname, 'Anh iu');
+      expect(restored.isFromHusband, isFalse);
+    });
+
     test('AES-256 and SHA-256 checksum integrity verification', () {
       final key = enc.Key.fromUtf8('MoonaSec2026!Key@SecretFlow2026!');
       final iv = enc.IV.fromUtf8('MoonaIV2026Init!');

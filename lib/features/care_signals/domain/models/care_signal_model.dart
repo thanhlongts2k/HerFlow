@@ -9,6 +9,7 @@ enum CareSignalType {
   message,        // Tin nhắn yêu thương
   remind,         // Nhắc nhở nhẹ nhàng
   husbandMessage, // Lời hỏi thăm từ Người thương
+  custom,         // Tin nhắn tùy biến nàng tự gõ
 }
 
 extension CareSignalTypeExt on CareSignalType {
@@ -21,6 +22,7 @@ extension CareSignalTypeExt on CareSignalType {
       case CareSignalType.message:        return 'Nhắn tin thương yêu 💌';
       case CareSignalType.remind:         return 'Nhắc nhở nhẹ nhàng 🔔';
       case CareSignalType.husbandMessage: return 'Hỏi thăm & Nhắn nhủ nàng 💬';
+      case CareSignalType.custom:         return 'Lời nhắn tâm tình 💌';
     }
   }
 
@@ -33,6 +35,7 @@ extension CareSignalTypeExt on CareSignalType {
       case CareSignalType.message:        return '💌';
       case CareSignalType.remind:         return '🔔';
       case CareSignalType.husbandMessage: return '💬';
+      case CareSignalType.custom:         return '💌';
     }
   }
 }
@@ -65,6 +68,12 @@ class CareSignalModel {
     this.targetNickname,
   });
 
+  /// Alias tiện ích theo yêu cầu kiến trúc (customMessage tương đương customNote)
+  String? get customMessage => customNote;
+
+  /// Alias tiện ích theo yêu cầu kiến trúc (senderName tương đương senderNickname)
+  String? get senderName => senderNickname;
+
   /// Kiểm tra xem đã có người bấm phản hồi hay chưa
   bool get isResponded => responseMessage != null && responseMessage!.isNotEmpty;
 
@@ -75,13 +84,17 @@ class CareSignalModel {
     'id': id,
     'coupleId': coupleId,
     'type': type.name,
+    'signalType': type.name,
     'customNote': customNote,
+    'customMessage': customNote,
     'sentAt': sentAt.toIso8601String(),
+    'createdAt': sentAt.toIso8601String(),
     'isRead': isRead,
     'responseMessage': responseMessage,
     'respondedAt': respondedAt?.toIso8601String(),
     'senderRole': senderRole,
     'senderNickname': senderNickname,
+    'senderName': senderNickname,
     'targetNickname': targetNickname,
   };
 
@@ -89,18 +102,18 @@ class CareSignalModel {
     id: map['id'] as String? ?? '',
     coupleId: map['coupleId'] as String? ?? '',
     type: CareSignalType.values.firstWhere(
-      (e) => e.name == map['type'],
+      (e) => e.name == (map['signalType'] ?? map['type']),
       orElse: () => CareSignalType.hug,
     ),
-    customNote: map['customNote'] as String?,
-    sentAt: DateTime.tryParse(map['sentAt'] as String? ?? '') ?? DateTime.now(),
+    customNote: (map['customMessage'] ?? map['customNote']) as String?,
+    sentAt: DateTime.tryParse((map['createdAt'] ?? map['sentAt']) as String? ?? '') ?? DateTime.now(),
     isRead: map['isRead'] as bool? ?? false,
     responseMessage: map['responseMessage'] as String?,
     respondedAt: map['respondedAt'] != null
         ? DateTime.tryParse(map['respondedAt'] as String)
         : null,
     senderRole: map['senderRole'] as String?,
-    senderNickname: map['senderNickname'] as String?,
+    senderNickname: (map['senderName'] ?? map['senderNickname']) as String?,
     targetNickname: map['targetNickname'] as String?,
   );
 

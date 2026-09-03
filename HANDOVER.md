@@ -11,8 +11,9 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **30/30 tests PASSED** | Đạt 100% pass toàn bộ test suites |
+| **Unit Testing (`flutter test`)** | ✅ **31/31 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Love Note roundtrip) |
 | **Bản Đồ Nghiệp Vụ Toàn Dự Án** | ✅ **CHUẨN HÓA** | Tạo `docs/APP_BUSINESS_MATRIX.md` phân định quyền 2 Role, Unpaired vs Paired, Data Boundary & Perspective Mapping |
+| **Tin Nhắn Tùy Biến Cho Vợ (Love Note)** | ✅ **HOÀN TẤT** | Nàng tự do gõ tin nhắn (max 150 ký tự), quick chips gợi ý, chống tràn bàn phím, bong bóng tin nhắn hiển thị nổi bật trên máy Chồng |
 | **BUG-01 + BUG-08: Navigation Chồng** | ✅ **FIXED** | `MainNavScreen` giờ có `_buildHusbandLayout()` riêng: Scaffold + BottomNav 4 tab (Trang chủ, Cảm xúc, Dinh dưỡng, Cài đặt). Chồng chuyển tab bình thường |
 | **BUG-04: Banner ghép đôi thừa** | ✅ **FIXED** | `_buildConnectionHeader()` phân nhánh rõ 2 trạng thái: `isConnected=true` → Card xanh tĩnh "Đang đồng hành 💕"; `isConnected=false` → Banner CTA ghép đôi |
 | **BUG-03: Sub-title AppBar truncate** | ✅ **FIXED** | Bọc trong `Flexible` + `maxLines: 2, overflow: TextOverflow.ellipsis` |
