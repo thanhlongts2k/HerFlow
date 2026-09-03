@@ -5,16 +5,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class PartnerStatusModel {
   final String coupleId;
   final String currentPhase;
+  final int cycleDay;
   final int energyLevel;
   final List<String> moodTags;
+  final String moodSummary;
   final String husbandActionTip;
   final DateTime updatedAt;
 
   const PartnerStatusModel({
     required this.coupleId,
     required this.currentPhase,
+    this.cycleDay = 1,
     required this.energyLevel,
     required this.moodTags,
+    this.moodSummary = '',
     required this.husbandActionTip,
     required this.updatedAt,
   });
@@ -23,8 +27,10 @@ class PartnerStatusModel {
     return {
       'coupleId': coupleId,
       'currentPhase': currentPhase,
+      'cycleDay': cycleDay,
       'energyLevel': energyLevel,
       'moodTags': moodTags,
+      'moodSummary': moodSummary,
       'husbandActionTip': husbandActionTip,
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -40,8 +46,10 @@ class PartnerStatusModel {
     return PartnerStatusModel(
       coupleId: map['coupleId'] as String? ?? '',
       currentPhase: map['currentPhase'] as String? ?? 'Nang trứng',
-      energyLevel: map['energyLevel'] as int? ?? 3,
+      cycleDay: (map['cycleDay'] as num?)?.toInt() ?? 1,
+      energyLevel: (map['energyLevel'] as num?)?.toInt() ?? 3,
       moodTags: List<String>.from(map['moodTags'] ?? []),
+      moodSummary: map['moodSummary'] as String? ?? '',
       husbandActionTip: map['husbandActionTip'] as String? ?? '',
       updatedAt: parseDate(map['updatedAt']),
     );
@@ -55,16 +63,20 @@ class PartnerStatusModel {
   PartnerStatusModel copyWith({
     String? coupleId,
     String? currentPhase,
+    int? cycleDay,
     int? energyLevel,
     List<String>? moodTags,
+    String? moodSummary,
     String? husbandActionTip,
     DateTime? updatedAt,
   }) {
     return PartnerStatusModel(
       coupleId: coupleId ?? this.coupleId,
       currentPhase: currentPhase ?? this.currentPhase,
+      cycleDay: cycleDay ?? this.cycleDay,
       energyLevel: energyLevel ?? this.energyLevel,
       moodTags: moodTags ?? this.moodTags,
+      moodSummary: moodSummary ?? this.moodSummary,
       husbandActionTip: husbandActionTip ?? this.husbandActionTip,
       updatedAt: updatedAt ?? this.updatedAt,
     );

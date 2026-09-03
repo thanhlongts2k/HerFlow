@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
+import 'package:herflow/core/constants/user_role.dart';
+import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/domain/models/pairing_model.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/husband_dashboard_screen.dart';
 
 /// Màn hình Kết Nối Ghép Đôi Vợ - Chồng qua mã Pairing Code 6 ký tự
 class PairingScreen extends ConsumerStatefulWidget {
-  const PairingScreen({super.key});
+  final int? initialIndex;
+  const PairingScreen({super.key, this.initialIndex});
 
   @override
   ConsumerState<PairingScreen> createState() => _PairingScreenState();
@@ -23,7 +26,13 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final initialTab = widget.initialIndex ??
+        (ref.read(userRoleProvider) == UserRole.husband ? 1 : 0);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: initialTab.clamp(0, 1),
+    );
   }
 
   @override

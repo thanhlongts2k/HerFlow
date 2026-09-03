@@ -1,10 +1,12 @@
 // lib/features/care_signals/presentation/widgets/care_signal_sheet.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
+import 'package:herflow/features/care_signals/presentation/controllers/care_signal_controller.dart';
 
 /// Bottom sheet để Vợ chọn và gửi tín hiệu yêu thương cho Chồng
-class CareSignalSheet extends StatelessWidget {
+class CareSignalSheet extends ConsumerWidget {
   const CareSignalSheet({super.key});
 
   static Future<void> show(BuildContext context) {
@@ -20,7 +22,7 @@ class CareSignalSheet extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Padding(
@@ -56,15 +58,33 @@ class CareSignalSheet extends StatelessWidget {
             runSpacing: 10,
             children: CareSignalType.values.map((type) {
               return InkWell(
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã gửi: ${type.label} — Tính năng đồng bộ Cloud sẽ có trong v0.4.0'),
-                      backgroundColor: AppColors.primary,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
+                  await ref.read(careSignalControllerProvider).sendSignal(type);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Text(type.emoji, style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Đã gửi tín hiệu: ${type.label} 💖',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: AppColors.primary,
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    );
+                  }
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(

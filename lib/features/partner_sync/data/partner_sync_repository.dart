@@ -2,10 +2,12 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import '../domain/models/pairing_model.dart';
 import '../domain/models/partner_status_model.dart';
 
@@ -215,13 +217,30 @@ class PartnerSyncRepository {
     }
 
     try {
+      final statusMap = status.toMap();
+
+      // 1. Ghi vào subcollection couples/{coupleId}/status/today
       await _firestore
           .collection('couples')
           .doc(coupleId)
           .collection('status')
           .doc('today')
-          .set(status.toMap(), SetOptions(merge: true))
+          .set(statusMap, SetOptions(merge: true))
           .timeout(_kFirestoreTimeout);
+
+      // 2. Ghi đồng thời vào document pairings/{pairingCode}
+      final pairingCode = _settingsBox.get(keyPairingCode) as String?;
+      if (pairingCode != null && pairingCode.isNotEmpty) {
+        try {
+          await _firestore
+              .collection('pairings')
+              .doc(pairingCode)
+              .set(statusMap, SetOptions(merge: true))
+              .timeout(_kFirestoreTimeout);
+        } catch (e) {
+          debugPrint('pushTodayStatus pairings sync note: $e');
+        }
+      }
 
       // Đẩy thành công -> xóa cờ pending
       await _settingsBox.put(keyIsPendingSync, false);
@@ -248,13 +267,25 @@ class PartnerSyncRepository {
       if (coupleId == null || coupleId.isEmpty) return;
 
       try {
+        final map = Map<String, dynamic>.from(data);
         await _firestore
             .collection('couples')
             .doc(coupleId)
             .collection('status')
             .doc('today')
-            .set(Map<String, dynamic>.from(data), SetOptions(merge: true))
+            .set(map, SetOptions(merge: true))
             .timeout(_kFirestoreTimeout);
+
+        final pairingCode = _settingsBox.get(keyPairingCode) as String?;
+        if (pairingCode != null && pairingCode.isNotEmpty) {
+          try {
+            await _firestore
+                .collection('pairings')
+                .doc(pairingCode)
+                .set(map, SetOptions(merge: true))
+                .timeout(_kFirestoreTimeout);
+          } catch (_) {}
+        }
 
         await _settingsBox.put(keyIsPendingSync, false);
         await _settingsBox.delete(keyPendingStatusData);
@@ -278,6 +309,150 @@ class PartnerSyncRepository {
       if (!snapshot.exists || snapshot.data() == null) return null;
       return PartnerStatusModel.fromFirestore(snapshot);
     }).handleError((_) {
+      return null;
+    });
+  }
+
+  // === 4. TÍN HIỆU YÊU THƯƠNG 2 CHIỀU (CARE SIGNALS) ===
+  static const String keyLatestLocalSignal = 'latest_local_care_signal';
+
+  /// Vợ gửi tín hiệu yêu thương lên Firestore & lưu Hive local
+  Future<void> sendCareSignal(CareSignalModel signal) async {
+    // 1. Lưu Hive local làm bộ đệm
+    await _settingsBox.put(keyLatestLocalSignal, signal.toMap());
+
+    // 2. Ghi lên Firestore nếu đã kết nối cặp đôi
+    final coupleId = signal.coupleId.isNotEmpty ? signal.coupleId : getSavedCoupleId();
+    final pairingCode = _settingsBox.get(keyPairingCode) as String?;
+
+    if (coupleId != null && coupleId.isNotEmpty) {
+      try {
+        await _firestore
+            .collection('couples')
+            .doc(coupleId)
+            .collection('care_signals')
+            .doc(signal.id)
+            .set(signal.toMap(), SetOptions(merge: true))
+            .timeout(_kFirestoreTimeout);
+      } catch (e) {
+        debugPrint('PartnerSyncRepository: sendCareSignal couples error: $e');
+      }
+    }
+
+    if (pairingCode != null && pairingCode.isNotEmpty) {
+      try {
+        await _firestore
+            .collection('pairings')
+            .doc(pairingCode)
+            .collection('care_signals')
+            .doc(signal.id)
+            .set(signal.toMap(), SetOptions(merge: true))
+            .timeout(_kFirestoreTimeout);
+      } catch (e) {
+        debugPrint('PartnerSyncRepository: sendCareSignal pairings error: $e');
+      }
+    }
+  }
+
+  /// Chồng phản hồi nhanh 1 chạm lên tín hiệu của Vợ
+  Future<void> respondCareSignal({
+    required String signalId,
+    required String responseMessage,
+  }) async {
+    final coupleId = getSavedCoupleId();
+    final pairingCode = _settingsBox.get(keyPairingCode) as String?;
+    final now = DateTime.now();
+    final updatePayload = {
+      'responseMessage': responseMessage,
+      'respondedAt': now.toIso8601String(),
+      'isRead': true,
+    };
+
+    // 1. Cập nhật Hive local
+    final localData = _settingsBox.get(keyLatestLocalSignal);
+    if (localData is Map) {
+      final map = Map<String, dynamic>.from(localData);
+      map['responseMessage'] = responseMessage;
+      map['respondedAt'] = now.toIso8601String();
+      map['isRead'] = true;
+      await _settingsBox.put(keyLatestLocalSignal, map);
+    }
+
+    // 2. Cập nhật Firestore couples collection
+    if (coupleId != null && coupleId.isNotEmpty) {
+      try {
+        await _firestore
+            .collection('couples')
+            .doc(coupleId)
+            .collection('care_signals')
+            .doc(signalId)
+            .set(updatePayload, SetOptions(merge: true))
+            .timeout(_kFirestoreTimeout);
+      } catch (e) {
+        debugPrint('PartnerSyncRepository: respondCareSignal couples error: $e');
+      }
+    }
+
+    // 3. Cập nhật Firestore pairings collection
+    if (pairingCode != null && pairingCode.isNotEmpty) {
+      try {
+        await _firestore
+            .collection('pairings')
+            .doc(pairingCode)
+            .collection('care_signals')
+            .doc(signalId)
+            .set(updatePayload, SetOptions(merge: true))
+            .timeout(_kFirestoreTimeout);
+      } catch (e) {
+        debugPrint('PartnerSyncRepository: respondCareSignal pairings error: $e');
+      }
+    }
+  }
+
+  /// Lắng nghe tín hiệu yêu thương mới nhất từ Firestore theo thời gian thực (fallback Hive)
+  Stream<CareSignalModel?> watchLatestCareSignal(String coupleId) {
+    final pairingCode = _settingsBox.get(keyPairingCode) as String?;
+
+    if (coupleId.isEmpty && (pairingCode == null || pairingCode.isEmpty)) {
+      final local = _settingsBox.get(keyLatestLocalSignal);
+      if (local is Map) {
+        try {
+          return Stream.value(CareSignalModel.fromMap(Map<String, dynamic>.from(local)));
+        } catch (_) {}
+      }
+      return Stream.value(null);
+    }
+
+    // Ưu tiên lắng nghe subcollection của coupleId hoặc pairingCode
+    final targetRef = coupleId.isNotEmpty
+        ? _firestore.collection('couples').doc(coupleId).collection('care_signals')
+        : _firestore.collection('pairings').doc(pairingCode).collection('care_signals');
+
+    return targetRef.snapshots().map((snapshot) {
+      if (snapshot.docs.isEmpty) {
+        final local = _settingsBox.get(keyLatestLocalSignal);
+        if (local is Map) {
+          return CareSignalModel.fromMap(Map<String, dynamic>.from(local));
+        }
+        return null;
+      }
+
+      // Sắp xếp in-memory theo sentAt giảm dần để tránh lỗi composite index Firestore
+      final list = snapshot.docs
+          .map((doc) => CareSignalModel.fromMap(doc.data()))
+          .toList();
+      list.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+      final latest = list.first;
+
+      // Cập nhật bộ đệm Hive local
+      _settingsBox.put(keyLatestLocalSignal, latest.toMap());
+      return latest;
+    }).handleError((e) {
+      debugPrint('PartnerSyncRepository: watchLatestCareSignal error: $e');
+      final local = _settingsBox.get(keyLatestLocalSignal);
+      if (local is Map) {
+        return CareSignalModel.fromMap(Map<String, dynamic>.from(local));
+      }
       return null;
     });
   }

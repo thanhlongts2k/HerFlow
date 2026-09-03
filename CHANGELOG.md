@@ -4,6 +4,79 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.4.0+9] - 2026-09-03 (Realtime 2-Way Feedback Loop & Multi-Device Sync)
+
+### [Added]
+- **🔄 Vòng lặp phản hồi tương tác 2 chiều Realtime hoàn chỉnh (2-Way Realtime Feedback Loop):**
+  * **Phía Vợ (CycleScreen):**
+    - Lắng nghe realtime `Stream<CareSignalModel?>` qua `latestCareSignalStreamProvider`.
+    - Tự động hiển thị `_HusbandResponseBanner` nổi bật ở đầu màn hình ngay khi Chồng phản hồi: `💖 Lời nhắn từ Chồng yêu 💕`, hiển thị nội dung tin nhắn của Chồng kèm ngữ cảnh tín hiệu ban đầu (`Phản hồi cho: "Muốn được ôm 🤗"`).
+    - Tự động kích hoạt hiệu ứng rung nhẹ xúc giác `AppHaptics.light()` khi nhận tin nhắn phản hồi.
+    - Hỗ trợ nút đóng nhanh `✕` và timer tự động ẩn sau 10 giây.
+  * **Phía Chồng (HusbandViewScreen):**
+    - Nhận tín hiệu yêu thương thời gian thực với đầy đủ 4 nút phản hồi nhanh 1 chạm.
+    - Chồng bấm phản hồi -> Đổi ngay sang badge xác nhận `"Bạn đã phản hồi: '[Tin nhắn]'"` kèm SnackBar thông báo.
+- **⚡ Tự động đồng bộ thể trạng Vợ lên Cloud (Wife Status Auto-Sync):**
+  * Nâng cấp `PartnerStatusModel` bổ sung trường `cycleDay` và `moodSummary`.
+  * Hook tự động kích hoạt `syncTodayStatus()` ngay khi Vợ cập nhật tâm trạng/mức năng lượng trong ngày tại `SelectedDateMoodController`.
+  * Tự động gọi `syncCurrentWifeStatusToCloud()` khi mở màn hình `CycleScreen`.
+  * Màn hình Chồng lập tức cập nhật thời gian thực mà không cần thao tác vuốt hay tải lại trang.
+- **🛡️ Cơ chế Dual-Collection Firestore & In-Memory Sorting chống lỗi index:**
+  * Đồng bộ song song vào cả `couples/{coupleId}` và `pairings/{pairingCode}` với `.set(..., SetOptions(merge: true))`, loại bỏ hoàn toàn rủi ro lỗi `NOT_FOUND` của `.update()`.
+  * Triển khai sắp xếp in-memory theo `sentAt` giảm dần, loại bỏ phụ thuộc vào composite index của Firestore.
+- **🚀 Kịch bản Deploy đa thiết bị tự động (`scripts/deploy.ps1 -Target all`):**
+  * Tự động quét toàn bộ thiết bị đang kết nối ADB (cả máy thật và giả lập).
+  * Build APK một lần duy nhất và nạp đồng thời lên tất cả thiết bị.
+
+---
+
+## [0.4.0+2] - 2026-09-03 (Role-Based Architecture & Dynamic Navigation)
+
+### [Added]
+- **👥 Phân định vai trò người dùng (Role-Based Architecture):**
+  * Định nghĩa `enum UserRole { wife, husband }` kèm extension helper (`isWife`, `isHusband`, `displayName`, `shortName`, `emoji`) trong `lib/core/constants/user_role.dart`.
+  * Xây dựng `userRoleProvider` (Riverpod `StateNotifier`) đọc/ghi trạng thái từ Hive (`app_user_role` & `partner_user_role`) để toàn bộ ứng dụng cập nhật real-time.
+- **📱 Cấu trúc giao diện động theo vai trò (Dynamic Main View):**
+  * **Vai trò Vợ (`UserRole.wife`):**
+    - Hiển thị Bottom Navigation 4 tab đầy đủ dành cho phái nữ: [0: Chu kỳ, 1: Cảm xúc, 2: Dinh dưỡng, 3: Cài đặt].
+    - Nút icon Khiên (`Icons.shield_outlined`) trên AppBar và ListTile trong Cài Đặt cho phép Vợ "Xem trước Góc nhìn của Chồng" (`HusbandViewScreen(isWifePreview: true)` có banner giải thích và nút đóng).
+    - Màn hình Ghép đôi: Mặc định mở tab 0 "Dành cho Vợ" (Tạo mã ghép đôi).
+  * **Vai trò Chồng (`UserRole.husband`):**
+    - Mở app vào THẲNG màn hình "Góc Nhìn Của Anh" (Gentleman's Companion), loại bỏ hoàn toàn Bottom Navigation theo dõi chu kỳ phái nữ.
+    - AppBar có nút Cài đặt và trạng thái đồng bộ Live.
+    - Màn hình Ghép đôi: Mặc định mở tab 1 "Dành cho Chồng" (Nhập mã ghép đôi từ nàng).
+- **🎛️ Bộ công cụ chuyển vai trò tiện lợi trên 1 thiết bị:**
+  * Thêm nhóm "Vai Trò Ứng Dụng" trong `SettingsScreen` với 2 thẻ chọn `_RoleCard`: `[ 🌸 Tôi là Vợ ]` và `[ 🛡️ Tôi là Chồng ]`, chuyển đổi ngay lập tức không cần khởi động lại.
+  * Bổ sung nút chuyển role nhanh dạng Floating Action Chip (chỉ kích hoạt ở `kDebugMode`): `🌸 Mode: Vợ ⇄` / `🛡️ Mode: Chồng ⇄` ở góc màn hình, kiểm thử 1 máy chỉ với 1 chạm.
+- **🧪 Unit Tests:**
+  * Bổ sung 3 test cases cho `UserRole` và các helper extension trong `test/widget_test.dart` (14/14 tests pass 100%).
+
+---
+
+## [0.4.0+1] - 2026-09-03 (Husband View Redesign & 2-Way Care Signals)
+
+### [Added]
+- **👔 Redesign toàn diện màn hình "Góc nhìn anh" (Gentleman's Companion):**
+  * Thiết kế lại giao diện theo phong cách nam tính, lịch lãm (Dark Slate / Deep Navy kết hợp Warm Amber).
+  * **Hero Card nhiệt kế thể trạng:** Hiển thị rõ tên pha chu kỳ, ngày chu kỳ, lời giải thích tinh tế viết riêng cho nam giới, và thanh đo Pin năng lượng trực quan (🪫 Cạn kiệt, 🔋 Đang hồi phục, ⚡ Tràn đầy).
+  * **Gentleman's Playbook (Tuyệt chiêu cho chàng):** Phân 3 khối rõ ràng:
+    - 🎯 *Nên làm ngay:* Chườm ấm, chuẩn bị trà gừng, làm việc nhà giúp nàng.
+    - 🚫 *Điều cấm kỵ:* Không tranh cãi lý lẽ, không hỏi dồn dập "Sao em cứ cáu thế?", không trễ hẹn.
+    - 💡 *Gợi ý món nàng thích:* Trà thảo mộc, súp ấm, socola ngọt thanh.
+  * **Banner kết nối thông minh:** Tự động lắng nghe Live Firestore khi đã ghép đôi, hoặc hiển thị từ Hive local kèm lối tắt kết nối nhanh.
+- **💕 Tín hiệu yêu thương tương tác 2 chiều (2-Way Care Signals):**
+  * Nâng cấp `CareSignalModel` hỗ trợ `responseMessage`, `respondedAt`, `isResponded`.
+  * Phía Vợ (`CareSignalSheet`): Chạm gửi tín hiệu trực tiếp lên Firestore (`pairings/{coupleId}/care_signals`) và Hive local, loại bỏ hoàn toàn thông báo tạm.
+  * Phía Chồng: Hiển thị hộp tín hiệu nổi bật với thời gian tương đối (Vừa xong, X phút trước).
+  * **Bộ 4 nút phản hồi nhanh 1 chạm cho Chồng:**
+    - 🛵 *"Anh đang mua đồ ăn về nè"*
+    - 🫂 *"Gửi nàng cái ôm thật chặt"*
+    - 💖 *"Ngoan đợi anh về nhé"*
+    - ☕ *"Anh pha nước ấm cho em liền"*
+  * Chồng bấm phản hồi -> Cập nhật trực tiếp lên Firestore và đổi badge sang trạng thái "Bạn đã phản hồi".
+
+---
+
 ## [0.3.0+7] - 2026-09-03 (Cycle Projection Engine & Actual vs Predicted Calendar)
 
 ### [Fixed]

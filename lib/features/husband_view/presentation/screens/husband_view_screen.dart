@@ -2,17 +2,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:herflow/core/constants/app_colors.dart';
+import 'package:herflow/core/constants/cycle_phase.dart';
 import 'package:herflow/core/utils/date_utils.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/mood/presentation/controllers/mood_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
-import 'package:herflow/features/partner_sync/presentation/screens/husband_dashboard_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
+import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
+import 'package:herflow/features/care_signals/presentation/controllers/care_signal_controller.dart';
+import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 
-/// Màn hình Góc Nhìn Yêu Thương Cho Chồng / Người Yêu (Husband View)
+/// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
 class HusbandViewScreen extends ConsumerWidget {
-  const HusbandViewScreen({super.key});
+  final bool isWifePreview;
+  const HusbandViewScreen({super.key, this.isWifePreview = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,36 +25,70 @@ class HusbandViewScreen extends ConsumerWidget {
     final selectedDate = ref.watch(selectedCalendarDateProvider);
     final moodEntry = ref.watch(selectedDateMoodProvider);
     final savedCoupleId = ref.watch(savedCoupleIdProvider);
+    final liveStatusAsync = ref.watch(partnerLiveStatusStreamProvider);
+    final careSignalAsync = ref.watch(latestCareSignalStreamProvider);
+    final careSignal = careSignalAsync.valueOrNull;
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: isWifePreview,
+        leading: isWifePreview
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                tooltip: 'Quay lại',
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Góc Nhìn Của Anh',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
+            Row(
+              children: [
+                const Icon(Icons.shield_rounded, size: 18, color: AppColors.secondary),
+                const SizedBox(width: 6),
+                Text(
+                  'Góc Nhìn Của Anh',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
             ),
             Text(
-              'Bí quyết thấu hiểu & chăm sóc nàng (${AppDateUtils.formatHeaderDate(selectedDate)})',
-              style: theme.textTheme.labelSmall,
+              'Trợ lý thấu hiểu & đồng hành cùng nàng (${AppDateUtils.formatHeaderDate(selectedDate)})',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.sync_rounded),
-            tooltip: 'Ghép đôi Realtime',
+            icon: Icon(
+              savedCoupleId != null ? Icons.cloud_done_rounded : Icons.sync_rounded,
+              color: savedCoupleId != null ? AppColors.success : AppColors.secondary,
+            ),
+            tooltip: savedCoupleId != null ? 'Đã kết nối Live' : 'Ghép đôi với Vợ',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const PairingScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const PairingScreen(initialIndex: 1),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Cài đặt ứng dụng',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
           ),
@@ -57,201 +96,76 @@ class HusbandViewScreen extends ConsumerWidget {
       ),
       body: cycleAsync.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: AppColors.secondary),
         ),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (cycleInfo) {
-          final phase = cycleInfo.getPhaseForDate(selectedDate);
-          final cycleDay = cycleInfo.getCycleDay(selectedDate);
+          final liveStatus = liveStatusAsync.valueOrNull;
+          final currentPhase = liveStatus != null
+              ? _parsePhase(liveStatus.currentPhase)
+              : cycleInfo.getPhaseForDate(selectedDate);
+          final cycleDay = (liveStatus != null && liveStatus.cycleDay > 0)
+              ? liveStatus.cycleDay
+              : cycleInfo.getCycleDay(selectedDate);
+          final energyLevel = liveStatus != null
+              ? liveStatus.energyLevel
+              : moodEntry.energyLevel;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 0. BANNER GHÉP ĐÔI REALTIME QUA PAIRING CODE
-                GestureDetector(
-                  onTap: () {
-                    if (savedCoupleId != null && savedCoupleId.isNotEmpty) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HusbandDashboardScreen()),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PairingScreen()),
-                      );
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: savedCoupleId != null
-                          ? AppColors.success.withAlpha(isDark ? 50 : 25)
-                          : AppColors.secondaryContainer.withAlpha(isDark ? 50 : 120),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: savedCoupleId != null
-                            ? AppColors.success.withAlpha(80)
-                            : AppColors.secondary.withAlpha(60),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          savedCoupleId != null ? Icons.cloud_done_rounded : Icons.sync_lock_rounded,
-                          color: savedCoupleId != null ? AppColors.success : AppColors.secondary,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            savedCoupleId != null
-                                ? 'Đã kết nối Firestore • Chạm để xem Live Dashboard'
-                                : 'Kết nối với Chồng qua mã Pairing Code 6 ký tự',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: savedCoupleId != null ? AppColors.success : AppColors.secondaryDark,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
-                      ],
-                    ),
-                  ),
-                ),
+                // 0. BANNER XEM TRƯỚC (DÀNH CHO VỢ)
+                if (isWifePreview) ...[
+                  _buildPreviewBanner(context, isDark),
+                  const SizedBox(height: 10),
+                ],
 
-                // 1. TÓM TẮT TRẠNG THÁI CỦA NÀNG HÔM NAY
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        phase.color.withAlpha(isDark ? 80 : 40),
-                        AppColors.secondary.withAlpha(isDark ? 50 : 20),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: phase.color.withAlpha(isDark ? 100 : 70),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: phase.color.withAlpha(40),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.favorite_rounded, color: phase.color, size: 28),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Hôm nay: ${phase.vietnameseName} (Ngày $cycleDay)',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: phase.color,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Tâm trạng: ${moodEntry.mood} • Năng lượng: ${moodEntry.energyLevel}/5',
-                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        phase.husbandAdvice,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // 1. BANNER TRẠNG THÁI KẾT NỐI
+                _buildConnectionHeader(context, savedCoupleId, isDark),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-                // 2. NHỮNG VIỆC NÊN CHỦ ĐỘNG LÀM HÔM NAY (DO'S)
-                _buildActionCard(
+                // 2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG (CARE SIGNAL)
+                if (careSignal != null) ...[
+                  _buildCareSignalBox(context, ref, careSignal, isDark),
+                  const SizedBox(height: 14),
+                ],
+
+                // 3. HERO CARD: NHIỆT KẾ CẢM XÚC & NĂNG LƯỢNG NÀNG
+                _buildHeroCard(
                   context,
-                  title: 'Hành động ấm áp nên làm ngay',
-                  icon: Icons.thumb_up_alt_rounded,
-                  color: AppColors.success,
-                  items: [
-                    'Chủ động rửa chén, dọn nhà hoặc chăm con giúp nàng.',
-                    'Chuẩn bị một ly nước ấm / trà gừng mật ong để sẵn bàn làm việc.',
-                    'Ôm nàng thật chặt và nói: "Hôm nay em vất vả rồi, để anh lo nhé!".',
-                  ],
+                  phase: currentPhase,
+                  cycleDay: cycleDay,
+                  energyLevel: energyLevel,
+                  isDark: isDark,
+                  moodText: liveStatus?.moodSummary.isNotEmpty == true
+                      ? liveStatus!.moodSummary
+                      : (liveStatus?.moodTags.isNotEmpty == true
+                          ? liveStatus!.moodTags.join(', ')
+                          : moodEntry.mood),
                 ),
 
                 const SizedBox(height: 16),
 
-                // 3. NHỮNG ĐIỀU NÊN TRÁNH (DON'TS)
-                _buildActionCard(
-                  context,
-                  title: 'Những điều tuyệt đối tránh',
-                  icon: Icons.block_rounded,
-                  color: AppColors.error,
-                  items: [
-                    'Tránh tranh luận gay gắt hoặc nói câu "Em lại khó tính rồi đấy".',
-                    'Đừng để nàng phải suy nghĩ tối nay ăn gì — hãy chủ động gọi món nàng thích.',
-                    'Không phàn nàn nếu nàng mệt và muốn đi ngủ sớm.',
-                  ],
-                ),
+                // 4. GENTLEMAN'S PLAYBOOK: TUYỆT CHIÊU CHO CHÀNG
+                _buildPlaybookSection(context, currentPhase, isDark),
 
                 const SizedBox(height: 20),
 
-                // 4. NÚT SAO CHÉP TÓM TẮT ĐỂ GỬI QUA TIN NHẮN (SMS/ZALO)
-                ElevatedButton.icon(
-                  onPressed: () {
-                    final text = '''
-🌸 Tóm tắt thể trạng Moona hôm nay:
-- Giai đoạn: ${phase.vietnameseName} (Ngày $cycleDay)
-- Tâm trạng: ${moodEntry.mood} (Năng lượng: ${moodEntry.energyLevel}/5)
-- Lời nhắc yêu thương: ${phase.husbandAdvice}
-''';
-                    Clipboard.setData(ClipboardData(text: text));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã sao chép tóm tắt trạng thái vào bộ nhớ tạm!'),
-                        backgroundColor: AppColors.primary,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_all_rounded, size: 20),
-                  label: const Text('Sao chép tóm tắt để gửi tin nhắn'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
+                // 5. NÚT SAO CHÉP TÓM TẮT GỬI NHANH (ZALO/SMS)
+                _buildQuickCopyButton(
+                  context,
+                  phase: currentPhase,
+                  cycleDay: cycleDay,
+                  energyLevel: energyLevel,
+                  moodText: moodEntry.mood,
+                  isDark: isDark,
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 32),
               ],
             ),
           );
@@ -260,61 +174,536 @@ class HusbandViewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionCard(
+  /// Banner thông báo khi Vợ đang xem trước giao diện Chồng
+  Widget _buildPreviewBanner(BuildContext context, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withAlpha(isDark ? 40 : 20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withAlpha(isDark ? 80 : 50),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.visibility_rounded, size: 18, color: AppColors.primary),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Chế độ xem trước: Đây là giao diện Chồng bạn sẽ thấy khi mở app 💕',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Đóng',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Banner trạng thái kết nối
+  Widget _buildConnectionHeader(
+    BuildContext context,
+    String? savedCoupleId,
+    bool isDark,
+  ) {
+    final isConnected = savedCoupleId != null && savedCoupleId.isNotEmpty;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PairingScreen(initialIndex: 1)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isConnected
+              ? AppColors.success.withAlpha(isDark ? 35 : 20)
+              : AppColors.secondary.withAlpha(isDark ? 30 : 15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isConnected
+                ? AppColors.success.withAlpha(isDark ? 70 : 50)
+                : AppColors.secondary.withAlpha(isDark ? 60 : 40),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isConnected ? Icons.check_circle_rounded : Icons.link_rounded,
+              color: isConnected ? AppColors.success : AppColors.secondary,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isConnected
+                    ? 'Đang đồng bộ Live Firestore cùng Vợ'
+                    : 'Ghép đôi với nàng qua mã 6 ký tự để nhận Live Status',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isConnected
+                      ? (isDark ? const Color(0xFF81C784) : AppColors.success)
+                      : (isDark ? Colors.white70 : AppColors.secondaryDark),
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Hộp nhận tín hiệu yêu thương từ Vợ & Bộ phản hồi 1 chạm
+  Widget _buildCareSignalBox(
+    BuildContext context,
+    WidgetRef ref,
+    CareSignalModel signal,
+    bool isDark,
+  ) {
+    final timeStr = _formatRelativeTime(signal.sentAt);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2638) : const Color(0xFFF2F5FD),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.secondary.withAlpha(isDark ? 110 : 80),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(isDark ? 50 : 30),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(signal.type.emoji, style: const TextStyle(fontSize: 22)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Tín Hiệu Yêu Thương Từ Nàng 💕',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                        Text(
+                          timeStr,
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      signal.type.label,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          if (signal.customNote != null && signal.customNote!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Ghi chú: "${signal.customNote}"',
+              style: const TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic),
+            ),
+          ],
+
+          const Divider(height: 20),
+
+          // Trạng thái phản hồi
+          if (signal.isResponded) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.success.withAlpha(isDark ? 30 : 20),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.success.withAlpha(60)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.done_all_rounded, size: 16, color: AppColors.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Bạn đã phản hồi: "${signal.responseMessage}"',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const Text(
+              'Phản hồi nhanh 1 chạm cho nàng:',
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildQuickReplyChip(context, ref, signal.id, '🛵 Anh đang mua đồ ăn về nè'),
+                _buildQuickReplyChip(context, ref, signal.id, '🫂 Gửi nàng cái ôm thật chặt'),
+                _buildQuickReplyChip(context, ref, signal.id, '💖 Ngoan đợi anh về nhé'),
+                _buildQuickReplyChip(context, ref, signal.id, '☕ Anh pha nước ấm cho em liền'),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickReplyChip(
+    BuildContext context,
+    WidgetRef ref,
+    String signalId,
+    String text,
+  ) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () async {
+        await ref.read(careSignalControllerProvider).respondSignal(
+          signalId: signalId,
+          responseMessage: text,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Đã gửi phản hồi tới nàng: "$text" 💖'),
+              backgroundColor: AppColors.secondary,
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.secondary.withAlpha(25),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.secondary.withAlpha(55)),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.secondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Hero Card: Thể trạng nàng & Đo lường năng lượng
+  Widget _buildHeroCard(
     BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required List<String> items,
+    required CyclePhase phase,
+    required int cycleDay,
+    required int energyLevel,
+    required bool isDark,
+    required String moodText,
   }) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final batteryInfo = _getBatteryStatus(energyLevel);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            phase.color.withAlpha(isDark ? 65 : 35),
+            const Color(0xFF1E293B).withAlpha(isDark ? 90 : 15),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: phase.color.withAlpha(isDark ? 90 : 60),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: phase.color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${phase.vietnameseName} • Ngày $cycleDay',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: batteryInfo.color.withAlpha(isDark ? 40 : 25),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: batteryInfo.color.withAlpha(60)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(batteryInfo.icon, style: const TextStyle(fontSize: 13)),
+                    const SizedBox(width: 4),
+                    Text(
+                      batteryInfo.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: batteryInfo.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Lời giải thích tinh tế theo từng pha dành riêng cho nam giới
+          Text(
+            _getGentlemanInsight(phase, cycleDay),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Thanh Pin Năng lượng
+          Row(
+            children: [
+              const Text(
+                'Pin năng lượng nàng:',
+                style: TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: (energyLevel.clamp(1, 5)) / 5.0,
+                    backgroundColor: Colors.grey.withAlpha(40),
+                    valueColor: AlwaysStoppedAnimation<Color>(batteryInfo.color),
+                    minHeight: 7,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$energyLevel/5',
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+
+          if (moodText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Tâm trạng nàng: $moodText',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Hộp Tuyệt chiêu cho chàng (Gentleman's Playbook)
+  Widget _buildPlaybookSection(
+    BuildContext context,
+    CyclePhase phase,
+    bool isDark,
+  ) {
+    final playbook = _getPlaybook(phase);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 10),
+          child: Row(
+            children: [
+              Icon(Icons.menu_book_rounded, size: 16, color: AppColors.secondary),
+              SizedBox(width: 6),
+              Text(
+                'Tuyệt Chiêu Của Chàng Hôm Nay',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ),
+
+        // 1. Nên làm ngay
+        _buildPlaybookCard(
+          context,
+          title: 'Nên chủ động làm ngay',
+          badgeText: 'DO',
+          badgeColor: AppColors.success,
+          items: playbook.dos,
+          isDark: isDark,
+        ),
+
+        const SizedBox(height: 10),
+
+        // 2. Điều cấm kỵ
+        _buildPlaybookCard(
+          context,
+          title: 'Những điều tuyệt đối cấm kỵ',
+          badgeText: 'DON\'T',
+          badgeColor: AppColors.error,
+          items: playbook.donts,
+          isDark: isDark,
+        ),
+
+        const SizedBox(height: 10),
+
+        // 3. Gợi ý món nàng thích
+        _buildPlaybookCard(
+          context,
+          title: 'Gợi ý món ăn / thức uống nàng thích',
+          badgeText: 'MENU',
+          badgeColor: AppColors.accentPeach,
+          items: playbook.treats,
+          isDark: isDark,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaybookCard(
+    BuildContext context, {
+    required String title,
+    required String badgeText,
+    required Color badgeColor,
+    required List<String> items,
+    required bool isDark,
+  }) {
+    final theme = Theme.of(context);
 
     return Card(
+      elevation: 0,
       color: isDark ? AppColors.cardDark : AppColors.cardLight,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, size: 18, color: color),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withAlpha(isDark ? 40 : 25),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: TextStyle(
+                      color: badgeColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             ...items.map(
-              (it) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+              (item) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 5),
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        it,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          height: 1.35,
-                        ),
+                        item,
+                        style: const TextStyle(fontSize: 12.5, height: 1.35),
                       ),
                     ),
                   ],
@@ -326,4 +715,174 @@ class HusbandViewScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// Nút sao chép tin nhắn nhanh
+  Widget _buildQuickCopyButton(
+    BuildContext context, {
+    required CyclePhase phase,
+    required int cycleDay,
+    required int energyLevel,
+    required String moodText,
+    required bool isDark,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: () {
+        final text = '''
+🌸 Tóm tắt thể trạng Moona hôm nay:
+- Giai đoạn: ${phase.vietnameseName} (Ngày $cycleDay)
+- Năng lượng: $energyLevel/5 • Tâm trạng: $moodText
+- Lời nhắc ấm áp: ${_getGentlemanInsight(phase, cycleDay)}
+''';
+        Clipboard.setData(ClipboardData(text: text));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Đã sao chép tóm tắt trạng thái vào bộ nhớ tạm!'),
+            backgroundColor: AppColors.secondary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+      },
+      icon: const Icon(Icons.copy_all_rounded, size: 18),
+      label: const Text('Sao chép tin nhắn quan tâm nhanh'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isDark ? const Color(0xFF243048) : AppColors.secondary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const EdgeInsets.symmetric(vertical: 13),
+      ),
+    );
+  }
+
+  // === HELPER FUNCTIONS ===
+
+  CyclePhase _parsePhase(String phaseStr) {
+    for (final p in CyclePhase.values) {
+      if (p.vietnameseName == phaseStr || p.name == phaseStr) return p;
+    }
+    return CyclePhase.menstrual;
+  }
+
+  _BatteryStatus _getBatteryStatus(int energy) {
+    if (energy <= 1) {
+      return _BatteryStatus('🪫', 'Cạn kiệt', AppColors.error);
+    } else if (energy == 2) {
+      return _BatteryStatus('🪫', 'Yếu ớt', AppColors.accentPeach);
+    } else if (energy == 3) {
+      return _BatteryStatus('🔋', 'Đang hồi phục', AppColors.secondary);
+    } else if (energy == 4) {
+      return _BatteryStatus('🔋', 'Tốt', AppColors.success);
+    } else {
+      return _BatteryStatus('⚡', 'Tràn đầy năng lượng', AppColors.primary);
+    }
+  }
+
+  String _getGentlemanInsight(CyclePhase phase, int cycleDay) {
+    switch (phase) {
+      case CyclePhase.menstrual:
+        return 'Hôm nay là Ngày $cycleDay — Nàng đang trải qua cơn đau co thắt và mệt mỏi thể chất. Hãy là điểm tựa ấm áp, chăm sóc và chuẩn bị nước ấm cho nàng.';
+      case CyclePhase.follicular:
+        return 'Hormone estrogen đang tăng trở lại. Tâm trạng nàng phấn chấn và năng động hơn. Thích hợp cho những buổi hẹn hò ăn uống bất ngờ!';
+      case CyclePhase.ovulation:
+        return 'Giai đoạn rụng trứng — Nàng rạng rỡ, tự tin và quyến rũ nhất chu kỳ. Tinh thần cởi mở và khả năng thụ thai đạt đỉnh.';
+      case CyclePhase.luteal:
+        return 'Giai đoạn hoàng thể (tiền kinh nguyệt). Nàng có thể nhạy cảm, dễ cáu hoặc mệt mỏi. Hãy kiên nhẫn, bao dung và đừng phân bua đúng sai.';
+    }
+  }
+
+  _PlaybookData _getPlaybook(CyclePhase phase) {
+    switch (phase) {
+      case CyclePhase.menstrual:
+        return _PlaybookData(
+          dos: [
+            'Chủ động chuẩn bị túi chườm ấm hoặc một ly trà gừng mật ong.',
+            'Làm giúp nàng việc nhà, rửa chén hoặc chăm con.',
+            'Nói câu: "Hôm nay em mệt rồi, việc này để anh lo".',
+          ],
+          donts: [
+            'Không hỏi dồn dập "Sao em cứ cau có thế?".',
+            'Đừng để nàng phải đau đầu nghĩ "Tối nay ăn gì".',
+            'Tránh phân bua lý lẽ hoặc so đo việc nhà hôm nay.',
+          ],
+          treats: [
+            'Trà gừng mật ong ấm, canh gà hầm nóng.',
+            'Súp bí đỏ, cháo sen sườn non nóng hổi.',
+            'Một thanh socola đen ngọt thanh xoa dịu cơn đau.',
+          ],
+        );
+      case CyclePhase.follicular:
+        return _PlaybookData(
+          dos: [
+            'Lên lịch một buổi hẹn hò bất ngờ ngoài trời.',
+            'Cùng nàng tập luyện thể thao nhẹ nhàng hoặc đi dạo.',
+            'Khen ngợi trang phục hoặc kiểu tóc mới của nàng.',
+          ],
+          donts: [
+            'Đừng để những ngày cuối tuần trôi qua tẻ nhạt trong nhà.',
+            'Không ngắt lời khi nàng hào hứng chia sẻ kế hoạch mới.',
+          ],
+          treats: [
+            'Smoothie bơ chuối tươi mát, sữa chua hạt granola.',
+            'Salad cá hồi quả bơ giàu dinh dưỡng.',
+            'Bữa tối món Âu hoặc đồ nướng nàng thích.',
+          ],
+        );
+      case CyclePhase.ovulation:
+        return _PlaybookData(
+          dos: [
+            'Dành cho nàng sự chú ý và những cử chỉ âu yếm lãng mạn.',
+            'Lên kế hoạch hẹn hò riêng tư chỉ có hai người.',
+            'Tạo không gian ấm cúng, thư thái sau giờ làm việc.',
+          ],
+          donts: [
+            'Không lơ là hoặc thiếu tập trung khi trò chuyện cùng nàng.',
+            'Đừng quên những cái ôm siết chặt trước khi đi ngủ.',
+          ],
+          treats: [
+            'Một ly rượu vang đỏ nhẹ cùng bữa tối lãng mạn.',
+            'Hải sản tươi ngon, dâu tây hoặc socola ngọt ngào.',
+          ],
+        );
+      case CyclePhase.luteal:
+        return _PlaybookData(
+          dos: [
+            'Lắng nghe nàng tâm sự mà không phán xét hay cố đưa ra giải pháp ngay.',
+            'Massage nhẹ vùng vai gáy và lưng cho nàng trước khi ngủ.',
+            'Ôm nàng thật chặt và vỗ về khi nàng cảm thấy buồn vô cớ.',
+          ],
+          donts: [
+            'TUYỆT ĐỐI KHÔNG nói câu: "Em lại tới tháng rồi à?".',
+            'Tránh tranh luận chuyện lớn hoặc đưa ra quyết định căng thẳng.',
+            'Không phàn nàn nếu nàng đổi ý đột ngột.',
+          ],
+          treats: [
+            'Trà hoa cúc ấm giúp ngủ ngon và xoa dịu thần kinh.',
+            'Chè dưỡng nhan, hạt sen long nhãn thanh nhiệt.',
+            'Trái cây tươi mát: chuối, cam, việt quất.',
+          ],
+        );
+    }
+  }
+
+  String _formatRelativeTime(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 1) return 'Vừa xong';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+    return DateFormat('HH:mm dd/MM').format(dateTime);
+  }
+}
+
+class _BatteryStatus {
+  final String icon;
+  final String label;
+  final Color color;
+  const _BatteryStatus(this.icon, this.label, this.color);
+}
+
+class _PlaybookData {
+  final List<String> dos;
+  final List<String> donts;
+  final List<String> treats;
+  const _PlaybookData({required this.dos, required this.donts, required this.treats});
 }

@@ -4,9 +4,11 @@ import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herflow/core/constants/cycle_phase.dart';
+import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
 import 'package:herflow/features/cycle/domain/entities/period_record.dart';
+import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
 
 void main() {
   group('Cycle Core Engine Unit Tests', () {
@@ -147,17 +149,25 @@ void main() {
         customNote: 'Đau bụng cần chườm ấm',
         sentAt: DateTime(2026, 9, 3, 10, 30),
         isRead: false,
+        responseMessage: 'Anh đang mua đồ ăn về nè',
+        respondedAt: DateTime(2026, 9, 3, 10, 35),
       );
+
+      expect(signal.isResponded, isTrue);
 
       final map = signal.toMap();
       expect(map['id'], 'sig-test-1');
       expect(map['type'], 'message');
+      expect(map['responseMessage'], 'Anh đang mua đồ ăn về nè');
 
       final restored = CareSignalModel.fromMap(map);
       expect(restored.id, signal.id);
       expect(restored.type, CareSignalType.message);
       expect(restored.customNote, signal.customNote);
       expect(restored.isRead, isFalse);
+      expect(restored.responseMessage, 'Anh đang mua đồ ăn về nè');
+      expect(restored.respondedAt, DateTime(2026, 9, 3, 10, 35));
+      expect(restored.isResponded, isTrue);
     });
 
     test('AES-256 and SHA-256 checksum integrity verification', () {
@@ -181,6 +191,67 @@ void main() {
       // Verify checksum
       final verifyHash = sha256.convert(utf8.encode(envelopeDecoded['payload'] as String)).toString();
       expect(verifyHash, checksum);
+    });
+  });
+
+  group('Role-Based Architecture Unit Tests', () {
+    test('UserRole Wife properties and extension helpers', () {
+      const role = UserRole.wife;
+      expect(role.isWife, isTrue);
+      expect(role.isHusband, isFalse);
+      expect(role.shortName, 'Vợ');
+      expect(role.emoji, '🌸');
+      expect(role.displayName, contains('Vợ'));
+      expect(role.name, 'wife');
+    });
+
+    test('UserRole Husband properties and extension helpers', () {
+      const role = UserRole.husband;
+      expect(role.isWife, isFalse);
+      expect(role.isHusband, isTrue);
+      expect(role.shortName, 'Chồng');
+      expect(role.emoji, '🛡️');
+      expect(role.displayName, contains('Chồng'));
+      expect(role.name, 'husband');
+    });
+
+    test('UserRole serialization and parsing by name', () {
+      final wifeParsed = UserRole.values.firstWhere((e) => e.name == 'wife');
+      expect(wifeParsed, UserRole.wife);
+
+      final husbandParsed = UserRole.values.firstWhere((e) => e.name == 'husband');
+      expect(husbandParsed, UserRole.husband);
+    });
+  });
+
+  group('PartnerStatusModel Sync Unit Tests', () {
+    test('PartnerStatusModel serialization and deserialization with cycleDay and moodSummary', () {
+      final now = DateTime(2026, 9, 3, 15, 0);
+      final status = PartnerStatusModel(
+        coupleId: 'COUPLE_123',
+        currentPhase: 'Hoàng thể',
+        cycleDay: 24,
+        energyLevel: 2,
+        moodTags: ['Mệt mỏi', 'Cáu kỉnh'],
+        moodSummary: 'Mệt mỏi (Cáu kỉnh)',
+        husbandActionTip: 'Lắng nghe nàng và chườm ấm',
+        updatedAt: now,
+      );
+
+      final map = status.toMap();
+      expect(map['coupleId'], 'COUPLE_123');
+      expect(map['currentPhase'], 'Hoàng thể');
+      expect(map['cycleDay'], 24);
+      expect(map['energyLevel'], 2);
+      expect(map['moodSummary'], 'Mệt mỏi (Cáu kỉnh)');
+
+      final restored = PartnerStatusModel.fromMap(map);
+      expect(restored.coupleId, status.coupleId);
+      expect(restored.currentPhase, status.currentPhase);
+      expect(restored.cycleDay, 24);
+      expect(restored.energyLevel, 2);
+      expect(restored.moodSummary, 'Mệt mỏi (Cáu kỉnh)');
+      expect(restored.husbandActionTip, status.husbandActionTip);
     });
   });
 }

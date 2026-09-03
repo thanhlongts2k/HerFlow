@@ -1,6 +1,8 @@
 // lib/features/partner_sync/presentation/controllers/partner_sync_controller.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/network/network_connectivity_provider.dart';
+import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/mood/presentation/controllers/mood_controller.dart';
 import 'package:herflow/features/partner_sync/data/partner_sync_repository.dart';
@@ -143,6 +145,9 @@ class PartnerSyncController extends StateNotifier<PairingState> {
       _ref.read(savedCoupleIdProvider.notifier).state = pairing.coupleId;
       _ref.read(savedUserRoleProvider.notifier).state = 'husband';
 
+      // Tự động nhận diện vai trò Chồng: lưu vào Hive & State chuyển layout Chồng tức thì
+      await _ref.read(userRoleProvider.notifier).setRole(UserRole.husband);
+
       state = state.copyWith(
         activePairingCode: pairing.pairingCode,
         status: PairingStatus.connected,
@@ -175,11 +180,26 @@ class PartnerSyncController extends StateNotifier<PairingState> {
 
     if (phase == null) return;
 
+    final cycleDay = cycleAsync.maybeWhen(
+      data: (info) => info.getCycleDay(selectedDate),
+      orElse: () => 1,
+    );
+
+    final moodSummary = moodEntry.mood.isNotEmpty
+        ? (moodEntry.symptoms.isNotEmpty
+            ? '${moodEntry.mood} (${moodEntry.symptoms.join(", ")})'
+            : moodEntry.mood)
+        : (moodEntry.symptoms.isNotEmpty
+            ? moodEntry.symptoms.join(", ")
+            : 'Bình thường');
+
     final status = PartnerStatusModel(
       coupleId: coupleId,
       currentPhase: phase.vietnameseName,
+      cycleDay: cycleDay,
       energyLevel: moodEntry.energyLevel,
-      moodTags: [moodEntry.mood, ...moodEntry.symptoms],
+      moodTags: [if (moodEntry.mood.isNotEmpty) moodEntry.mood, ...moodEntry.symptoms],
+      moodSummary: moodSummary,
       husbandActionTip: phase.husbandAdvice,
       updatedAt: DateTime.now(),
     );
@@ -187,6 +207,9 @@ class PartnerSyncController extends StateNotifier<PairingState> {
     final isOnline = _ref.read(isOnlineProvider);
     await _repository.pushTodayStatus(status, isOnline: isOnline);
   }
+
+  /// Alias tiện lợi để các Controller khác gọi đồng bộ
+  Future<void> syncTodayStatus() => syncCurrentWifeStatusToCloud();
 
   /// 4. Hủy kết nối cặp đôi
   Future<void> disconnect() async {

@@ -2,11 +2,14 @@
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║   MOONA -- Automated Build & Deploy Script (Windows PowerShell)  ║
 # ║   Usage: .\scripts\deploy.ps1 [-Mode debug|release]             ║
+# ║                               [-Target all|first|<deviceId>]    ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 param(
     [ValidateSet("debug", "release")]
-    [string]$Mode = "debug"
+    [string]$Mode = "debug",
+    [string]$Target = "first",
+    [string]$DeviceId = ""
 )
 
 # ── COLOR HELPERS ──────────────────────────────────────────────────
@@ -20,7 +23,8 @@ function Write-Banner {
     Write-Host ""
     Write-Host "=================================================" -ForegroundColor Magenta
     Write-Host "   MOONA -- Auto Build and Deploy Script" -ForegroundColor Magenta
-    Write-Host "   Mode : $($Mode.ToUpper())" -ForegroundColor Magenta
+    Write-Host "   Mode   : $($Mode.ToUpper())" -ForegroundColor Magenta
+    Write-Host "   Target : $($Target.ToUpper())" -ForegroundColor Magenta
     Write-Host "=================================================" -ForegroundColor Magenta
     Write-Host ""
 }
@@ -54,9 +58,9 @@ if (-not (Test-Path $googleServicesPath)) {
 
 
 # ═════════════════════════════════════════════════════════════════
-# STEP 1: CHECK ADB DEVICE
+# STEP 1: CHECK ADB DEVICE(S)
 # ═════════════════════════════════════════════════════════════════
-Write-Step "Step 1/5 -- Check connected Android device (ADB)"
+Write-Step "Step 1/5 -- Check connected Android device(s) (ADB)"
 
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
     Write-Fail "Command 'adb' not found. Install Android Platform Tools and add to PATH."
@@ -75,31 +79,30 @@ if ($deviceLines.Count -eq 0) {
     exit 1
 }
 
-$activeDeviceLine = $deviceLines | Where-Object { $_ -match "`tdevice$" } | Select-Object -First 1
-
-if (-not $activeDeviceLine) {
-    $badLine = $deviceLines | Select-Object -First 1
-    if ($badLine -match "unauthorized") {
-        Write-Fail "Device not authorized! Please confirm the debug connection on your phone screen."
-    } elseif ($badLine -match "offline") {
-        Write-Fail "Device is offline! Try unplugging and re-plugging the USB cable."
-    } else {
-        Write-Fail "Device not ready: $badLine"
-    }
+$readyLines = $deviceLines | Where-Object { $_ -match "`tdevice$" }
+if (-not $readyLines -or $readyLines.Count -eq 0) {
+    Write-Fail "No ready devices found (devices might be offline or unauthorized)."
     exit 1
 }
 
-$deviceId = ($activeDeviceLine -split "`t")[0].Trim()
-
-if ($deviceLines.Count -gt 1) {
-    Write-Warn "Found $($deviceLines.Count) devices -- auto-selecting first active device."
+$targetDevices = @()
+if ($DeviceId -ne "") {
+    $targetDevices = @($DeviceId)
+} elseif ($Target -eq "all") {
+    $targetDevices = @($readyLines | ForEach-Object { ($_ -split "`t")[0].Trim() })
+} elseif ($Target -ne "first") {
+    $targetDevices = @($Target)
+} else {
+    $targetDevices = @(($readyLines[0] -split "`t")[0].Trim())
 }
 
-$deviceModel = (adb -s $deviceId shell getprop ro.product.model 2>$null).Trim()
-$androidVer  = (adb -s $deviceId shell getprop ro.build.version.release 2>$null).Trim()
-Write-OK "Device ready: $deviceId"
-if ($deviceModel) {
-    Write-Info "Model: $deviceModel  |  Android: $androidVer"
+Write-OK "Target device(s) selected: $($targetDevices.Count) device(s)"
+foreach ($dev in $targetDevices) {
+    $rawM = adb -s $dev shell getprop ro.product.model 2>$null
+    $rawV = adb -s $dev shell getprop ro.build.version.release 2>$null
+    $m = if ($rawM) { $rawM.Trim() } else { "Device" }
+    $v = if ($rawV) { $rawV.Trim() } else { "?" }
+    Write-Info "  -> $dev ($m | Android $v)"
 }
 
 
@@ -120,7 +123,6 @@ if ($analyzeExitCode -ne 0) {
     Write-Fail "flutter analyze found errors! Fix them before building."
     exit 1
 }
-
 Write-OK "No static analysis issues found -- source code is clean."
 
 
@@ -131,61 +133,72 @@ Write-Step "Step 3/5 -- Build APK (Mode: $($Mode.ToUpper()))"
 
 $buildStart = Get-Date
 
-if ($Mode -eq "debug") {
-    Write-Info "Running: flutter build apk --debug"
-    flutter build apk --debug
-} else {
+if ($Mode -eq "release") {
+    # Check if primary target device ABI can be resolved
+    $deviceAbi = (adb -s $targetDevices[0] shell getprop ro.product.cpu.abi 2>$null).Trim()
+    Write-Info "Primary target device ABI: $deviceAbi"
     Write-Info "Running: flutter build apk --release --split-per-abi"
-    Write-Info "(Split APK by CPU architecture -- optimized file size)"
-    flutter build apk --release --split-per-abi
+    $buildOutput = flutter build apk --release --split-per-abi 2>&1
+} else {
+    Write-Info "Running: flutter build apk --debug"
+    $buildOutput = flutter build apk --debug 2>&1
 }
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Fail "Build failed! See errors above."
+$buildExitCode = $LASTEXITCODE
+
+if ($buildExitCode -ne 0) {
+    Write-Fail "Build failed! Output:"
+    $buildOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
     exit 1
 }
 
-$buildSec = [math]::Round(((Get-Date) - $buildStart).TotalSeconds, 1)
-Write-OK "Build completed in ${buildSec}s"
+$buildElapsed = [math]::Round(((Get-Date) - $buildStart).TotalSeconds, 1)
+Write-OK "Build completed in ${buildElapsed}s"
 
 
 # ═════════════════════════════════════════════════════════════════
-# STEP 4: RESOLVE APK PATH
+# STEP 4: RESOLVE APK FILE PATH
 # ═════════════════════════════════════════════════════════════════
 Write-Step "Step 4/5 -- Resolve APK file path"
 
-$apkBase = "build\app\outputs\flutter-apk"
 $apkPath = $null
 
-if ($Mode -eq "debug") {
-    $candidate = Join-Path $apkBase "app-debug.apk"
-    if (Test-Path $candidate) { $apkPath = $candidate }
-} else {
-    # Release: prefer arm64-v8a, then armeabi-v7a, then x86_64, then fat APK
-    $candidates = @(
-        (Join-Path $apkBase "app-arm64-v8a-release.apk"),
-        (Join-Path $apkBase "app-armeabi-v7a-release.apk"),
-        (Join-Path $apkBase "app-x86_64-release.apk"),
-        (Join-Path $apkBase "app-release.apk")
-    )
-    foreach ($c in $candidates) {
-        if (Test-Path $c) {
-            $apkPath = $c
-            break
+if ($Mode -eq "release") {
+    $apkDir = "build\app\outputs\flutter-apk"
+    $abiMap = @{
+        "arm64-v8a"   = "$apkDir\app-arm64-v8a-release.apk"
+        "armeabi-v7a" = "$apkDir\app-armeabi-v7a-release.apk"
+        "x86_64"      = "$apkDir\app-x86_64-release.apk"
+    }
+
+    if ($deviceAbi -and $abiMap.ContainsKey($deviceAbi) -and (Test-Path $abiMap[$deviceAbi])) {
+        $apkPath = $abiMap[$deviceAbi]
+        Write-Info "Selected ABI-specific APK for $deviceAbi"
+    } else {
+        $fallback = Get-ChildItem -Path $apkDir -Filter "*.apk" |
+                    Where-Object { $_.Name -notmatch "debug" } |
+                    Sort-Object Length |
+                    Select-Object -First 1
+        if ($fallback) {
+            $apkPath = $fallback.FullName
+            Write-Warn "Using fallback APK: $($fallback.Name)"
         }
+    }
+} else {
+    $debugApk = "build\app\outputs\flutter-apk\app-debug.apk"
+    if (Test-Path $debugApk) {
+        $apkPath = $debugApk
     }
 }
 
-if (-not $apkPath) {
-    Write-Fail "APK file not found after build in: $apkBase"
-    Write-Warn "Directory contents:"
-    Get-ChildItem $apkBase -Filter "*.apk" -ErrorAction SilentlyContinue |
-        ForEach-Object { Write-Info "  $($_.Name)" }
+if (-not $apkPath -or -not (Test-Path $apkPath)) {
+    Write-Fail "Cannot find built APK file!"
     exit 1
 }
 
-$apkSizeMB = [math]::Round((Get-Item $apkPath).Length / 1MB, 2)
-$apkName   = Split-Path $apkPath -Leaf
+$apkFile   = Get-Item $apkPath
+$apkSizeMB = [math]::Round($apkFile.Length / 1MB, 2)
+$apkName   = $apkFile.Name
 Write-OK "APK resolved: $apkName ($apkSizeMB MB)"
 Write-Info "Path: $apkPath"
 
@@ -193,37 +206,34 @@ Write-Info "Path: $apkPath"
 # ═════════════════════════════════════════════════════════════════
 # STEP 5: INSTALL AND LAUNCH
 # ═════════════════════════════════════════════════════════════════
-Write-Step "Step 5/5 -- Install and launch on device"
+Write-Step "Step 5/5 -- Install and launch on device(s)"
 
-# 5a. Install
-Write-Info "Installing on $deviceId ..."
-$installOutput = adb -s $deviceId install -r -d -t $apkPath 2>&1
-
-if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
-    if ($installOutput -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE|INSTALL_FAILED_SHARED_USER_INCOMPATIBLE") {
-        Write-Warn "Signature incompatibility detected. Re-installing cleanly..."
-        adb -s $deviceId uninstall com.herflow.app.herflow | Out-Null
-        $installOutput = adb -s $deviceId install -t $apkPath 2>&1
-    }
-}
-
-if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
-    Write-Fail "Installation failed!"
-    $installOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
-    exit 1
-}
-Write-OK "Installation successful!"
-
-# 5b. Launch app
-Write-Info "Launching Moona app..."
 $packageActivity = "com.herflow.app.herflow/.MainActivity"
-adb -s $deviceId shell am start -n $packageActivity | Out-Null
+foreach ($dev in $targetDevices) {
+    Write-Info "Installing on $dev ..."
+    $installOutput = adb -s $dev install -r -d -t $apkPath 2>&1
 
-if ($LASTEXITCODE -eq 0) {
-    Write-OK "App launched on device!"
-} else {
-    Write-Warn "Could not auto-launch app. Open it manually on the device."
-    Write-Warn "(Check applicationId in android/app/build.gradle.kts if this keeps failing)"
+    if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
+        if ($installOutput -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE|INSTALL_FAILED_SHARED_USER_INCOMPATIBLE") {
+            Write-Warn "Signature incompatibility detected on $dev. Re-installing cleanly..."
+            adb -s $dev uninstall com.herflow.app.herflow | Out-Null
+            $installOutput = adb -s $dev install -t $apkPath 2>&1
+        }
+    }
+
+    if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
+        Write-Fail "Installation failed on $dev!"
+        $installOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+    } else {
+        Write-OK "Installation successful on $dev!"
+        Write-Info "Launching Moona app on $dev..."
+        adb -s $dev shell am start -n $packageActivity | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-OK "App launched on $dev!"
+        } else {
+            Write-Warn "Could not auto-launch app on $dev."
+        }
+    }
 }
 
 
@@ -242,9 +252,6 @@ Write-Host "   Mode    : $($Mode.ToUpper())" -ForegroundColor Green
 Write-Host "   APK     : $apkName" -ForegroundColor Green
 Write-Host "   Size    : $apkSizeMB MB" -ForegroundColor Green
 Write-Host "   Time    : ${mins}m ${secs}s" -ForegroundColor Green
-Write-Host "   Device  : $deviceId" -ForegroundColor Green
-if ($deviceModel) {
-    Write-Host "   Model   : $deviceModel (Android $androidVer)" -ForegroundColor Green
-}
+Write-Host "   Devices : $($targetDevices -join ', ')" -ForegroundColor Green
 Write-Host "=================================================" -ForegroundColor Green
 Write-Host ""

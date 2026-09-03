@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.3.0+7` (Cycle Projection Engine & Actual vs Predicted Calendar)
-> **Thời điểm cập nhật:** 03/09/2026 — Phiên làm việc kết thúc, lưu ngữ cảnh đầy đủ
+> **Phiên bản hiện tại:** `v0.4.0+9` (Realtime 2-Way Feedback Loop & Multi-Device Sync)
+> **Thời điểm cập nhật:** 03/09/2026 — Hoàn thành Vòng lặp phản hồi 2 chiều & Đồng bộ Live 2 thiết bị
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)
 
 ---
@@ -11,20 +11,20 @@
 | Hạng mục | Kết quả |
 |---|---|
 | `flutter analyze` | ✅ **0 issues found!** |
-| `flutter test` | ✅ **11/11 tests PASSED (100%)** |
-| Deploy Xiaomi Device | ✅ **SUCCESS (1m 13s via `deploy.ps1`)** |
-| Dọn rác dữ liệu cũ | ✅ **CLEANED** — Migration `_cleanDirtyRecords()` xóa rác 02-06 & 28-31, giữ duy nhất 11/08 - 15/08 |
-| Phân định Thực tế vs Dự kiến | ✅ **IMPLEMENTED** — Nền đậm/icon đặc vs Nền mờ/viền nét/icon outline |
-| Thuật toán dự phóng tương lai | ✅ **IMPLEMENTED** — Chiếu 3-6 tháng, không vẽ kỳ ảo trong quá khứ |
-| Bố cục nút "Chỉnh sửa chu kỳ" | ✅ **FIXED** — Tách khỏi header lịch, chuyển thành Action Chip trong thẻ lịch |
-| Lỗi PageController Crash | ✅ **FIXED** — Nullable `PageController?`, an toàn `onCalendarCreated`, `_focusedDay` state |
+| `flutter test` | ✅ **15/15 tests PASSED (100%)** |
+| Deploy Đa Thiết Bị | ✅ **SUCCESS** — Xiaomi 2201116TG + Android Emulator-5554 song song |
+| Vợ đổi Thể Trạng/Năng Lượng | ✅ **REALTIME SYNC** — Pin năng lượng & tâm trạng trên máy Chồng nhảy tức thì |
+| Vợ gửi Tín Hiệu Yêu Thương | ✅ **REALTIME SYNC** — Máy Chồng hiện Hộp tín hiệu + 4 nút phản hồi nhanh 1 chạm |
+| Chồng phản hồi 1 chạm | ✅ **REALTIME SYNC** — Máy Vợ nhận ngay Banner ngọt ngào kèm Haptic & tự ẩn sau 10s |
+| Dual-Path Firestore Sync | ✅ **HOÀN TẤT** — Đồng bộ an toàn song song `couples` và `pairings`, sắp xếp in-memory |
+| Multi-Device Deploy Script | ✅ **HOÀN TẤT** — `scripts/deploy.ps1 -Target all` nạp APK song song lên toàn bộ thiết bị |
 
 ---
 
 ## 1. 🚀 TRẠNG THÁI BUILD APK & KIỂM THỬ (APK BUILD & TEST STATUS)
 
 * **Phân tích tĩnh (Static Analysis):** `flutter analyze` → ✅ **0 issues found!** (0 lỗi, 0 cảnh báo).
-* **Kiểm thử đơn vị (Unit Tests):** `flutter test` → ✅ **10/10 tests PASSED (100%)**.
+* **Kiểm thử đơn vị (Unit Tests):** `flutter test` → ✅ **14/14 tests PASSED (100%)**.
 * **Đóng gói tối ưu (Release Optimization):**
   * Đã kích hoạt **R8 Code Shrinking / Obfuscation** (`isMinifyEnabled = true`, `isShrinkResources = true`).
   * Cấu hình an toàn `proguard-rules.pro` bảo vệ Models, Entities, Hive, Firebase và Plugins.
@@ -238,7 +238,7 @@ adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp
 
 ---
 
-## 6. 📸 SCREENSHOTS KIỂM THỬ THIẾT BỊ (v0.3.0)
+## 6. 📸 SCREENSHOTS KIỂM THỬ THIẾT BỊ (v0.4.0)
 
 | # | File | Nội dung |
 |---|---|---|
@@ -248,6 +248,33 @@ adb-BM6HKBHEHQKFEMLR-prj23i._adb-tls-connect._tcp
 | 28 | `docs/screenshots/28_v030_care_signals_sheet.png` | Care Signals bottom sheet |
 | 29 | `docs/screenshots/29_v030_mood_tab.png` | Tab Cảm xúc — Nhật Ký Thể Trạng |
 | 30 | `docs/screenshots/30_v030_care_signals_sheet.png` | Cycle Screen với AppBar tim đỏ |
+| 31 | `docs/screenshots/31_v040_husband_redesign.png` | Gentleman's Companion màn hình Chồng |
+| 32 | `docs/screenshots/32_v040_care_sheet.png` | Vợ mở CareSignalSheet gửi tín hiệu |
+| 33 | `docs/screenshots/33_v040_signal_received.png` | Hộp tín hiệu từ Vợ + 4 nút phản hồi nhanh |
+| 34 | `docs/screenshots/34_v040_signal_responded.png` | Chồng phản hồi "Gửi nàng cái ôm thật chặt" |
+| 35 | `docs/screenshots/35_v040_role_wife.png` | Giao diện Vợ (4 tab BottomNav + icon Khiên + Chip Vợ) |
+| 36 | `docs/screenshots/36_v040_wife_preview_husband.png` | Vợ xem trước Góc nhìn của Chồng kèm Banner hồng |
+| 37 | `docs/screenshots/37_v040_role_husband.png` | Giao diện Chồng (Vào thẳng Gentleman's Companion, không BottomNav) |
+| 38 | `docs/screenshots/38_v040_settings_role.png` | Màn hình Cài đặt với thẻ chọn [Tôi là Vợ] & [Tôi là Chồng] |
+| 39 | `docs/screenshots/39_v040_settings_switched_to_wife.png` | Trạng thái chuyển đổi tức thời trong Cài đặt |
+| 41 | `docs/screenshots/41_v040_settings_wife.png` | Cài đặt khi ở vai trò Vợ (có tile Xem trước góc nhìn Chồng) |
+| 42 | `docs/screenshots/42_v040_settings_switched_to_husband.png` | Cài đặt khi chọn vai trò Chồng (tự ẩn tile xem trước) |
+| 43 | `docs/screenshots/43_v040_husband_home_after_switch.png` | Màn hình Chồng chính thức sau khi đổi vai trò |
+| 44 | `docs/screenshots/44_v040_xiaomi_init.png` | Khởi chạy ban đầu trên thiết bị thật Xiaomi 2201116TG |
+| 45 | `docs/screenshots/45_v040_emulator_init.png` | Khởi chạy ban đầu trên máy ảo Android Emulator-5554 |
+| 46 | `docs/screenshots/46_v040_xiaomi_switched_to_wife.png` | Xiaomi chọn vai trò Vợ trong Cài đặt |
+| 47 | `docs/screenshots/47_v040_xiaomi_wife_home.png` | Xiaomi giao diện Vợ 4 tabs Bottom Navigation |
+| 52 | `docs/screenshots/52_v040_xiaomi_mood_changed.png` | Vợ đổi mức năng lượng lên "Tràn đầy" (5/5) & tâm trạng "Hạnh phúc" |
+| 53 | `docs/screenshots/53_v040_emu_synced_tranday.png` | Màn hình Chồng trên Giả lập tự động nhảy pin 5/5 & tâm trạng "Hạnh phúc" Realtime |
+| 55 | `docs/screenshots/55_v040_xiaomi_care_sheet_opened.png` | Vợ mở BottomSheet Gửi Tín Hiệu Yêu Thương |
+| 56 | `docs/screenshots/56_v040_emu_received_signal.png` | Chồng nhận Tín hiệu yêu thương từ Vợ |
+| 64 | `docs/screenshots/64_v040_xiaomi_ready.png` | Xiaomi sẵn sàng ở chế độ Vợ (Light Mode) |
+| 65 | `docs/screenshots/65_v040_emulator_ready.png` | Emulator sẵn sàng ở chế độ Chồng (Light Mode) |
+| 68 | `docs/screenshots/68_v040_xiaomi_sheet_open.png` | Sheet chọn tín hiệu yêu thương hiển thị đẹp mắt |
+| 69 | `docs/screenshots/69_v040_emu_received_om.png` | Chồng nhận tín hiệu "Muốn được ôm 🤗" (Vừa xong) + 4 nút phản hồi nhanh |
+| 70 | `docs/screenshots/70_v040_emu_responded_ngoan.png` | Chồng bấm phản hồi "💖 Ngoan đợi anh về nhé" |
+| 71 | `docs/screenshots/71_v040_xiaomi_banner_received.png` | Máy Vợ hiển thị Banner ngọt ngào từ Chồng ở đầu màn hình kèm rung Haptic |
+| 72 | `docs/screenshots/72_v040_xiaomi_banner_dismissed.png` | Vợ bấm ✕ đóng Banner nhẹ nhàng mượt mà |
 
 ---
 

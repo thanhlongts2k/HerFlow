@@ -7,6 +7,7 @@ import 'package:herflow/features/mood/data/datasources/mood_local_datasource.dar
 import 'package:herflow/features/mood/data/repositories/mood_repository_impl.dart';
 import 'package:herflow/features/mood/domain/entities/mood_entry.dart';
 import 'package:herflow/features/mood/domain/repositories/mood_repository.dart';
+import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 
 /// Provider cung cấp DataSource cục bộ Hive cho Mood
 final moodLocalDataSourceProvider = Provider<MoodLocalDataSource>((ref) {
@@ -24,8 +25,9 @@ final moodRepositoryProvider = Provider<MoodRepository>((ref) {
 class SelectedDateMoodController extends StateNotifier<MoodEntry> {
   final MoodRepository _repository;
   final DateTime _selectedDate;
+  final Future<void> Function()? _onSaved;
 
-  SelectedDateMoodController(this._repository, this._selectedDate)
+  SelectedDateMoodController(this._repository, this._selectedDate, [this._onSaved])
       : super(MoodEntry(date: _selectedDate)) {
     loadEntry();
   }
@@ -42,11 +44,13 @@ class SelectedDateMoodController extends StateNotifier<MoodEntry> {
   Future<void> setEnergy(int level) async {
     state = state.copyWith(energyLevel: level);
     await _repository.saveMoodEntry(state);
+    _onSaved?.call();
   }
 
   Future<void> setMood(String mood) async {
     state = state.copyWith(mood: mood);
     await _repository.saveMoodEntry(state);
+    _onSaved?.call();
   }
 
   Future<void> toggleSymptom(String symptom) async {
@@ -58,11 +62,13 @@ class SelectedDateMoodController extends StateNotifier<MoodEntry> {
     }
     state = state.copyWith(symptoms: list);
     await _repository.saveMoodEntry(state);
+    _onSaved?.call();
   }
 
   Future<void> setNote(String note) async {
     state = state.copyWith(note: note);
     await _repository.saveMoodEntry(state);
+    _onSaved?.call();
   }
 }
 
@@ -71,7 +77,18 @@ final selectedDateMoodProvider =
     StateNotifierProvider<SelectedDateMoodController, MoodEntry>((ref) {
   final repo = ref.watch(moodRepositoryProvider);
   final selectedDate = ref.watch(selectedCalendarDateProvider);
-  return SelectedDateMoodController(repo, selectedDate);
+  return SelectedDateMoodController(
+    repo,
+    selectedDate,
+    () async {
+      final now = DateTime.now();
+      if (selectedDate.year == now.year &&
+          selectedDate.month == now.month &&
+          selectedDate.day == now.day) {
+        await ref.read(partnerSyncControllerProvider.notifier).syncTodayStatus();
+      }
+    },
+  );
 });
 
 /// Provider cung cấp dữ liệu 7 ngày gần nhất để vẽ biểu đồ fl_chart

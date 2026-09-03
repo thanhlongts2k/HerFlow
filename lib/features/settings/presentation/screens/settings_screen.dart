@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/providers/app_version_provider.dart';
+import 'package:herflow/core/providers/user_role_provider.dart';
+import 'package:herflow/core/utils/haptic_feedback_utils.dart';
+import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
 
@@ -55,6 +59,7 @@ class SettingsScreen extends ConsumerWidget {
     final autoLockMinutes = ref.watch(_autoLockTimeProvider);
     final coupleId = ref.watch(savedCoupleIdProvider);
     final isConnected = coupleId != null && coupleId.isNotEmpty;
+    final currentRole = ref.watch(userRoleProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -137,7 +142,51 @@ class SettingsScreen extends ConsumerWidget {
 
           _SettingsDivider(),
 
-          // ── NHÓM 2: ĐỒNG BỘ CẶP ĐÔI ─────────────────────────────
+          // ── NHÓM 2: VAI TRÒ ỨNG DỤNG ─────────────────────────────
+          _SectionHeader(
+            icon: Icons.badge_outlined,
+            title: 'Vai Trò Ứng Dụng',
+            color: AppColors.secondary,
+          ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _RoleCard(
+                    role: UserRole.wife,
+                    isSelected: currentRole == UserRole.wife,
+                    title: 'Tôi là Vợ',
+                    subtitle: 'Theo dõi chu kỳ',
+                    emoji: '🌸',
+                    selectedColor: AppColors.primary,
+                    onTap: () async {
+                      await ref.read(userRoleProvider.notifier).setRole(UserRole.wife);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _RoleCard(
+                    role: UserRole.husband,
+                    isSelected: currentRole == UserRole.husband,
+                    title: 'Tôi là Chồng',
+                    subtitle: 'Đồng hành cùng nàng',
+                    emoji: '🛡️',
+                    selectedColor: AppColors.secondary,
+                    onTap: () async {
+                      await ref.read(userRoleProvider.notifier).setRole(UserRole.husband);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          _SettingsDivider(),
+
+          // ── NHÓM 3: ĐỒNG BỘ CẶP ĐÔI ─────────────────────────────
           _SectionHeader(
             icon: Icons.favorite_rounded,
             title: 'Đồng Bộ Cặp Đôi',
@@ -171,7 +220,11 @@ class SettingsScreen extends ConsumerWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PairingScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => PairingScreen(
+                      initialIndex: currentRole == UserRole.husband ? 1 : 0,
+                    ),
+                  ),
                 );
               },
               child: Text(
@@ -180,6 +233,31 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+
+          // Lối tắt xem trước giao diện của Chồng (nếu đang ở vai trò Vợ)
+          if (currentRole == UserRole.wife)
+            ListTile(
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.shield_rounded, color: AppColors.secondary, size: 20),
+              ),
+              title: const Text('Xem trước Góc nhìn của Chồng', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Xem giao diện người bạn đời sẽ nhìn thấy', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HusbandViewScreen(isWifePreview: true),
+                  ),
+                );
+              },
+            ),
 
           _SettingsDivider(),
 
@@ -408,3 +486,86 @@ class _SettingsDivider extends StatelessWidget {
     return const Divider(height: 8, indent: 16, endIndent: 16);
   }
 }
+
+class _RoleCard extends StatelessWidget {
+  final UserRole role;
+  final bool isSelected;
+  final String title;
+  final String subtitle;
+  final String emoji;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  const _RoleCard({
+    required this.role,
+    required this.isSelected,
+    required this.title,
+    required this.subtitle,
+    required this.emoji,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        AppHaptics.selection();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? selectedColor.withAlpha(isDark ? 45 : 25)
+              : (isDark ? AppColors.cardDark : AppColors.cardLight),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? selectedColor
+                : (isDark ? AppColors.dividerDark : AppColors.dividerLight),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 20)),
+                const Spacer(),
+                if (isSelected)
+                  Icon(Icons.check_circle_rounded, size: 18, color: selectedColor)
+                else
+                  Icon(Icons.radio_button_unchecked_rounded, size: 18, color: Colors.grey.withAlpha(120)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: isSelected ? selectedColor : null,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                color: theme.textTheme.bodySmall?.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
