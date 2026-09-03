@@ -7,6 +7,9 @@ class CycleDayInfo {
   final int cycleDay;
   final CyclePhase phase;
   final bool isPeriodDay;
+  final bool isActualPeriod;      // Người dùng đã xác nhận thực tế có kinh
+  final bool isPredictedPeriod;   // Do thuật toán dự báo cho các kỳ tương lai
+  final bool isPredicted;         // Ngày thuộc về kỳ dự báo tương lai
   final bool isFertileWindow;
   final bool isOvulationDay;
   final String conceptionProbability;
@@ -19,6 +22,9 @@ class CycleDayInfo {
     required this.cycleDay,
     required this.phase,
     required this.isPeriodDay,
+    this.isActualPeriod = false,
+    this.isPredictedPeriod = false,
+    this.isPredicted = false,
     required this.isFertileWindow,
     required this.isOvulationDay,
     required this.conceptionProbability,
@@ -32,6 +38,9 @@ class CycleDayInfo {
     required int cycleDay,
     required CyclePhase phase,
     required bool isPeriodDay,
+    bool isActualPeriod = false,
+    bool isPredictedPeriod = false,
+    bool isPredicted = false,
     required bool isFertileWindow,
     required bool isOvulationDay,
   }) {
@@ -72,7 +81,10 @@ class CycleDayInfo {
       date: date,
       cycleDay: cycleDay,
       phase: phase,
-      isPeriodDay: isPeriodDay,
+      isPeriodDay: isPeriodDay || isActualPeriod || isPredictedPeriod,
+      isActualPeriod: isActualPeriod,
+      isPredictedPeriod: isPredictedPeriod,
+      isPredicted: isPredicted,
       isFertileWindow: isFertileWindow,
       isOvulationDay: isOvulationDay,
       conceptionProbability: prob,

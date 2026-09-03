@@ -8,6 +8,8 @@ import 'package:herflow/core/providers/app_version_provider.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
 
+import 'package:herflow/core/theme/theme_controller.dart';
+
 // ────────────────────────────────────────────────────────────
 // LOCAL PROVIDERS — quản lý state các switch trong màn hình này
 // ────────────────────────────────────────────────────────────
@@ -18,21 +20,8 @@ final _biometricEnabledProvider = StateProvider<bool>((ref) {
   return box.get(AppConstants.keyIsBiometricEnabled, defaultValue: false) as bool;
 });
 
-/// Provider đọc/ghi theme mode từ Hive settingsBox
-final _themeModeProvider = StateProvider<ThemeMode>((ref) {
-  final box = Hive.box(AppConstants.settingsBoxName);
-  final saved = box.get(AppConstants.keyThemeMode, defaultValue: 'system') as String;
-  switch (saved) {
-    case 'light':
-      return ThemeMode.light;
-    case 'dark':
-      return ThemeMode.dark;
-    default:
-      return ThemeMode.system;
-  }
-});
-
 /// Provider bật/tắt Haptic Feedback toàn app
+
 final _hapticEnabledProvider = StateProvider<bool>((ref) {
   final box = Hive.box(AppConstants.settingsBoxName);
   return box.get('haptic_enabled', defaultValue: true) as bool;
@@ -61,7 +50,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isBiometricEnabled = ref.watch(_biometricEnabledProvider);
-    final themeMode = ref.watch(_themeModeProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final isHapticEnabled = ref.watch(_hapticEnabledProvider);
     final autoLockMinutes = ref.watch(_autoLockTimeProvider);
     final coupleId = ref.watch(savedCoupleIdProvider);
@@ -243,31 +232,9 @@ class SettingsScreen extends ConsumerWidget {
               style: ButtonStyle(
                 side: WidgetStateProperty.all(BorderSide(color: AppColors.primary.withAlpha(80))),
               ),
-              onSelectionChanged: (Set<ThemeMode> selected) async {
+              onSelectionChanged: (Set<ThemeMode> selected) {
                 final mode = selected.first;
-                String modeStr;
-                switch (mode) {
-                  case ThemeMode.light:
-                    modeStr = 'light';
-                    break;
-                  case ThemeMode.dark:
-                    modeStr = 'dark';
-                    break;
-                  default:
-                    modeStr = 'system';
-                }
-                final box = Hive.box(AppConstants.settingsBoxName);
-                await box.put(AppConstants.keyThemeMode, modeStr);
-                ref.read(_themeModeProvider.notifier).state = mode;
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Theme sẽ áp dụng hoàn toàn sau khi khởi động lại app.'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
+                ref.read(themeModeProvider.notifier).setThemeMode(mode);
               },
             ),
           ),

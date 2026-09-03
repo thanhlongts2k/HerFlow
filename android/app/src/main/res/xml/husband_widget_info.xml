@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AppWidget Provider Info — Husband Home Screen Widget
+  Hiển thị trạng thái chu kỳ và tâm trạng của Vợ trên màn hình chính của Chồng
+  Cập nhật mỗi 30 phút qua home_widget plugin (WorkManager)
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/husband_widget_layout"
+    android:widgetCategory="home_screen"
+    android:description="@string/husband_widget_description"
+    android:previewImage="@mipmap/ic_launcher"
+    android:resizeMode="horizontal|vertical" />

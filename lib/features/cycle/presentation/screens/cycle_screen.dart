@@ -89,56 +89,22 @@ class CycleScreen extends ConsumerWidget {
 
                 const SizedBox(height: 20),
 
-                // 2. LỊCH TƯƠNG TÁC TABLE_CALENDAR 4 PHA
-                //    Kèm nút nhỏ "Chỉnh sửa chu kỳ" góc trên bên phải lịch
-                Stack(
-                  children: [
-                    CycleCalendarView(
-                      cycleInfo: cycleInfo,
-                      selectedDate: selectedDate,
-                      onDateSelected: (newDate) {
-                        ref.read(selectedCalendarDateProvider.notifier).state = newDate;
-                      },
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () {
-                          CycleSettingsSheet.show(
-                            context,
-                            cycleInfo.cycleLength,
-                            cycleInfo.periodDuration,
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(20),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.primary.withAlpha(60)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.tune_rounded, size: 13, color: AppColors.primary),
-                              SizedBox(width: 4),
-                              Text(
-                                'Chỉnh sửa chu kỳ',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                // 2. LỊCH TƯƠNG TÁC TABLE_CALENDAR 4 PHA (Kèm nút chỉnh sửa chu kỳ tích hợp)
+                CycleCalendarView(
+                  cycleInfo: cycleInfo,
+                  selectedDate: selectedDate,
+                  onDateSelected: (newDate) {
+                    ref.read(selectedCalendarDateProvider.notifier).state = newDate;
+                  },
+                  onEditCycle: () {
+                    CycleSettingsSheet.show(
+                      context,
+                      cycleInfo.cycleLength,
+                      cycleInfo.periodDuration,
+                    );
+                  },
                 ),
+
 
                 const SizedBox(height: 14),
 

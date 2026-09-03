@@ -5,7 +5,8 @@ import 'package:herflow/core/utils/date_utils.dart';
 import 'cycle_day_info.dart';
 import 'period_record.dart';
 
-/// Thực thể lưu trữ cấu hình chu kỳ và tính toán pha sinh học chuyên sâu
+/// Thực thể cấu hình chu kỳ sinh học 4 pha
+/// Phân biệt rạch ròi giữa kỳ kinh THỰC TẾ (Actual) và DỰ BÁO (Predicted)
 class CycleInfo {
   final DateTime lastPeriodStart;
   final int cycleLength;
@@ -19,9 +20,21 @@ class CycleInfo {
     this.records = const [],
   });
 
+  /// Mốc chuẩn kỳ kinh thực tế gần nhất (Anchor Period Start)
+  DateTime get anchorStart {
+    if (records.isNotEmpty) {
+      // Sắp xếp giảm dần theo ngày bắt đầu để lấy kỳ mới nhất
+      final sorted = List<PeriodRecord>.from(records)
+        ..sort((a, b) => b.startDate.compareTo(a.startDate));
+      return AppDateUtils.normalize(sorted.first.startDate);
+    }
+    return AppDateUtils.normalize(lastPeriodStart);
+  }
+
   /// Tính ngày của chu kỳ cho một thời điểm bất kỳ (Bắt đầu từ ngày 1)
   int getCycleDay(DateTime date) {
-    final diff = AppDateUtils.daysBetween(lastPeriodStart, date);
+    final normDate = AppDateUtils.normalize(date);
+    final diff = AppDateUtils.daysBetween(anchorStart, normDate);
     if (diff < 0) {
       final mod = (diff % cycleLength) + cycleLength;
       return (mod % cycleLength) + 1;
@@ -29,41 +42,104 @@ class CycleInfo {
     return (diff % cycleLength) + 1;
   }
 
-  /// Ngày dự kiến kỳ kinh tiếp theo bắt đầu
+  /// Ngày dự kiến kỳ kinh tiếp theo bắt đầu (sau anchorStart)
   DateTime get nextPeriodDate {
-    return lastPeriodStart.add(Duration(days: cycleLength));
+    return anchorStart.add(Duration(days: cycleLength));
   }
 
   /// Số ngày còn lại đến kỳ kinh tiếp theo
   int daysUntilNextPeriod(DateTime fromDate) {
-    final diff = AppDateUtils.daysBetween(lastPeriodStart, fromDate);
-    final currentCycleDay = diff >= 0 ? (diff % cycleLength) : ((diff % cycleLength) + cycleLength);
+    final normFrom = AppDateUtils.normalize(fromDate);
+    final diff = AppDateUtils.daysBetween(anchorStart, normFrom);
+    if (diff < 0) {
+      // Nếu từ ngày trong quá khứ trước anchorStart
+      return AppDateUtils.daysBetween(normFrom, anchorStart);
+    }
+    final currentCycleDay = diff % cycleLength;
+    if (currentCycleDay == 0 && diff > 0) {
+      return 0;
+    }
     return cycleLength - currentCycleDay;
   }
 
   /// Ngày rụng trứng lý thuyết trong chu kỳ: Ngày thứ (cycleLength - 14)
   int get ovulationDayNumber => cycleLength - 14;
 
-  /// Kiểm tra xem một ngày có phải là ngày hành kinh (Thực tế từ bản ghi hoặc Dự kiến)
-  bool isPeriodDay(DateTime date) {
-    // 1. Kiểm tra bản ghi thực tế
+  /// Kiểm tra xem một ngày có phải là kỳ kinh THỰC TẾ (Đã ghi nhận nhật ký hoặc nằm trong anchor period)
+  bool isActualPeriod(DateTime date) {
+    final normDate = AppDateUtils.normalize(date);
+
+    // 1. Kiểm tra trong danh sách nhật ký thực tế đã lưu
     for (final r in records) {
-      if (r.containsDate(date)) return true;
+      if (r.containsDate(normDate)) return true;
     }
-    // 2. Kiểm tra theo thuật toán chu kỳ (nếu không có bản ghi phủ)
-    final day = getCycleDay(date);
-    return day <= periodDuration;
+
+    // 2. Nếu ngày nằm trong chu kỳ mốc anchorStart (anchorStart -> anchorStart + periodDuration - 1)
+    final anchorEnd = anchorStart.add(Duration(days: periodDuration - 1));
+    if ((normDate.isAtSameMomentAs(anchorStart) || normDate.isAfter(anchorStart)) &&
+        (normDate.isAtSameMomentAs(anchorEnd) || normDate.isBefore(anchorEnd))) {
+      return true;
+    }
+
+    return false;
   }
 
-  /// Kiểm tra xem một ngày có phải là ngày rụng trứng đỉnh điểm không
+  /// Kiểm tra xem một ngày có phải là kỳ kinh DỰ BÁO TƯƠNG LAI (Không áp dụng cho quá khứ)
+  bool isPredictedPeriod(DateTime date) {
+    final normDate = AppDateUtils.normalize(date);
+
+    // Tuyệt đối không dự báo cho ngày trước hoặc trong chu kỳ mốc hiện tại
+    final currentCycleEnd = anchorStart.add(Duration(days: cycleLength - 1));
+    if (normDate.isBefore(currentCycleEnd) || normDate.isAtSameMomentAs(currentCycleEnd)) {
+      return false;
+    }
+
+    // Nếu ngày này đã được người dùng ghi nhận thực tế thì không phải là dự báo
+    for (final r in records) {
+      if (r.containsDate(normDate)) return false;
+    }
+
+    // Tính toán dự phóng cho các chu kỳ tương lai (3 - 12 tháng)
+    final diff = AppDateUtils.daysBetween(anchorStart, normDate);
+    final dayInCycle = (diff % cycleLength) + 1;
+
+    return dayInCycle <= periodDuration;
+  }
+
+  /// Kiểm tra xem một ngày có phải ngày hành kinh (Thực tế HOẶC Dự kiến)
+  bool isPeriodDay(DateTime date) {
+    return isActualPeriod(date) || isPredictedPeriod(date);
+  }
+
+  /// Kiểm tra xem ngày này có thuộc về các chu kỳ dự báo tương lai hay không
+  bool isPredicted(DateTime date) {
+    final normDate = AppDateUtils.normalize(date);
+    final currentCycleEnd = anchorStart.add(Duration(days: cycleLength - 1));
+    return normDate.isAfter(currentCycleEnd);
+  }
+
+  /// Kiểm tra xem một ngày có phải là ngày rụng trứng đỉnh điểm
   bool isOvulationDay(DateTime date) {
-    final day = getCycleDay(date);
+    final normDate = AppDateUtils.normalize(date);
+
+    // Không dự báo ngày rụng trứng ảo trong quá khứ trước anchorStart nếu không có log
+    if (normDate.isBefore(anchorStart)) {
+      return false;
+    }
+
+    final day = getCycleDay(normDate);
     return day == ovulationDayNumber;
   }
 
   /// Kiểm tra xem một ngày có nằm trong Cửa sổ thụ thai (Fertile Window: 5 ngày trước đến ngày rụng trứng)
   bool isFertileWindow(DateTime date) {
-    final day = getCycleDay(date);
+    final normDate = AppDateUtils.normalize(date);
+
+    if (normDate.isBefore(anchorStart)) {
+      return false;
+    }
+
+    final day = getCycleDay(normDate);
     return day >= (ovulationDayNumber - 5) && day <= (ovulationDayNumber + 1);
   }
 
@@ -78,9 +154,26 @@ class CycleInfo {
 
   /// Thuật toán phân loại 4 pha sinh học chính xác theo từng ngày trong chu kỳ
   CyclePhase getPhaseForDate(DateTime date) {
-    final day = getCycleDay(date);
+    final normDate = AppDateUtils.normalize(date);
 
-    // 1. Pha hành kinh: Ngày 1 -> periodDuration
+    // Nếu là ngày có kinh thực tế
+    if (isActualPeriod(normDate)) {
+      return CyclePhase.menstrual;
+    }
+
+    // Nếu là ngày kinh dự báo
+    if (isPredictedPeriod(normDate)) {
+      return CyclePhase.menstrual;
+    }
+
+    // Đối với ngày trong quá khứ trước anchorStart mà không có kỳ kinh
+    if (normDate.isBefore(anchorStart)) {
+      return CyclePhase.follicular;
+    }
+
+    final day = getCycleDay(normDate);
+
+    // 1. Pha hành kinh
     if (day <= periodDuration) {
       return CyclePhase.menstrual;
     }
@@ -118,13 +211,20 @@ class CycleInfo {
 
   /// Lấy toàn bộ thông tin sinh học chi tiết đóng gói trong CycleDayInfo
   CycleDayInfo getDayInfo(DateTime date) {
+    final normDate = AppDateUtils.normalize(date);
+    final actual = isActualPeriod(normDate);
+    final predicted = isPredictedPeriod(normDate);
+
     return CycleDayInfo.calculate(
-      date: date,
-      cycleDay: getCycleDay(date),
-      phase: getPhaseForDate(date),
-      isPeriodDay: isPeriodDay(date),
-      isFertileWindow: isFertileWindow(date),
-      isOvulationDay: isOvulationDay(date),
+      date: normDate,
+      cycleDay: getCycleDay(normDate),
+      phase: getPhaseForDate(normDate),
+      isPeriodDay: actual || predicted,
+      isActualPeriod: actual,
+      isPredictedPeriod: predicted,
+      isPredicted: isPredicted(normDate),
+      isFertileWindow: isFertileWindow(normDate),
+      isOvulationDay: isOvulationDay(normDate),
     );
   }
 

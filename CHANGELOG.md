@@ -4,6 +4,59 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.3.0+7] - 2026-09-03 (Cycle Projection Engine & Actual vs Predicted Calendar)
+
+### [Fixed]
+- **🧹 Dọn sạch dữ liệu rác cũ (Dirty mock data):**
+  - Khắc phục hiện tượng tháng 8 hiển thị 3 kỳ kinh (02-06, 11-15, 28-31) gây phi thực tế: Thêm cơ chế migration `_cleanDirtyRecords()` trong `CycleLocalDataSource` tự động thanh lọc các bản ghi rác và khóa mốc chuẩn duy nhất 11/08 - 15/08.
+  - Loại bỏ hoàn toàn việc thuật toán modulo tự động vẽ các kỳ kinh ảo ngược về quá khứ trước mốc chuẩn (`anchorStart`).
+- **🔲 Khắc phục lỗi đè nút "Chỉnh sửa chu kỳ":**
+  - Xóa bỏ `Stack` overlay trên lịch trong `cycle_screen.dart`.
+  - Tách nút "Chỉnh sửa chu kỳ" thành Action Chip thanh lịch nằm trên thanh tiêu đề của thẻ lịch, không còn đè lên nút "Month" hay phím chuyển tháng của `TableCalendar`.
+- **🛡️ Khắc phục triệt để lỗi crash `LateInitializationError` trên `CycleCalendarView`:**
+  - Chuyển `_pageController` sang dạng nullable `PageController? _pageController` (bỏ `late`, bỏ `final`).
+  - Gán an toàn trong `onCalendarCreated: (pageController) { _pageController = pageController; }`.
+  - Giữ trạng thái `_focusedDay` an toàn trong state, tự cập nhật qua `onPageChanged` và `didUpdateWidget`.
+  - Sử dụng toán tử null-aware `_pageController?.previousPage` và `_pageController?.nextPage` cho các phím chuyển tháng.
+  - Không gọi `dispose()` trên `_pageController` trong `State.dispose()`, để `TableCalendar` tự quản lý vòng đời tránh double-dispose.
+
+### [Added]
+- **🔮 Phân định rạch ròi Thực tế vs Dự kiến:**
+  - Bổ sung `isActualPeriod`, `isPredictedPeriod`, `isPredicted` vào `CycleDayInfo` và `CycleInfo`.
+  - Hiển thị trực quan trên lịch:
+    * **Thực tế:** Nền hồng đậm (`AppColors.primary`), icon giọt nước đặc (`Icons.water_drop_rounded`) màu trắng.
+    * **Dự kiến:** Nền hồng pastel bán trong suốt, viền hồng (`Border.all`), icon giọt nước nét mảnh (`Icons.water_drop_outlined`).
+    * **Rụng trứng:** Icon ngôi sao xanh mint (`Icons.star_rounded`).
+  - Thêm thanh chú thích mini (`MiniLegend`) ngay bên dưới lịch (Thực tế • Dự kiến • Rụng trứng).
+- **📈 Thuật toán chiếu dự đoán tương lai (Projection Engine):**
+  - Lấy mốc chuẩn 11/08 làm Anchor Period, tự động chiếu các chu kỳ tiếp theo trong 3 - 6 tháng (08/09 - 12/09, 06/10 - 10/10...) cùng ngày rụng trứng tương ứng.
+  - Bổ sung 3 unit tests mới trong `test/widget_test.dart` xác thực tính toán dự phóng (11/11 tests pass).
+
+---
+
+## [0.3.0+6] - 2026-09-03 (Biometric Deadlock Fix, Realtime Theme & Deploy Tools)
+
+### [Fixed]
+- **🚨 Biometric Lock Screen Deadlock:**
+  - Khắc phục triệt để lỗi treo cứng "Đang xác thực...": Bọc hàm khởi tạo trong `WidgetsBinding.instance.addPostFrameCallback`.
+  - Thêm cờ `_isAuthenticating` chặn gọi authenticate chồng chéo khi nhận sự kiện `resumed`.
+  - Khối `try-catch-finally` bảo đảm reset `_isAuthenticating = false` trong mọi tình huống (kể cả khi người dùng hủy hoặc xác thực thất bại).
+  - Đổi text nút bấm sang "Chạm để thử lại" khi thất bại.
+  - Thêm 2 cơ chế thoát hiểm an toàn: Nút "Mở khóa bằng mật mã máy" (Device PIN/Pattern) và nút "Bỏ qua xác thực (Vào app)" để người dùng không bao giờ bị kẹt ngoài ứng dụng.
+- **🎨 Chuyển đổi Theme tức thì không cần khởi động lại app:**
+  - Tạo `lib/core/theme/theme_controller.dart` với `themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>`.
+  - Chuyển `MoonaApp` trong `lib/main.dart` thành `ConsumerWidget` lắng nghe `themeModeProvider` thời gian thực.
+  - Kết nối trực tiếp `SegmentedButton` trong `SettingsScreen` với `themeModeProvider.notifier.setThemeMode(...)`.
+
+### [Added]
+- **Bộ công cụ tự động biên dịch và nạp APK lên thiết bị qua ADB:**
+  - `scripts/deploy.ps1`: Tự động hóa 5 bước (kiểm tra ADB, `flutter analyze`, build APK debug/release, giải quyết tệp APK, nạp qua `adb install -r -d -t` và tự mở ứng dụng).
+  - `run_app.bat`: Nhấp đúp để build debug và deploy nhanh.
+  - `run_app_release.bat`: Nhấp đúp để build release (R8/split-per-abi) và deploy.
+  - Bổ sung tài nguyên Android Native: `husband_widget_info.xml`, `husband_widget_layout.xml`, `HusbandWidgetProvider.kt`, `strings.xml`.
+
+---
+
 ## [0.3.0+5] - 2026-09-03 (Pairing Bugfix & Settings Refactor)
 
 ### [Fixed]

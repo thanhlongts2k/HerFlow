@@ -101,3 +101,21 @@ grep -r --include="*.dart" -E "AIza|sk-|api_key\s*=\s*['\"]|password\s*=\s*['\"]
 git log --all --full-history --oneline -- "**/google-services.json" "**/*.jks" "**/.env*"
 ```
 Nếu phát hiện vi phạm: dùng `git rm --cached <file>` → thêm vào `.gitignore` → báo ngay cho người dùng.
+
+---
+
+### 9. ⚙️ NGUYÊN TẮC AN TOÀN VÒNG ĐỜI WIDGET & QUẢN LÝ BIẾN (RUNTIME SAFETY)
+1. CẤM TUYỆT ĐỐI DÙNG `late final` CHO CONTROLLER TỪ CALLBACK:
+   - Các controller nhận từ callback của thư viện (ví dụ: onCalendarCreated, onMapReady, onPageChanged): BẮT BUỘC khai báo Nullable (`PageController?`, `ScrollController?`) và thao tác bằng toán tử null-aware `?.`.
+   - Tuyệt đối không dùng `late final` hoặc `late` cho bất kỳ biến nào có nguy cơ bị gán lại khi Widget cha rebuild (như khi người dùng đổi Theme, đổi State hoặc xoay màn hình).
+   - Chỉ dùng `late final` trong State khi và chỉ khi biến đó được gán duy nhất 1 lần trong `initState()` từ các nguồn dữ liệu đồng bộ.
+
+2. NGUYÊN TẮC GIẢI PHÓNG TÀI NGUYÊN (DISPOSE SAFETY):
+   - Controller tự tạo bằng `initState()`: Bắt buộc dispose trong hàm `dispose()` của State.
+   - Controller do thư viện bên thứ 3 tự khởi tạo và truyền qua callback (như `TableCalendar`): TUYỆT ĐỐI KHÔNG tự ý gọi `dispose()`, để thư viện tự quản lý vòng đời tránh xung đột giải phóng vùng nhớ.
+
+3. TÍNH BẢO TOÀN KHI REBUILD (REBUILD IDEMPOTENCY):
+   - Phương thức `build()` và các callback UI phải đảm bảo tính idempotent: chạy lại nhiều lần vẫn cho ra kết quả an toàn, không làm biến đổi state ngầm và không văng ngoại lệ.
+
+4. BẢO VỆ LIFECYCLE VỚI DIALOG NATIVE:
+   - Mọi tương tác bung pop-up hệ thống (Biometric, FilePicker, ShareSheet, Permission): Bắt buộc dùng cờ chặn (Guarding Flag) để triệt tiêu sự kiện `AppLifecycleState.inactive` và `resumed` giả mạo do hệ điều hành kích hoạt.

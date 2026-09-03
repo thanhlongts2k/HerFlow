@@ -11,6 +11,7 @@ import '../models/period_record_model.dart';
 class CycleLocalDataSource {
   final Box _box;
   static const String _recordsKey = 'period_records_list';
+  static const String _cleanupVersionKey = 'cycle_records_cleanup_v20260903_v2';
 
   CycleLocalDataSource(this._box);
 
@@ -20,8 +21,8 @@ class CycleLocalDataSource {
       final parsed = DateTime.tryParse(raw);
       if (parsed != null) return AppDateUtils.normalize(parsed);
     }
-    // Mặc định: ngày 1 của chu kỳ gần nhất cách đây 5 ngày
-    return AppDateUtils.normalize(DateTime.now().subtract(const Duration(days: 4)));
+    // Mặc định: mốc chuẩn 11/08/2026 theo thiết lập ban đầu
+    return AppDateUtils.normalize(DateTime(2026, 8, 11));
   }
 
   Future<void> saveLastPeriodStart(DateTime date) async {
@@ -48,13 +49,70 @@ class CycleLocalDataSource {
     await _box.put(AppConstants.keyPeriodDuration, days);
   }
 
+  /// Dọn dẹp dữ liệu rác mẫu cũ (02-06/08 và 28-31/08)
+  void _cleanDirtyRecords() {
+    final raw = _box.get(_recordsKey);
+    final validRecords = <PeriodRecord>[];
+
+    if (raw is List) {
+      for (final item in raw) {
+        try {
+          PeriodRecord r;
+          if (item is String) {
+            r = PeriodRecordModel.fromMap(json.decode(item));
+          } else if (item is Map) {
+            r = PeriodRecordModel.fromMap(Map<String, dynamic>.from(item));
+          } else {
+            continue;
+          }
+
+          // Loại bỏ các bản ghi mock rác ngày 02-06/08 và 28-31/08
+          final startNorm = AppDateUtils.normalize(r.startDate);
+          final isDirtyAugustRecord = (startNorm.month == 8 && startNorm.year == 2026) &&
+              (startNorm.day <= 6 || startNorm.day >= 27);
+
+          if (!isDirtyAugustRecord) {
+            validRecords.add(r);
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Nếu không còn bản ghi nào hợp lệ, khởi tạo duy nhất mốc chuẩn 11/08 - 15/08
+    if (validRecords.isEmpty) {
+      final anchorStart = DateTime(2026, 8, 11);
+      final duration = getPeriodDuration();
+      validRecords.add(
+        PeriodRecord(
+          id: 'anchor_period_2026_08_11',
+          startDate: anchorStart,
+          endDate: anchorStart.add(Duration(days: duration - 1)),
+          flowIntensity: FlowIntensity.medium,
+          isOngoing: false,
+        ),
+      );
+      saveLastPeriodStart(anchorStart);
+    }
+
+    // Sắp xếp giảm dần theo startDate
+    validRecords.sort((a, b) => b.startDate.compareTo(a.startDate));
+    final rawList = validRecords.map((r) => json.encode(PeriodRecordModel.toMap(r))).toList();
+    _box.put(_recordsKey, rawList);
+    _box.put(_cleanupVersionKey, true);
+  }
+
   List<PeriodRecord> getAllPeriodRecords() {
+    // Tự động dọn dẹp dữ liệu mẫu cũ nếu chưa thực hiện
+    if (_box.get(_cleanupVersionKey) != true) {
+      _cleanDirtyRecords();
+    }
+
     final raw = _box.get(_recordsKey);
     if (raw == null || raw is! List) {
-      // Nếu chưa có, tạo bản ghi mặc định cho chu kỳ gần nhất
+      // Nếu chưa có, tạo bản ghi mốc chuẩn 11/08
       final defaultStart = getLastPeriodStart();
       final defaultRecord = PeriodRecord(
-        id: 'initial_default_period',
+        id: 'anchor_period_2026_08_11',
         startDate: defaultStart,
         endDate: defaultStart.add(Duration(days: getPeriodDuration() - 1)),
         flowIntensity: FlowIntensity.medium,
@@ -126,7 +184,7 @@ class CycleLocalDataSource {
     }
 
     if (matched != null) {
-      // Nếu đã có: xóa hoặc cắt ngắn kỳ kinh đó
+      // Nếu đã có: xóa kỳ kinh đó
       await deletePeriodRecord(matched.id);
     } else {
       // Nếu chưa có: tạo một kỳ kinh mới bắt đầu từ ngày này

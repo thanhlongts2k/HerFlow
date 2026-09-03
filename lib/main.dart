@@ -11,6 +11,8 @@ import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/screens/biometric_lock_screen.dart';
 
+import 'core/theme/theme_controller.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -59,19 +61,21 @@ void main() async {
   );
 }
 
-class MoonaApp extends StatelessWidget {
+class MoonaApp extends ConsumerWidget {
   final bool isOnboardingCompleted;
 
   const MoonaApp({super.key, required this.isOnboardingCompleted});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       initialRoute: isOnboardingCompleted ? AppRoutes.home : AppRoutes.onboarding,
       onGenerateRoute: AppRoutes.onGenerateRoute,
       builder: (context, child) {
@@ -82,3 +86,4 @@ class MoonaApp extends StatelessWidget {
     );
   }
 }
+

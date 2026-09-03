@@ -1,6 +1,6 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.3.0+5` (Pairing Bugfix & SettingsScreen Refactor + Restored Feature Files)
+> **Phiên bản hiện tại:** `v0.3.0+7` (Cycle Projection Engine & Actual vs Predicted Calendar)
 > **Thời điểm cập nhật:** 03/09/2026 — Phiên làm việc kết thúc, lưu ngữ cảnh đầy đủ
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)
 
@@ -11,11 +11,13 @@
 | Hạng mục | Kết quả |
 |---|---|
 | `flutter analyze` | ✅ **0 issues found!** |
-| Commit HEAD | ✅ `4e612b5` — `feat(v0.3.0+5): fix pairing timeout, add SettingsScreen, restore v0.3.0 feature files` |
-| Pairing Timeout Bug | ✅ **FIXED** — `try-catch-finally` + 5s timeout + offline fallback `HFxxxx` |
-| `SettingsScreen` | ✅ **IMPLEMENTED** — 4 nhóm (Bảo mật, Đồng bộ đôi, Giao diện, Dữ liệu) |
-| `CycleSettingsSheet` | ✅ **REFACTORED** — Xóa biometric switch, chỉ giữ chu kỳ + PMS |
-| Restored v0.3.0 files | ✅ **12 new files** — care_signals, auth, onboarding, core utils, notifications |
+| `flutter test` | ✅ **11/11 tests PASSED (100%)** |
+| Deploy Xiaomi Device | ✅ **SUCCESS (1m 13s via `deploy.ps1`)** |
+| Dọn rác dữ liệu cũ | ✅ **CLEANED** — Migration `_cleanDirtyRecords()` xóa rác 02-06 & 28-31, giữ duy nhất 11/08 - 15/08 |
+| Phân định Thực tế vs Dự kiến | ✅ **IMPLEMENTED** — Nền đậm/icon đặc vs Nền mờ/viền nét/icon outline |
+| Thuật toán dự phóng tương lai | ✅ **IMPLEMENTED** — Chiếu 3-6 tháng, không vẽ kỳ ảo trong quá khứ |
+| Bố cục nút "Chỉnh sửa chu kỳ" | ✅ **FIXED** — Tách khỏi header lịch, chuyển thành Action Chip trong thẻ lịch |
+| Lỗi PageController Crash | ✅ **FIXED** — Nullable `PageController?`, an toàn `onCalendarCreated`, `_focusedDay` state |
 
 ---
 

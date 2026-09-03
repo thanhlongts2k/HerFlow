@@ -30,6 +30,30 @@ Write-Banner
 
 
 # ═════════════════════════════════════════════════════════════════
+# STEP 0: PRE-FLIGHT CHECK -- google-services.json
+# ═════════════════════════════════════════════════════════════════
+$googleServicesPath = "android\app\google-services.json"
+$googleServicesExample = "android\app\google-services.json.example"
+
+if (-not (Test-Path $googleServicesPath)) {
+    Write-Warn "android\app\google-services.json not found!"
+
+    if (Test-Path $googleServicesExample) {
+        Write-Info "Auto-copying google-services.json.example as placeholder for local build..."
+        Copy-Item $googleServicesExample $googleServicesPath
+        Write-OK "Placeholder google-services.json created (Firebase features will use demo config)."
+        Write-Warn "For full Firebase functionality, replace with your real google-services.json"
+        Write-Info "  from: https://console.firebase.google.com/ -> Project Settings -> Android App"
+    } else {
+        Write-Fail "google-services.json.example also missing! Cannot proceed."
+        Write-Info "  Download google-services.json from Firebase Console:"
+        Write-Info "  https://console.firebase.google.com/ -> Project Settings -> Android App"
+        exit 1
+    }
+}
+
+
+# ═════════════════════════════════════════════════════════════════
 # STEP 1: CHECK ADB DEVICE
 # ═════════════════════════════════════════════════════════════════
 Write-Step "Step 1/5 -- Check connected Android device (ADB)"
@@ -173,7 +197,15 @@ Write-Step "Step 5/5 -- Install and launch on device"
 
 # 5a. Install
 Write-Info "Installing on $deviceId ..."
-$installOutput = adb -s $deviceId install -r $apkPath 2>&1
+$installOutput = adb -s $deviceId install -r -d -t $apkPath 2>&1
+
+if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
+    if ($installOutput -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE|INSTALL_FAILED_SHARED_USER_INCOMPATIBLE") {
+        Write-Warn "Signature incompatibility detected. Re-installing cleanly..."
+        adb -s $deviceId uninstall com.herflow.app.herflow | Out-Null
+        $installOutput = adb -s $deviceId install -t $apkPath 2>&1
+    }
+}
 
 if ($LASTEXITCODE -ne 0 -or ($installOutput -match "FAILED|Exception")) {
     Write-Fail "Installation failed!"

@@ -99,6 +99,43 @@ void main() {
       expect(record.containsDate(DateTime(2026, 8, 3)), isTrue);
       expect(record.containsDate(DateTime(2026, 8, 6)), isFalse);
     });
+
+    test('Actual vs Predicted period and projection engine (11/08 anchor)', () {
+      final anchorDate = DateTime(2026, 8, 11);
+      final cycleWithAnchor = CycleInfo(
+        lastPeriodStart: anchorDate,
+        cycleLength: 28,
+        periodDuration: 5,
+      );
+
+      // 1. Kỳ kinh thực tế tháng 8: 11/08 -> 15/08
+      expect(cycleWithAnchor.isActualPeriod(DateTime(2026, 8, 11)), isTrue);
+      expect(cycleWithAnchor.isActualPeriod(DateTime(2026, 8, 15)), isTrue);
+      expect(cycleWithAnchor.isPredictedPeriod(DateTime(2026, 8, 11)), isFalse);
+      expect(cycleWithAnchor.isPeriodDay(DateTime(2026, 8, 11)), isTrue);
+
+      // 2. Các ngày trong quá khứ trước anchor (không vẽ kỳ kinh ảo)
+      expect(cycleWithAnchor.isPeriodDay(DateTime(2026, 8, 5)), isFalse);
+      expect(cycleWithAnchor.isActualPeriod(DateTime(2026, 8, 5)), isFalse);
+      expect(cycleWithAnchor.isPredictedPeriod(DateTime(2026, 8, 5)), isFalse);
+
+      // 3. Rụng trứng chu kỳ hiện tại: Ngày 14 = 11/08 + 13 ngày = 24/08
+      expect(cycleWithAnchor.isOvulationDay(DateTime(2026, 8, 24)), isTrue);
+
+      // 4. Kỳ kinh dự báo tháng 9: 11/08 + 28 ngày = 08/09 -> 12/09
+      expect(cycleWithAnchor.nextPeriodDate, DateTime(2026, 9, 8));
+      expect(cycleWithAnchor.isPredictedPeriod(DateTime(2026, 9, 8)), isTrue);
+      expect(cycleWithAnchor.isPredictedPeriod(DateTime(2026, 9, 12)), isTrue);
+      expect(cycleWithAnchor.isActualPeriod(DateTime(2026, 9, 8)), isFalse);
+      expect(cycleWithAnchor.isPeriodDay(DateTime(2026, 9, 8)), isTrue);
+
+      // 5. Rụng trứng chu kỳ kế tiếp: Ngày 14 = 08/09 + 13 ngày = 21/09
+      expect(cycleWithAnchor.isOvulationDay(DateTime(2026, 9, 21)), isTrue);
+
+      // 6. Kỳ kinh dự báo tháng 10: 08/09 + 28 = 06/10 -> 10/10
+      expect(cycleWithAnchor.isPredictedPeriod(DateTime(2026, 10, 6)), isTrue);
+      expect(cycleWithAnchor.isPredictedPeriod(DateTime(2026, 10, 10)), isTrue);
+    });
   });
 
   group('v0.3.0 Care Signals & Backup Unit Tests', () {
