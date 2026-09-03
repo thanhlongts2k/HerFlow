@@ -106,20 +106,20 @@ void main() {
       final signal = CareSignalModel(
         id: 'sig-test-1',
         coupleId: 'couple-123',
-        type: CareSignalType.heatPack,
-        message: 'Đau bụng cần chườm ấm',
-        createdAt: DateTime(2026, 9, 3, 10, 30),
+        type: CareSignalType.message,
+        customNote: 'Đau bụng cần chườm ấm',
+        sentAt: DateTime(2026, 9, 3, 10, 30),
         isRead: false,
       );
 
       final map = signal.toMap();
       expect(map['id'], 'sig-test-1');
-      expect(map['type'], 'heatPack');
+      expect(map['type'], 'message');
 
       final restored = CareSignalModel.fromMap(map);
       expect(restored.id, signal.id);
-      expect(restored.type, CareSignalType.heatPack);
-      expect(restored.message, signal.message);
+      expect(restored.type, CareSignalType.message);
+      expect(restored.customNote, signal.customNote);
       expect(restored.isRead, isFalse);
     });
 

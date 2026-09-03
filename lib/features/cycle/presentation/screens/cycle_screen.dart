@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/utils/date_utils.dart';
+import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 import '../controllers/cycle_controller.dart';
 import '../widgets/cycle_calendar_view.dart';
 import '../widgets/cycle_day_detail_card.dart';
@@ -44,23 +45,21 @@ class CycleScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          // Nút Care Signal (tín hiệu yêu thương)
           IconButton(
             icon: const Icon(Icons.favorite_rounded, color: AppColors.primary),
             tooltip: 'Gửi tín hiệu yêu thương đến chồng',
             onPressed: () => CareSignalSheet.show(context),
           ),
+          // Nút Settings — điều hướng sang SettingsScreen riêng
           IconButton(
-            icon: const Icon(Icons.tune_rounded),
-            tooltip: 'Tùy chỉnh chu kỳ',
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Cài đặt ứng dụng',
             onPressed: () {
-              final cycle = cycleAsync.valueOrNull;
-              if (cycle != null) {
-                CycleSettingsSheet.show(
-                  context,
-                  cycle.cycleLength,
-                  cycle.periodDuration,
-                );
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
           ),
         ],
@@ -91,12 +90,54 @@ class CycleScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
 
                 // 2. LỊCH TƯƠNG TÁC TABLE_CALENDAR 4 PHA
-                CycleCalendarView(
-                  cycleInfo: cycleInfo,
-                  selectedDate: selectedDate,
-                  onDateSelected: (newDate) {
-                    ref.read(selectedCalendarDateProvider.notifier).state = newDate;
-                  },
+                //    Kèm nút nhỏ "Chỉnh sửa chu kỳ" góc trên bên phải lịch
+                Stack(
+                  children: [
+                    CycleCalendarView(
+                      cycleInfo: cycleInfo,
+                      selectedDate: selectedDate,
+                      onDateSelected: (newDate) {
+                        ref.read(selectedCalendarDateProvider.notifier).state = newDate;
+                      },
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          CycleSettingsSheet.show(
+                            context,
+                            cycleInfo.cycleLength,
+                            cycleInfo.periodDuration,
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(20),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.primary.withAlpha(60)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.tune_rounded, size: 13, color: AppColors.primary),
+                              SizedBox(width: 4),
+                              Text(
+                                'Chỉnh sửa chu kỳ',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 14),

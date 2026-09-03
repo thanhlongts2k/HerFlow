@@ -4,6 +4,25 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.3.0+5] - 2026-09-03 (Pairing Bugfix & Settings Refactor)
+
+### [Fixed]
+- **🐛 Sửa lỗi treo "Đang tạo mã...":** `createPairingCode()` và `connectWithPairingCode()` bọc đầy đủ `try-catch-finally` + `.timeout(Duration(seconds: 5))`.
+- **isLoading không reset:** Khối `finally` đảm bảo `isLoading = false` trong mọi tình huống — không bao giờ treo spinner vô tận.
+
+### [Added]
+- **Offline Fallback cho Pairing:** Khi Firestore timeout/lỗi, tự động sinh mã `HFxxxx` cục bộ. UI hiển thị badge cam "Mã kết nối nội bộ (Thử nghiệm)".
+- **`SettingsScreen`** (`lib/features/settings/presentation/screens/settings_screen.dart`): 4 nhóm: Bảo mật (Biometric + Auto-lock), Đồng bộ đôi, Giao diện (Theme + Haptic), Dữ liệu & Giới thiệu.
+- Restored missing v0.3.0 files sau `filter-branch`: `network_connectivity_provider`, `app_version_provider`, `haptic_feedback_utils`, `offline_banner`, `notification_service`, `biometric_lock_screen`, toàn bộ `care_signals/`, `onboarding_screen`.
+
+### [Changed]
+- **`CycleSettingsSheet`:** Đổi tên "Hiệu Chỉnh Chu Kỳ", xóa Biometric switch (chuyển sang SettingsScreen).
+- **`cycle_screen.dart`:** Icon → `settings_outlined` → SettingsScreen. Thêm chip "Chỉnh sửa chu kỳ" overlay trên lịch.
+- **`app_routes.dart`:** Đăng ký route `/settings`.
+- **`widget_test.dart`:** Cập nhật test `CareSignalModel` align API mới.
+
+---
+
 ## [0.3.0+4] - 2026-09-03 (Security Audit & Hardening)
 
 ### [Security]

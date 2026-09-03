@@ -6,7 +6,6 @@ import 'package:herflow/features/mood/presentation/controllers/mood_controller.d
 import 'package:herflow/features/partner_sync/data/partner_sync_repository.dart';
 import 'package:herflow/features/partner_sync/domain/models/pairing_model.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
-import 'package:herflow/features/widgets/services/widget_update_service.dart';
 
 /// Provider cung cấp PartnerSyncRepository
 final partnerSyncRepositoryProvider = Provider<PartnerSyncRepository>((ref) {
@@ -41,12 +40,7 @@ final partnerLiveStatusStreamProvider = StreamProvider<PartnerStatusModel?>((ref
   if (coupleId == null || coupleId.isEmpty) {
     return Stream.value(null);
   }
-  return repo.watchPartnerTodayStatus(coupleId).map((status) {
-    if (status != null) {
-      WidgetUpdateService.updateFromPartnerStatus(status);
-    }
-    return status;
-  });
+  return repo.watchPartnerTodayStatus(coupleId);
 });
 
 /// Trạng thái của phiên ghép đôi (State model)
@@ -56,6 +50,8 @@ class PairingState {
   final PairingStatus? status;
   final String? errorMessage;
   final bool isSuccess;
+  /// true = mã được tạo cục bộ do Firestore không khả dụng (chế độ thử nghiệm)
+  final bool isOfflineCode;
 
   const PairingState({
     this.isLoading = false,
@@ -63,6 +59,7 @@ class PairingState {
     this.status,
     this.errorMessage,
     this.isSuccess = false,
+    this.isOfflineCode = false,
   });
 
   PairingState copyWith({
@@ -71,6 +68,7 @@ class PairingState {
     PairingStatus? status,
     String? errorMessage,
     bool? isSuccess,
+    bool? isOfflineCode,
   }) {
     return PairingState(
       isLoading: isLoading ?? this.isLoading,
@@ -78,6 +76,7 @@ class PairingState {
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
       isSuccess: isSuccess ?? this.isSuccess,
+      isOfflineCode: isOfflineCode ?? this.isOfflineCode,
     );
   }
 }
@@ -88,7 +87,14 @@ class PartnerSyncController extends StateNotifier<PairingState> {
   final Ref _ref;
 
   PartnerSyncController(this._repository, this._ref)
-      : super(PairingState(activePairingCode: _repository.getSavedPairingCode())) {
+      : super(PairingState(
+          activePairingCode: _ref
+              .read(partnerSyncRepositoryProvider)
+              .getSavedPairingCode(),
+          isOfflineCode: _ref
+              .read(partnerSyncRepositoryProvider)
+              .isOfflineCode,
+        )) {
     // Lắng nghe khôi phục kết nối mạng để tự động xả hàng đợi Offline Queue
     _ref.listen<bool>(isOnlineProvider, (previous, next) {
       if (next == true && (previous == false || previous == null)) {
@@ -98,27 +104,33 @@ class PartnerSyncController extends StateNotifier<PairingState> {
   }
 
   /// 1. Vợ tạo mã ghép đôi mới
+  /// Đảm bảo isLoading = false trong mọi trường hợp (try-catch-finally)
   Future<void> generatePairingCode() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, errorMessage: null, isOfflineCode: false);
     try {
-      final pairing = await _repository.createPairingCode();
-      state = state.copyWith(
-        isLoading: false,
-        activePairingCode: pairing.pairingCode,
-        status: pairing.status,
-      );
+      final result = await _repository.createPairingCode();
 
       // Cập nhật coupleId và vai trò
-      _ref.read(savedCoupleIdProvider.notifier).state = pairing.coupleId;
+      _ref.read(savedCoupleIdProvider.notifier).state = result.pairing.coupleId;
       _ref.read(savedUserRoleProvider.notifier).state = 'wife';
 
-      // Đẩy ngay trạng thái hiện tại của Vợ lên Cloud
-      await syncCurrentWifeStatusToCloud();
+      state = state.copyWith(
+        activePairingCode: result.pairing.pairingCode,
+        status: result.pairing.status,
+        isOfflineCode: result.isOffline,
+      );
+
+      // Chỉ đẩy trạng thái Vợ lên Cloud nếu thực sự online
+      if (!result.isOffline) {
+        await syncCurrentWifeStatusToCloud();
+      }
     } catch (e) {
       state = state.copyWith(
-        isLoading: false,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       );
+    } finally {
+      // BẮT BUỘC: luôn reset isLoading trong finally để không bị treo UI
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -127,22 +139,23 @@ class PartnerSyncController extends StateNotifier<PairingState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final pairing = await _repository.connectWithPairingCode(code);
+
+      _ref.read(savedCoupleIdProvider.notifier).state = pairing.coupleId;
+      _ref.read(savedUserRoleProvider.notifier).state = 'husband';
+
       state = state.copyWith(
-        isLoading: false,
         activePairingCode: pairing.pairingCode,
         status: PairingStatus.connected,
         isSuccess: true,
       );
-
-      _ref.read(savedCoupleIdProvider.notifier).state = pairing.coupleId;
-      _ref.read(savedUserRoleProvider.notifier).state = 'husband';
       return true;
     } catch (e) {
       state = state.copyWith(
-        isLoading: false,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       );
       return false;
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -173,7 +186,6 @@ class PartnerSyncController extends StateNotifier<PairingState> {
 
     final isOnline = _ref.read(isOnlineProvider);
     await _repository.pushTodayStatus(status, isOnline: isOnline);
-    await WidgetUpdateService.updateFromPartnerStatus(status);
   }
 
   /// 4. Hủy kết nối cặp đôi

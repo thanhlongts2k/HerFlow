@@ -139,9 +139,38 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
               label: Text(state.isLoading ? 'Đang tạo mã...' : 'Tạo Mã Kết Nối Mới'),
             ),
           ] else ...[
+            // Badge offline nếu mã được tạo cục bộ (không có Firestore)
+            if (state.isOfflineCode) ...[  
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withAlpha(120)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.wifi_off_rounded, size: 16, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Mã kết nối nội bộ (Thử nghiệm) — Không cần mạng để thử flow ghép đôi',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Đã có mã: Lắng nghe trạng thái realtime
             StreamBuilder<PairingModel?>(
-              stream: repo.watchPairingStatus(activeCode),
+              stream: state.isOfflineCode ? Stream.value(null) : repo.watchPairingStatus(activeCode),
               builder: (context, snapshot) {
                 final pairing = snapshot.data;
                 final isConnected = pairing?.status == PairingStatus.connected;
@@ -233,10 +262,25 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
 
           if (state.errorMessage != null) ...[
             const SizedBox(height: 16),
-            Text(
-              state.errorMessage!,
-              style: const TextStyle(color: AppColors.error, fontSize: 13),
-              textAlign: TextAlign.center,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withAlpha(80)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      state.errorMessage!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 12.5),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
