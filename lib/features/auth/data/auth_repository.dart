@@ -241,20 +241,24 @@ class AuthRepository {
       debugPrint('Google sign out error: $e');
     }
 
-    // 1. Xóa thông tin tài khoản đăng nhập
+    // 1. Xóa sạch thông tin tài khoản đăng nhập trong userBox
     final box = _userBox;
-    await box.put(AppConstants.keyUserIsLoggedIn, false);
-    await box.delete(AppConstants.keyUserUid);
-    await box.delete(AppConstants.keyUserDisplayName);
-    await box.delete(AppConstants.keyUserEmail);
-    await box.delete(AppConstants.keyUserPhotoUrl);
-    await box.delete('user_role');
+    await box.clear();
 
-    // 2. Xóa sạch cache vai trò và cờ onboarding để tài khoản tiếp theo không bị nhận nhầm
+    // 2. Xóa sạch toàn bộ cache vai trò, ghép đôi, danh xưng legacy không gắn tiền tố UID
     final settingsBox = _settingsBox;
     await settingsBox.delete('app_user_role');
     await settingsBox.delete('partner_user_role');
+    await settingsBox.delete('partner_couple_id');
+    await settingsBox.delete('partner_pairing_code');
+    await settingsBox.delete('partner_wife_user_id');
+    await settingsBox.delete('partner_offline_pairing_code');
+    await settingsBox.delete('nickname_call_partner');
+    await settingsBox.delete('nickname_self_call');
     await settingsBox.delete(AppConstants.keyHasSelectedRole);
     await settingsBox.delete(AppConstants.keyIsOnboardingCompleted);
+    await settingsBox.delete(AppConstants.keyLastPeriodStart);
+    await settingsBox.delete(AppConstants.keyCycleLength);
+    await settingsBox.delete(AppConstants.keyPeriodDuration);
   }
 }

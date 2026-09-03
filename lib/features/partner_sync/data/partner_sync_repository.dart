@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
 import '../domain/models/pairing_model.dart';
 import '../domain/models/partner_status_model.dart';
@@ -31,26 +32,57 @@ class PartnerSyncRepository {
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _settingsBox = settingsBox ?? Hive.box(AppConstants.settingsBoxName);
 
+  String _k(String baseKey, [String? explicitUid]) => UserScope.key(baseKey, explicitUid);
+
   // === LOCAL STORAGE GETTERS ===
-  String? getSavedCoupleId() => _settingsBox.get(keyCoupleId) as String?;
-  String? getSavedUserRole() => _settingsBox.get(keyUserRole) as String?;
-  String? getSavedPairingCode() => _settingsBox.get(keyPairingCode) as String?;
+  String? getSavedCoupleId([String? explicitUid]) {
+    final uid = explicitUid ?? UserScope.currentUid();
+    final scoped = _settingsBox.get(_k(keyCoupleId, uid)) as String?;
+    if (scoped != null && scoped.isNotEmpty) return scoped;
+    if (uid.isEmpty) return _settingsBox.get(keyCoupleId) as String?;
+    return null;
+  }
+
+  String? getSavedUserRole([String? explicitUid]) {
+    final uid = explicitUid ?? UserScope.currentUid();
+    final scoped = _settingsBox.get(_k(keyUserRole, uid)) as String?;
+    if (scoped != null && scoped.isNotEmpty) return scoped;
+    if (uid.isEmpty) return _settingsBox.get(keyUserRole) as String?;
+    return null;
+  }
+
+  String? getSavedPairingCode([String? explicitUid]) {
+    final uid = explicitUid ?? UserScope.currentUid();
+    final scoped = _settingsBox.get(_k(keyPairingCode, uid)) as String?;
+    if (scoped != null && scoped.isNotEmpty) return scoped;
+    if (uid.isEmpty) return _settingsBox.get(keyPairingCode) as String?;
+    return null;
+  }
+
   bool get isConnected => getSavedCoupleId() != null && getSavedCoupleId()!.isNotEmpty;
+
+  /// Lưu coupleId cho người dùng hiện tại
+  Future<void> saveCoupleId(String coupleId, [String? explicitUid]) async {
+    final uid = explicitUid ?? UserScope.currentUid();
+    await _settingsBox.put(_k(keyCoupleId, uid), coupleId);
+  }
 
   /// Trả về true nếu mã ghép đôi hiện tại là mã nội bộ (offline fallback)
   bool get isOfflineCode {
-    final savedCode = _settingsBox.get(keyOfflinePairingCode) as String?;
+    final uid = UserScope.currentUid();
+    final savedCode = _settingsBox.get(_k(keyOfflinePairingCode, uid)) as String?;
     return savedCode != null && getSavedPairingCode() == savedCode;
   }
 
   /// Lấy hoặc tạo userId ẩn danh cho Vợ
   String getOrCreateWifeUserId() {
-    var uid = _settingsBox.get(keyWifeUserId) as String?;
-    if (uid == null || uid.isEmpty) {
-      uid = const Uuid().v4();
-      _settingsBox.put(keyWifeUserId, uid);
+    final uid = UserScope.currentUid();
+    var wifeId = _settingsBox.get(_k(keyWifeUserId, uid)) as String?;
+    if (wifeId == null || wifeId.isEmpty) {
+      wifeId = uid.isNotEmpty ? uid : const Uuid().v4();
+      _settingsBox.put(_k(keyWifeUserId, uid), wifeId);
     }
-    return uid;
+    return wifeId;
   }
 
   // === 1. PHÍA VỢ: TẠO MÃ GHÉP ĐÔI 6 KÝ TỰ ===
@@ -80,12 +112,20 @@ class PartnerSyncRepository {
           .set(pairing.toMap())
           .timeout(_kFirestoreTimeout);
 
-      // Lưu tạm cấu hình phía Vợ vào Hive
-      await _settingsBox.put(keyPairingCode, code);
-      await _settingsBox.put(keyCoupleId, coupleId);
-      await _settingsBox.put(keyUserRole, 'wife');
+      // Lưu tạm cấu hình phía Vợ vào Hive (gắn tiền tố UID người dùng)
+      final uid = UserScope.currentUid();
+      await _settingsBox.put(_k(keyPairingCode, uid), code);
+      await _settingsBox.put(_k(keyCoupleId, uid), coupleId);
+      await _settingsBox.put(_k(keyUserRole, uid), 'wife');
       // Xóa cờ offline nếu đã online thành công
-      await _settingsBox.delete(keyOfflinePairingCode);
+      await _settingsBox.delete(_k(keyOfflinePairingCode, uid));
+
+      if (uid.isNotEmpty) {
+        await _firestore.collection('users').doc(uid).set({
+          'coupleId': coupleId,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
 
       return PairingCodeResult(pairing: pairing, isOffline: false);
     } on TimeoutException {
@@ -118,10 +158,11 @@ class PartnerSyncRepository {
       expiresAt: expiresAt,
     );
 
-    await _settingsBox.put(keyPairingCode, code);
-    await _settingsBox.put(keyCoupleId, coupleId);
-    await _settingsBox.put(keyUserRole, 'wife');
-    await _settingsBox.put(keyOfflinePairingCode, code); // đánh dấu offline
+    final uid = UserScope.currentUid();
+    await _settingsBox.put(_k(keyPairingCode, uid), code);
+    await _settingsBox.put(_k(keyCoupleId, uid), coupleId);
+    await _settingsBox.put(_k(keyUserRole, uid), 'wife');
+    await _settingsBox.put(_k(keyOfflinePairingCode, uid), code); // đánh dấu offline
 
     return PairingCodeResult(pairing: offlinePairing, isOffline: true);
   }
@@ -167,9 +208,17 @@ class PartnerSyncRepository {
 
       if (pairing.status == PairingStatus.connected) {
         // Nếu đã connected, vẫn cho phép kết nối nếu cùng coupleId
-        await _settingsBox.put(keyCoupleId, pairing.coupleId);
-        await _settingsBox.put(keyUserRole, 'husband');
-        await _settingsBox.put(keyPairingCode, cleanCode);
+        final uid = UserScope.currentUid();
+        await _settingsBox.put(_k(keyCoupleId, uid), pairing.coupleId);
+        await _settingsBox.put(_k(keyUserRole, uid), 'husband');
+        await _settingsBox.put(_k(keyPairingCode, uid), cleanCode);
+
+        if (uid.isNotEmpty) {
+          await _firestore.collection('users').doc(uid).set({
+            'coupleId': pairing.coupleId,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
         return pairing;
       }
 
@@ -180,10 +229,18 @@ class PartnerSyncRepository {
           .update({'status': PairingStatus.connected.name})
           .timeout(_kFirestoreTimeout);
 
-      // Lưu coupleId vào Hive phía Chồng
-      await _settingsBox.put(keyCoupleId, pairing.coupleId);
-      await _settingsBox.put(keyUserRole, 'husband');
-      await _settingsBox.put(keyPairingCode, cleanCode);
+      // Lưu coupleId vào Hive phía Chồng (gắn tiền tố UID người dùng)
+      final uid = UserScope.currentUid();
+      await _settingsBox.put(_k(keyCoupleId, uid), pairing.coupleId);
+      await _settingsBox.put(_k(keyUserRole, uid), 'husband');
+      await _settingsBox.put(_k(keyPairingCode, uid), cleanCode);
+
+      if (uid.isNotEmpty) {
+        await _firestore.collection('users').doc(uid).set({
+          'coupleId': pairing.coupleId,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
 
       return pairing.copyWith(status: PairingStatus.connected);
     } on TimeoutException {
@@ -458,11 +515,26 @@ class PartnerSyncRepository {
   }
 
   /// Ngắt kết nối ghép đôi giữa hai thiết bị
-  Future<void> disconnectCouple() async {
+  Future<void> disconnectCouple([String? explicitUid]) async {
+    final uid = explicitUid ?? UserScope.currentUid();
+    await _settingsBox.delete(_k(keyCoupleId, uid));
+    await _settingsBox.delete(_k(keyUserRole, uid));
+    await _settingsBox.delete(_k(keyPairingCode, uid));
+    await _settingsBox.delete(_k(keyOfflinePairingCode, uid));
+
+    // Dọn dẹp cả legacy non-prefixed
     await _settingsBox.delete(keyCoupleId);
     await _settingsBox.delete(keyUserRole);
     await _settingsBox.delete(keyPairingCode);
     await _settingsBox.delete(keyOfflinePairingCode);
+
+    if (uid.isNotEmpty) {
+      try {
+        await _firestore.collection('users').doc(uid).update({
+          'coupleId': FieldValue.delete(),
+        });
+      } catch (_) {}
+    }
   }
 
   /// Hàm tiện ích sinh mã 6 ký tự viết hoa (ví dụ: HF8201, HF3924...)

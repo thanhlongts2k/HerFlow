@@ -15,6 +15,8 @@ jobs:
   build-and-release:
     name: Build & Publish Release APKs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: 1. Checkout repository

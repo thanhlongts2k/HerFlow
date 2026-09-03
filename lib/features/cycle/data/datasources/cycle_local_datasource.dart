@@ -4,10 +4,12 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/utils/date_utils.dart';
+import 'package:herflow/core/utils/user_scope.dart';
 import '../../domain/entities/period_record.dart';
 import '../models/period_record_model.dart';
 
 /// Nguồn dữ liệu cục bộ Hive cho chu kỳ kinh nguyệt
+/// Đã được User-Scoped theo UID người dùng để chống rò rỉ dữ liệu chu kỳ chéo giữa các tài khoản.
 class CycleLocalDataSource {
   final Box _box;
   static const String _recordsKey = 'period_records_list';
@@ -15,8 +17,10 @@ class CycleLocalDataSource {
 
   CycleLocalDataSource(this._box);
 
+  String _k(String baseKey) => UserScope.key(baseKey);
+
   DateTime getLastPeriodStart() {
-    final raw = _box.get(AppConstants.keyLastPeriodStart);
+    final raw = _box.get(_k(AppConstants.keyLastPeriodStart));
     if (raw != null && raw is String) {
       final parsed = DateTime.tryParse(raw);
       if (parsed != null) return AppDateUtils.normalize(parsed);
@@ -26,32 +30,32 @@ class CycleLocalDataSource {
   }
 
   Future<void> saveLastPeriodStart(DateTime date) async {
-    await _box.put(AppConstants.keyLastPeriodStart, AppDateUtils.normalize(date).toIso8601String());
+    await _box.put(_k(AppConstants.keyLastPeriodStart), AppDateUtils.normalize(date).toIso8601String());
   }
 
   int getCycleLength() {
-    final val = _box.get(AppConstants.keyCycleLength);
+    final val = _box.get(_k(AppConstants.keyCycleLength));
     if (val != null && val is int) return val;
     return AppConstants.defaultCycleLength;
   }
 
   Future<void> saveCycleLength(int days) async {
-    await _box.put(AppConstants.keyCycleLength, days);
+    await _box.put(_k(AppConstants.keyCycleLength), days);
   }
 
   int getPeriodDuration() {
-    final val = _box.get(AppConstants.keyPeriodDuration);
+    final val = _box.get(_k(AppConstants.keyPeriodDuration));
     if (val != null && val is int) return val;
     return AppConstants.defaultPeriodDuration;
   }
 
   Future<void> savePeriodDuration(int days) async {
-    await _box.put(AppConstants.keyPeriodDuration, days);
+    await _box.put(_k(AppConstants.keyPeriodDuration), days);
   }
 
-  /// Dọn dẹp dữ liệu rác mẫu cũ (02-06/08 và 28-31/08)
+  /// Dọn dẹp dữ liệu rác mẫu cũ (02-06/08 và 28-31/08) cho user hiện tại
   void _cleanDirtyRecords() {
-    final raw = _box.get(_recordsKey);
+    final raw = _box.get(_k(_recordsKey));
     final validRecords = <PeriodRecord>[];
 
     if (raw is List) {
@@ -97,17 +101,17 @@ class CycleLocalDataSource {
     // Sắp xếp giảm dần theo startDate
     validRecords.sort((a, b) => b.startDate.compareTo(a.startDate));
     final rawList = validRecords.map((r) => json.encode(PeriodRecordModel.toMap(r))).toList();
-    _box.put(_recordsKey, rawList);
-    _box.put(_cleanupVersionKey, true);
+    _box.put(_k(_recordsKey), rawList);
+    _box.put(_k(_cleanupVersionKey), true);
   }
 
   List<PeriodRecord> getAllPeriodRecords() {
     // Tự động dọn dẹp dữ liệu mẫu cũ nếu chưa thực hiện
-    if (_box.get(_cleanupVersionKey) != true) {
+    if (_box.get(_k(_cleanupVersionKey)) != true) {
       _cleanDirtyRecords();
     }
 
-    final raw = _box.get(_recordsKey);
+    final raw = _box.get(_k(_recordsKey));
     if (raw == null || raw is! List) {
       // Nếu chưa có, tạo bản ghi mốc chuẩn 11/08
       final defaultStart = getLastPeriodStart();
@@ -150,7 +154,7 @@ class CycleLocalDataSource {
     list.sort((a, b) => b.startDate.compareTo(a.startDate));
 
     final rawList = list.map((r) => json.encode(PeriodRecordModel.toMap(r))).toList();
-    await _box.put(_recordsKey, rawList);
+    await _box.put(_k(_recordsKey), rawList);
 
     // Cập nhật ngày bắt đầu chu kỳ gần nhất nếu cần
     if (list.isNotEmpty) {
@@ -162,7 +166,7 @@ class CycleLocalDataSource {
     final list = getAllPeriodRecords();
     list.removeWhere((r) => r.id == id);
     final rawList = list.map((r) => json.encode(PeriodRecordModel.toMap(r))).toList();
-    await _box.put(_recordsKey, rawList);
+    await _box.put(_k(_recordsKey), rawList);
 
     if (list.isNotEmpty) {
       await saveLastPeriodStart(list.first.startDate);

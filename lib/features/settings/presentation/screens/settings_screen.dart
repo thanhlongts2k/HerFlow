@@ -1025,11 +1025,6 @@ class SettingsScreen extends ConsumerWidget {
                       Navigator.pop(ctx);
                       AppHaptics.success();
 
-                      final settingsBox = Hive.box(AppConstants.settingsBoxName);
-                      await settingsBox.put(AppConstants.keyLastPeriodStart, selectedDate.toIso8601String());
-                      await settingsBox.put(AppConstants.keyCycleLength, cycleLen);
-                      await settingsBox.put(AppConstants.keyPeriodDuration, periodDur);
-
                       await ref.read(cycleControllerProvider.notifier).setLastPeriodStart(selectedDate);
                       await ref.read(cycleControllerProvider.notifier).setCycleLength(cycleLen);
                       await ref.read(cycleControllerProvider.notifier).setPeriodDuration(periodDur);

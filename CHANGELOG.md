@@ -24,6 +24,13 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
   * Hộp thoại Tín hiệu yêu thương (`CareSignalSheet`): Hiển thị banner cảnh báo và nút ghép đôi nhanh, vô hiệu hóa gửi tin khi chưa có đối tác.
 
 ### [Fixed]
+- **🛡️ Triệt Tiêu Hoàn Toàn Rò Rỉ Dữ Liệu Chéo Giữa Các Tài Khoản (Cross-Account State Pollution):**
+  * **Lớp 1 (User-Scoped Storage):** Xây dựng tiện ích `UserScope.key()` gắn `${uid}_` vào toàn bộ khóa lưu trữ cục bộ trong Hive (`NicknameController`, `PartnerSyncRepository`, `CycleLocalDataSource`, `UserRoleNotifier`).
+  * **Lớp 2 (Complete Logout Purge):** Khi đăng xuất, xóa sạch session userBox, dọn sạch khóa legacy và invalidate/reset toàn bộ Provider trong RAM (`savedCoupleIdProvider`, `nicknameConfigProvider`, `cycleControllerProvider`, etc.).
+  * **Lớp 3 (Cloud-Source of Truth):** Khi tài khoản mới đăng nhập, nạp đúng thông tin hồ sơ `users/{uid}` từ Firestore hoặc thiết lập trạng thái mặc định tinh khôi, ngăn 100% việc tài khoản 2 nhận nhầm dữ liệu tài khoản 1.
+- **⚙️ Sửa Lỗi CI Signing & Quyền Ghi GitHub Actions:**
+  * Theo dõi `debug.keystore` dùng chung trong Git repository để `validateSigningRelease` thành công trên runner GitHub Actions.
+  * Cấp quyền `permissions: contents: write` cho workflow để `softprops/action-gh-release` đăng tải bản phát hành thành công.
 - **🧹 Dọn dẹp Màn hình Cài đặt:**
   * Xóa bỏ nút chữ lơ lửng "Đổi vai trò" ở góc trên bên phải để bảo vệ tính bất biến của luồng phân quyền tài khoản.
   * Khắc phục bộ xem trước danh xưng khi người dùng chọn 2 danh xưng trùng nhau (ví dụ đều là "Người thương"), tự động hiển thị phân biệt rõ ràng `[Bạn]` và `[Người ấy]`.

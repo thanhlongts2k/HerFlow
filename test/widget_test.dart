@@ -10,6 +10,7 @@ import 'package:herflow/features/care_signals/domain/models/care_signal_model.da
 import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
 import 'package:herflow/features/cycle/domain/entities/period_record.dart';
 import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
+import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 
 void main() {
@@ -345,6 +346,43 @@ void main() {
       expect(restored.email, user.email);
       expect(restored.photoUrl, user.photoUrl);
       expect(restored.role, 'husband');
+    });
+  });
+
+  group('UserScope Cross-Account Isolation Unit Tests', () {
+    test('UserScope.key isolates storage keys per user UID', () {
+      expect(UserScope.key('nickname', 'UID_A'), 'UID_A_nickname');
+      expect(UserScope.key('nickname', 'UID_B'), 'UID_B_nickname');
+      expect(UserScope.key('nickname', ''), 'nickname');
+      expect(UserScope.key('couple_id', 'UID_A'), isNot(equals(UserScope.key('couple_id', 'UID_B'))));
+    });
+
+    test('Simulated multi-account storage isolation: UID_B never reads UID_A data', () {
+      final mockBox = <String, dynamic>{};
+
+      // 1. UID_A đăng nhập và tùy chỉnh Cài đặt
+      const uidA = 'account_wife_01';
+      mockBox[UserScope.key('nickname_call_partner', uidA)] = 'Chồng yêu dấu';
+      mockBox[UserScope.key('nickname_self_call', uidA)] = 'Bé bỏng';
+      mockBox[UserScope.key('partner_couple_id', uidA)] = 'couple_room_999';
+      mockBox[UserScope.key('cycle_length', uidA)] = 32;
+
+      // 2. UID_B đăng nhập máy này
+      const uidB = 'account_guest_02';
+
+      // 3. Xác thực UID_B không đọc thấy bất kỳ dữ liệu nào của UID_A
+      final uidBNicknamePartner = mockBox[UserScope.key('nickname_call_partner', uidB)];
+      final uidBCoupleId = mockBox[UserScope.key('partner_couple_id', uidB)];
+      final uidBCycleLen = mockBox[UserScope.key('cycle_length', uidB)];
+
+      expect(uidBNicknamePartner, isNull);
+      expect(uidBCoupleId, isNull);
+      expect(uidBCycleLen, isNull);
+
+      // 4. UID_B nhận đúng giá trị mặc định sạch sẽ
+      final effectiveNickname = uidBNicknamePartner ?? NicknameConfig.defaultNickname;
+      expect(effectiveNickname, NicknameConfig.defaultNickname);
+      expect(effectiveNickname, isNot('Chồng yêu dấu'));
     });
   });
 }

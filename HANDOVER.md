@@ -11,16 +11,17 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase sạch 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **20/20 tests PASSED** | Đạt 100% pass toàn bộ test suites |
+| **Unit Testing (`flutter test`)** | ✅ **22/22 tests PASSED** | Đạt 100% pass toàn bộ test suites (bổ sung test cô lập đa tài khoản) |
+| **Cô lập dữ liệu đa tài khoản (User-Scoped)** | ✅ **HOÀN TẤT & TRIỆT ĐỂ** | Kiến trúc 3 lớp: UserScope.key(), Complete Logout Purge, Cloud-Source of Truth |
 | **Ràng buộc vai trò theo tài khoản (Cloud-Bound)** | ✅ **HOÀN TẤT & FIX LỖI** | Thêm rule Firestore `users/{userId}`, nạp vai trò tự động khi đăng nhập, bỏ qua onboarding |
-| **Xóa sạch cache vai trò khi Sign Out** | ✅ **HOÀN TẤT** | Reset triệt để `app_user_role` và cờ onboarding tránh tài khoản sau bị nhận nhầm |
+| **Xóa sạch cache khi Sign Out** | ✅ **HOÀN TẤT** | Reset triệt để `app_user_role`, `coupleId`, `nicknames`, `cycle` và cờ onboarding |
 | **Chuẩn hóa logic khi chưa ghép đôi** | ✅ **HOÀN TẤT** | Ẩn chat nhanh và banner tương tác thời gian thực khi `!isPaired`, thay bằng card mời ghép đôi |
 | **Dọn dẹp màn hình Cài đặt** | ✅ **HOÀN TẤT** | Xóa nút lơ lửng "Đổi vai trò", xử lý placeholder phân biệt rõ khi trùng danh xưng |
 | **Dịch vụ In-App OTA Update** | ✅ **HOÀN TẤT** | `AppUpdateService` đối soát GitHub Releases API, modal `AppUpdateDialog`, check tự động 24h & thủ công |
-| **Pipeline GitHub Actions CI/CD** | ✅ **HOÀN TẤT** | `.github/workflows/build_release.yml` sẵn sàng build `moona-arm64-v8a.apk` & `moona-universal.apk` |
+| **Pipeline GitHub Actions CI/CD** | ✅ **HOÀN TẤT & FIX KEYSTORE** | `.github/workflows/build_release.yml` cấp quyền write, theo dõi shared debug.keystore |
 | **Bảo mật Repo Public** | ✅ **HOÀN TẤT** | `google-services.json` nằm trong `.gitignore` không bị track, nạp qua GitHub Secret |
 | **Dung lượng APK Release (arm64-v8a)** | ✅ **27.1 MB (28,383,948 bytes)** | Giảm 86.5% so với Fat APK 208MB; Dart AOT 7MB, Native 10MB, Assets 348KB |
-| **Shared Project Keystore** | ✅ **HOÀN TẤT** | `android/app/debug.keystore` (storePass: 'android', alias: 'androiddebugkey') |
+| **Shared Project Keystore** | ✅ **HOÀN TẤT (TRACKED)** | `android/app/debug.keystore` (storePass: 'android', alias: 'androiddebugkey') |
 | **Mã vân tay Firebase SHA-1** | ✅ **XÁC NHẬN** | `33:61:D2:2E:84:65:AE:C8:C3:C4:37:1D:79:6A:84:05:57:5D:F3:B0` |
 | **Deploy thử nghiệm thực tế** | ✅ **SUCCESS** | Tự động cài đặt và mở app trên thiết bị thật Xiaomi qua `scripts/build_and_install.bat` |
 
