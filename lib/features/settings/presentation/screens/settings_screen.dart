@@ -19,6 +19,8 @@ import 'package:herflow/features/partner_sync/presentation/controllers/partner_s
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
 import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
+import 'package:herflow/core/services/app_update_service.dart';
+import 'package:herflow/core/widgets/app_update_dialog.dart';
 
 import 'package:herflow/core/theme/theme_controller.dart';
 
@@ -93,7 +95,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 6),
 
           // ── NHÓM 1: BẢO MẬT & RIÊNG TƯ ──────────────────────────
-          _SectionHeader(
+          const _SectionHeader(
             icon: Icons.security_rounded,
             title: 'Bảo Mật & Riêng Tư',
             color: AppColors.primary,
@@ -113,7 +115,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Khóa bằng sinh trắc học', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text('Yêu cầu vân tay / FaceID khi mở Moona', style: TextStyle(fontSize: 12)),
             value: isBiometricEnabled,
-            activeThumbColor: AppColors.primary,
+            activeColor: AppColors.primary,
             onChanged: (val) async {
               final box = Hive.box(AppConstants.settingsBoxName);
               await box.put(AppConstants.keyIsBiometricEnabled, val);
@@ -243,44 +245,6 @@ class SettingsScreen extends ConsumerWidget {
                       color: isDark ? Colors.white54 : Colors.grey[600],
                     ),
                   ),
-                  const Divider(height: 18),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () {
-                        AppHaptics.light();
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Đổi vai trò ứng dụng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                            content: const Text(
-                              'Vai trò này được gắn liền với tài khoản của bạn để đảm bảo tính toàn vẹn dữ liệu chu kỳ.\n\nĐể đổi vai trò, bạn cần đăng xuất hoặc đặt lại tài khoản này.',
-                              style: TextStyle(fontSize: 13.5, height: 1.4),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('Đã hiểu'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  Navigator.pop(ctx);
-                                  await ref.read(authControllerProvider.notifier).signOut();
-                                  if (context.mounted) {
-                                    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (r) => false);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                                child: const Text('Đăng xuất ngay', style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.info_outline_rounded, size: 14),
-                      label: const Text('Đổi vai trò', style: TextStyle(fontSize: 12)),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -294,7 +258,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsDivider(),
 
           // ── NHÓM 3: ĐỒNG BỘ CẶP ĐÔI ─────────────────────────────
-          _SectionHeader(
+          const _SectionHeader(
             icon: Icons.favorite_rounded,
             title: 'Đồng Bộ Cặp Đôi',
             color: AppColors.secondary,
@@ -381,7 +345,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsDivider(),
 
           // ── NHÓM 3: GIAO DIỆN ─────────────────────────────────────
-          _SectionHeader(
+          const _SectionHeader(
             icon: Icons.palette_outlined,
             title: 'Giao Diện',
             color: Colors.purple,
@@ -452,7 +416,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Phản hồi xúc giác (Haptic)', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text('Rung nhẹ khi tương tác với ứng dụng', style: TextStyle(fontSize: 12)),
             value: isHapticEnabled,
-            activeThumbColor: Colors.purple,
+            activeColor: Colors.purple,
             onChanged: (val) async {
               final box = Hive.box(AppConstants.settingsBoxName);
               await box.put('haptic_enabled', val);
@@ -463,7 +427,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsDivider(),
 
           // ── NHÓM 4: DỮ LIỆU & GIỚI THIỆU ───────────────────────
-          _SectionHeader(
+          const _SectionHeader(
             icon: Icons.info_outline_rounded,
             title: 'Dữ Liệu & Giới Thiệu',
             color: Colors.teal,
@@ -489,13 +453,13 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
 
-          // Phiên bản động từ package_info_plus
+          // Phiên bản động từ package_info_plus & Kiểm tra cập nhật OTA
           ref.watch(appVersionProvider).when(
             data: (info) => ListTile(
               leading: const MoonaBrandLogo(size: 34, hasShadow: false),
               title: const Text('Phiên bản', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text(
-                '${info.appName} ${info.shortVersion} (Build ${info.buildNumber})',
+                '${info.appName} ${info.shortVersion} (Build ${info.buildNumber}) • Nhấn để kiểm tra',
                 style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
               ),
               trailing: Container(
@@ -503,23 +467,68 @@ class SettingsScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppColors.primary.withAlpha(20),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.primary.withAlpha(60)),
                 ),
-                child: Text(
-                  info.shortVersion,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'v${info.shortVersion}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.sync_rounded, size: 12, color: AppColors.primary),
+                  ],
                 ),
               ),
+              onTap: () async {
+                AppHaptics.light();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Đang kiểm tra bản cập nhật từ GitHub...'),
+                      ],
+                    ),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+
+                final update = await AppUpdateService.checkForUpdate(forceCheck: true);
+                if (!context.mounted) return;
+
+                if (update != null) {
+                  AppUpdateDialog.show(context, update);
+                } else {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Bạn đang sử dụng phiên bản Moona mới nhất (${info.shortVersion})! ✨'),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  );
+                }
+              },
             ),
             loading: () => const ListTile(
               leading: Icon(Icons.info_rounded, color: Colors.teal),
               title: Text('Phiên bản', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text('Đang tải...', style: TextStyle(fontSize: 12)),
             ),
-            error: (_, _) => const ListTile(
+            error: (_, __) => const ListTile(
               leading: Icon(Icons.info_rounded, color: Colors.teal),
               title: Text('Moona'),
               subtitle: Text('v0.3.0', style: TextStyle(fontSize: 12)),
@@ -646,7 +655,7 @@ class SettingsScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
+        const _SectionHeader(
           icon: Icons.favorite_outline_rounded,
           title: 'Hồ Sơ & Danh Xưng',
           color: AppColors.primary,
@@ -749,31 +758,39 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 12),
 
               // 3. Live Preview Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(isDark ? 25 : 15),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withAlpha(isDark ? 60 : 40)),
-                ),
-                child: Row(
-                  children: [
-                    const Text('💬', style: TextStyle(fontSize: 16)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Xem trước: "${nicknameConfig.selfCallAs} vừa gửi tín hiệu yêu thương cho ${nicknameConfig.callPartnerAs} 💕"',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white70 : AppColors.primary,
-                        ),
-                      ),
+              Builder(
+                builder: (context) {
+                  final isSame = nicknameConfig.selfCallAs.trim().toLowerCase() ==
+                      nicknameConfig.callPartnerAs.trim().toLowerCase();
+                  final selfDisplay = isSame ? '${nicknameConfig.selfCallAs} (Bạn)' : nicknameConfig.selfCallAs;
+                  final partnerDisplay = isSame ? '${nicknameConfig.callPartnerAs} (Người ấy)' : nicknameConfig.callPartnerAs;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(isDark ? 25 : 15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.primary.withAlpha(isDark ? 60 : 40)),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        const Text('💬', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Xem trước: "$selfDisplay vừa gửi tín hiệu yêu thương cho $partnerDisplay 💕"',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white70 : AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),

@@ -136,8 +136,8 @@ class HusbandViewScreen extends ConsumerWidget {
 
                 const SizedBox(height: 12),
 
-                // 2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG (CARE SIGNAL)
-                if (careSignal != null) ...[
+                // 2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG (CARE SIGNAL) — Chỉ hiển thị khi đã kết nối
+                if (savedCoupleId != null && savedCoupleId.isNotEmpty && careSignal != null) ...[
                   _buildCareSignalBox(context, ref, careSignal, isDark, partnerName),
                   const SizedBox(height: 14),
                 ],
@@ -160,7 +160,10 @@ class HusbandViewScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
 
                 // 3.2. THẺ HỎI THĂM & NHẮN NHỦ NÀNG (HUSBAND QUICK CHAT)
-                _buildQuickChatCard(context, currentPhase, partnerName, isDark),
+                if (savedCoupleId != null && savedCoupleId.isNotEmpty)
+                  _buildQuickChatCard(context, currentPhase, partnerName, isDark)
+                else
+                  _buildUnpairedQuickChatCard(context, isDark, partnerName),
 
                 const SizedBox(height: 14),
 
@@ -564,6 +567,89 @@ class HusbandViewScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnpairedQuickChatCard(
+    BuildContext context,
+    bool isDark,
+    String partnerName,
+  ) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PairingScreen(initialIndex: 1),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark.withAlpha(160) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.black.withAlpha(10),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.favorite_border_rounded, size: 20, color: Colors.grey),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ghép đôi để gửi tin nhắn quan tâm',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Kết nối để mở khóa gửi lời hỏi thăm thích ứng chu kỳ',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white38 : Colors.black45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withAlpha(30),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.secondary.withAlpha(80)),
+              ),
+              child: const Text(
+                'Ghép đôi',
+                style: TextStyle(
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.5,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1176,15 +1262,15 @@ class HusbandViewScreen extends ConsumerWidget {
 
   _BatteryStatus _getBatteryStatus(int energy) {
     if (energy <= 1) {
-      return _BatteryStatus('🪫', 'Cạn kiệt', AppColors.error);
+      return const _BatteryStatus('🪫', 'Cạn kiệt', AppColors.error);
     } else if (energy == 2) {
-      return _BatteryStatus('🪫', 'Yếu ớt', AppColors.accentPeach);
+      return const _BatteryStatus('🪫', 'Yếu ớt', AppColors.accentPeach);
     } else if (energy == 3) {
-      return _BatteryStatus('🔋', 'Đang hồi phục', AppColors.secondary);
+      return const _BatteryStatus('🔋', 'Đang hồi phục', AppColors.secondary);
     } else if (energy == 4) {
-      return _BatteryStatus('🔋', 'Tốt', AppColors.success);
+      return const _BatteryStatus('🔋', 'Tốt', AppColors.success);
     } else {
-      return _BatteryStatus('⚡', 'Tràn đầy năng lượng', AppColors.primary);
+      return const _BatteryStatus('⚡', 'Tràn đầy năng lượng', AppColors.primary);
     }
   }
 
@@ -1204,7 +1290,7 @@ class HusbandViewScreen extends ConsumerWidget {
   _PlaybookData _getPlaybook(CyclePhase phase) {
     switch (phase) {
       case CyclePhase.menstrual:
-        return _PlaybookData(
+        return const _PlaybookData(
           dos: [
             'Chủ động chuẩn bị túi chườm ấm hoặc một ly trà gừng mật ong.',
             'Làm giúp nàng việc nhà, rửa chén hoặc chăm con.',
@@ -1222,7 +1308,7 @@ class HusbandViewScreen extends ConsumerWidget {
           ],
         );
       case CyclePhase.follicular:
-        return _PlaybookData(
+        return const _PlaybookData(
           dos: [
             'Lên lịch một buổi hẹn hò bất ngờ ngoài trời.',
             'Cùng nàng tập luyện thể thao nhẹ nhàng hoặc đi dạo.',
@@ -1239,7 +1325,7 @@ class HusbandViewScreen extends ConsumerWidget {
           ],
         );
       case CyclePhase.ovulation:
-        return _PlaybookData(
+        return const _PlaybookData(
           dos: [
             'Dành cho nàng sự chú ý và những cử chỉ âu yếm lãng mạn.',
             'Lên kế hoạch hẹn hò riêng tư chỉ có hai người.',
@@ -1255,7 +1341,7 @@ class HusbandViewScreen extends ConsumerWidget {
           ],
         );
       case CyclePhase.luteal:
-        return _PlaybookData(
+        return const _PlaybookData(
           dos: [
             'Lắng nghe nàng tâm sự mà không phán xét hay cố đưa ra giải pháp ngay.',
             'Massage nhẹ vùng vai gáy và lưng cho nàng trước khi ngủ.',

@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.5.3+13` (Account-Bound Role Sync Verified)  
-> **Thời điểm cập nhật:** 03/09/2026 — Chuẩn hóa lưu trữ & khôi phục vai trò theo tài khoản Cloud  
+> **Phiên bản hiện tại:** `v0.6.0+15` (Release Build 27MB, In-App OTA Update & GitHub Actions CI/CD)  
+> **Thời điểm cập nhật:** 03/09/2026 — Hoàn tất OTA Update, GitHub Actions, Chuẩn hóa Unpaired & Pre-commit Audit  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -10,22 +10,33 @@
 
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
-| **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase sạch 100%, 0 errors, 0 warnings |
-| **Unit Testing (`flutter test`)** | ✅ **20/20 tests PASSED** | Đạt 100% pass, bao gồm test serialization `UserModel` kèm `role` |
-| **Ràng buộc vai trò theo tài khoản (Cloud-Bound)** | ✅ **HOÀN TẤT** | Gắn chặt `users/{uid}.role` ("wife" | "husband"), khôi phục tự động khi đăng nhập máy khác |
+| **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase sạch 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
+| **Unit Testing (`flutter test`)** | ✅ **20/20 tests PASSED** | Đạt 100% pass toàn bộ test suites |
+| **Ràng buộc vai trò theo tài khoản (Cloud-Bound)** | ✅ **HOÀN TẤT & FIX LỖI** | Thêm rule Firestore `users/{userId}`, nạp vai trò tự động khi đăng nhập, bỏ qua onboarding |
 | **Xóa sạch cache vai trò khi Sign Out** | ✅ **HOÀN TẤT** | Reset triệt để `app_user_role` và cờ onboarding tránh tài khoản sau bị nhận nhầm |
-| **Xác thực Google Sign-In & Firebase Auth** | ✅ **HOÀN TẤT** | Hỗ trợ Google Sign-In thật và Demo Mode dự phòng |
-| **Role Onboarding & Chu kỳ độc lập** | ✅ **HOÀN TẤT** | Thẻ chọn vai trò dạng ngang nhỏ gọn (~100-110dp); Chàng tự lập chu kỳ |
-| **Động cơ danh xưng (Nickname Engine)** | ✅ **HOÀN TẤT** | 7 Presets + Tự nhập, đồng bộ Firestore và Live Preview đối thoại |
-| **Modal Chat Nhanh (`HusbandQuickChatSheet`)** | ✅ **HOÀN TẤT** | Gợi ý thông minh thích ứng 4 pha chu kỳ & ô nhập tin nhắn tự do |
-| **Vòng lặp phản hồi 1 chạm (Wife Banner)** | ✅ **HOÀN TẤT** | 4 nút phản hồi nhanh (🥺, 🧋, 🥰, 🛌) đồng bộ tức thì sang máy Chồng |
-| **Đồng bộ Launcher Icon Moona** | ✅ **HOÀN TẤT** | Logo vầng trăng khuyết vàng trên đĩa tròn gradient hồng-tím (`android: true`) |
-| **Độ ổn định Runtime (R8 ProGuard Fix)** | ✅ **HOÀN TẤT** | Tắt minifyEnabled an toàn, loại bỏ triệt để lỗi crash `WorkDatabase` |
-| **Deploy thử nghiệm thực tế** | ✅ **SUCCESS** | Nạp và chạy mượt mà trên thiết bị qua `scripts/deploy.ps1 -Target all` |
+| **Chuẩn hóa logic khi chưa ghép đôi** | ✅ **HOÀN TẤT** | Ẩn chat nhanh và banner tương tác thời gian thực khi `!isPaired`, thay bằng card mời ghép đôi |
+| **Dọn dẹp màn hình Cài đặt** | ✅ **HOÀN TẤT** | Xóa nút lơ lửng "Đổi vai trò", xử lý placeholder phân biệt rõ khi trùng danh xưng |
+| **Dịch vụ In-App OTA Update** | ✅ **HOÀN TẤT** | `AppUpdateService` đối soát GitHub Releases API, modal `AppUpdateDialog`, check tự động 24h & thủ công |
+| **Pipeline GitHub Actions CI/CD** | ✅ **HOÀN TẤT** | `.github/workflows/build_release.yml` sẵn sàng build `moona-arm64-v8a.apk` & `moona-universal.apk` |
+| **Bảo mật Repo Public** | ✅ **HOÀN TẤT** | `google-services.json` nằm trong `.gitignore` không bị track, nạp qua GitHub Secret |
+| **Dung lượng APK Release (arm64-v8a)** | ✅ **27.1 MB (28,383,948 bytes)** | Giảm 86.5% so với Fat APK 208MB; Dart AOT 7MB, Native 10MB, Assets 348KB |
+| **Shared Project Keystore** | ✅ **HOÀN TẤT** | `android/app/debug.keystore` (storePass: 'android', alias: 'androiddebugkey') |
+| **Mã vân tay Firebase SHA-1** | ✅ **XÁC NHẬN** | `33:61:D2:2E:84:65:AE:C8:C3:C4:37:1D:79:6A:84:05:57:5D:F3:B0` |
+| **Deploy thử nghiệm thực tế** | ✅ **SUCCESS** | Tự động cài đặt và mở app trên thiết bị thật Xiaomi qua `scripts/build_and_install.bat` |
 
 ---
 
 ## 2. 💡 BÀI HỌC KINH NGHIỆM & CÁC LỖI KỸ THUẬT ĐÃ GIẢI QUYẾT
+
+### 2.3. Lỗi Google Sign-In `ApiException: 10`
+* **Hiện tượng:** Khi bấm "Đăng nhập với Google", ứng dụng trả về lỗi `PlatformException(sign_in_failed, com.google.android.gms.common.api.ApiException: 10: , null, null)`.
+* **Nguyên nhân cốt lõi (Kiểm toán nguyên mã):**
+  1. `serverClientId` trong `AuthRepository` trước đó bị trỏ sang Web Client ID của project khác (`FinLux`), không khớp với Google Cloud Console của project Moona (`moona-a92ec`).
+  2. Mã SHA-1 của keystore trên máy người dùng chưa được đồng bộ với `oauth_client` trong `google-services.json`.
+* **Khắc phục triệt để:**
+  1. Đặt `android/app/debug.keystore` trực tiếp trong repository (SHA-1: `33:61:D2:2E:84:65:AE:C8:C3:C4:37:1D:79:6A:84:05:57:5D:F3:B0`), trùng khớp 100% với `certificate_hash` trong `google-services.json`.
+  2. Cập nhật `defaultServerClientId` trong `AuthRepository` trỏ đúng vào Web Client ID (`client_type: 3`): `928842055742-ama9jv6hella1oobunsfvkcbkvl58gl1.apps.googleusercontent.com`.
+  3. Dọn dẹp cache `adb shell pm clear com.herflow.app.herflow` trước khi cài đặt.
 
 ### 2.1. Lỗi Crash On Launch do R8 Minification (`WorkDatabase`)
 * **Hiện tượng:** Ứng dụng ở bản Release bị văng ngay khi vừa mở ngoài màn hình chính (*"Moona tiếp tục dừng"*).
@@ -68,22 +79,46 @@ lib/
 │   ├── constants/                      # AppColors, AppConstants, CyclePhase
 │   ├── notifications/                  # NotificationService (Kênh PMS ưu tiên cao)
 │   ├── routes/                         # AppRoutes
+│   ├── services/                       # AppUpdateService (OTA Updates via GitHub Releases)
 │   ├── theme/                          # AppTheme (Soft Pastel Light/Dark), ThemeController
 │   ├── utils/                          # AppHaptics, AppDateUtils
-│   └── widgets/                        # MoonaBrandLogo (Reusable brand asset)
+│   └── widgets/                        # MoonaBrandLogo, AppUpdateDialog (Glassmorphism OTA)
 │
 └── features/                           # Clean Architecture (Feature-First)
     ├── auth/                           # Google Sign-In, Firebase Auth, BiometricLockScreen
     ├── care_signals/                   # CareSignalModel, Realtime 2-way Signals
     ├── cycle/                          # CycleCalendarView, CycleHeroIndicator, DayDetailCard
-    ├── home/                           # MainNavScreen (Role-based Navigation)
+    ├── home/                           # MainNavScreen (Role-based Navigation, Auto OTA Check)
     ├── husband_view/                   # Gentleman's Playbook, HusbandQuickChatSheet
     ├── mood/                           # Mood & Energy micro-logging, 7-day trend chart
     ├── nutrition/                      # Đồng bộ dinh dưỡng theo 4 pha sinh học
     ├── onboarding/                     # RoleSelectionScreen (Compact ListTile), Wizard
     ├── partner_sync/                   # PairingScreen, PartnerSyncRepository
-    └── settings/                       # Profile, Nickname Engine, Partner Cycle Editor
+    └── settings/                       # Profile, Nickname Engine, Partner Cycle Editor, OTA Tile
 ```
+
+### 3.1. Danh Sách Tệp Mới Tạo Trong Đợt Phát Hành v0.6.0
+* `.github/workflows/build_release.yml`: Pipeline CI/CD GitHub Actions đóng gói tự động `moona-arm64-v8a.apk` và `moona-universal.apk` khi push tag.
+* `lib/core/services/app_update_service.dart`: Dịch vụ đối soát bản phát hành mới qua GitHub API không phụ thuộc bên ngoài.
+* `lib/core/widgets/app_update_dialog.dart`: Hộp thoại thông báo cập nhật giao diện Glassmorphism với logo Moona.
+* `scripts/build_and_install.bat`: Script tự động hóa toàn diện (kiểm toán icon, Shared keystore, Quality Gate, build split-per-abi, kiểm tra chữ ký số và nạp ADB).
+
+### 3.2. Hướng Dẫn Vận Hành Release Pipeline (GitHub Actions)
+Khi sẵn sàng xuất bản một phiên bản release chính thức ra công chúng:
+1. Đảm bảo mã nguồn đã được commit sạch sẽ trên nhánh `main`.
+2. Tạo Git Tag tương ứng với phiên bản trong `pubspec.yaml` (ví dụ: `v0.6.0`):
+   ```bash
+   git tag v0.6.0
+   ```
+3. Đẩy tag lên GitHub để kích hoạt pipeline tự động build APK và đăng tải bản Release:
+   ```bash
+   git push origin v0.6.0
+   ```
+4. GitHub Actions sẽ tự động:
+   * Chạy Quality Gate (`flutter analyze` & `flutter test`).
+   * Giải mã secret `GOOGLE_SERVICES_JSON_BASE64` tạo `google-services.json`.
+   * Biên dịch 2 bản APK: `moona-arm64-v8a.apk` (~27MB) và `moona-universal.apk`.
+   * Tạo GitHub Release đính kèm ghi chú phát hành tự động.
 
 ---
 

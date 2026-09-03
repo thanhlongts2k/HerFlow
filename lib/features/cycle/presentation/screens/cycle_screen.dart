@@ -69,7 +69,10 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
       }
     });
 
-    final bool showHusbandBanner = latestSignal != null &&
+    final isPaired = savedCoupleId != null && savedCoupleId.isNotEmpty;
+
+    final bool showHusbandBanner = isPaired &&
+        latestSignal != null &&
         dismissedId != latestSignal.id &&
         (latestSignal.isFromHusband ||
             (latestSignal.isResponded &&
@@ -99,8 +102,13 @@ class _CycleScreenState extends ConsumerState<CycleScreen> {
         actions: [
           // Nút Care Signal (tín hiệu yêu thương)
           IconButton(
-            icon: const Icon(Icons.favorite_rounded, color: AppColors.primary),
-            tooltip: 'Gửi tín hiệu yêu thương đến chồng',
+            icon: Icon(
+              Icons.favorite_rounded,
+              color: isPaired ? AppColors.primary : AppColors.primary.withAlpha(120),
+            ),
+            tooltip: isPaired
+                ? 'Gửi tín hiệu yêu thương đến chồng'
+                : 'Ghép đôi để gửi tín hiệu yêu thương',
             onPressed: () => CareSignalSheet.show(context),
           ),
           // Badge Người thương kết nối

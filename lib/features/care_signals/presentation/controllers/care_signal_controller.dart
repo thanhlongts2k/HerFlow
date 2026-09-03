@@ -7,6 +7,9 @@ import 'package:herflow/features/partner_sync/presentation/controllers/partner_s
 /// StreamProvider lắng nghe tín hiệu yêu thương mới nhất từ Vợ (phía Chồng)
 final latestCareSignalStreamProvider = StreamProvider<CareSignalModel?>((ref) {
   final coupleId = ref.watch(savedCoupleIdProvider) ?? '';
+  if (coupleId.isEmpty) {
+    return Stream.value(null);
+  }
   final repository = ref.watch(partnerSyncRepositoryProvider);
   return repository.watchLatestCareSignal(coupleId);
 });

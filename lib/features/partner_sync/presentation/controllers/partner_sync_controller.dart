@@ -20,6 +20,12 @@ final savedCoupleIdProvider = StateProvider<String?>((ref) {
   return repo.getSavedCoupleId();
 });
 
+/// Provider kiểm tra trạng thái ghép đôi tập trung
+final isPairedProvider = Provider<bool>((ref) {
+  final coupleId = ref.watch(savedCoupleIdProvider);
+  return coupleId != null && coupleId.trim().isNotEmpty;
+});
+
 /// Provider vai trò người dùng ('wife' hoặc 'husband')
 final savedUserRoleProvider = StateProvider<String?>((ref) {
   final repo = ref.watch(partnerSyncRepositoryProvider);

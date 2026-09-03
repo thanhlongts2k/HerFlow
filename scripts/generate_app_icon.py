@@ -120,7 +120,8 @@ def generate_moona_icon():
     final_icon = img.resize((1024, 1024), Image.Resampling.LANCZOS)
     output_path = "assets/icons/app_icon.png"
     final_icon.save(output_path, "PNG", optimize=True)
-    print(f"[OK] Icon successfully generated at {output_path} (1024x1024)")
+    final_icon.save("assets/icons/moona_logo.png", "PNG", optimize=True)
+    print(f"[OK] Icon successfully generated at {output_path} and moona_logo.png (1024x1024)")
 
 if __name__ == "__main__":
     generate_moona_icon()

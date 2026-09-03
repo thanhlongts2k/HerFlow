@@ -20,9 +20,28 @@ class AuthController extends StateNotifier<AsyncValue<UserModel?>> {
   void _init() {
     final user = _repository.getCurrentUser();
     state = AsyncValue.data(user);
-    if (user != null && user.role != null) {
-      final role = user.role == 'husband' ? UserRole.husband : UserRole.wife;
-      _ref.read(userRoleProvider.notifier).setRole(role, uid: user.uid);
+    if (user != null) {
+      if (user.role != null) {
+        final role = user.role == 'husband' ? UserRole.husband : UserRole.wife;
+        _ref.read(userRoleProvider.notifier).setRole(role, uid: user.uid);
+      }
+      _checkCloudRoleAsync(user.uid);
+    }
+  }
+
+  Future<void> _checkCloudRoleAsync(String uid) async {
+    try {
+      final cloudRole = await _repository.getUserRoleFromFirestore(uid);
+      if (cloudRole != null && (cloudRole == 'husband' || cloudRole == 'wife')) {
+        final role = cloudRole == 'husband' ? UserRole.husband : UserRole.wife;
+        await _ref.read(userRoleProvider.notifier).setRole(role, uid: uid);
+        final current = state.valueOrNull;
+        if (current != null && current.role != cloudRole) {
+          state = AsyncValue.data(current.copyWith(role: cloudRole));
+        }
+      }
+    } catch (e) {
+      // Ignore background sync errors
     }
   }
 

@@ -12,12 +12,20 @@ import 'package:herflow/features/mood/presentation/screens/mood_screen.dart';
 import 'package:herflow/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 
+import 'package:herflow/core/services/app_update_service.dart';
+import 'package:herflow/core/widgets/app_update_dialog.dart';
+
 /// Quản lý Tab Navigation chính của ứng dụng Moona (Dành cho Vợ)
 final currentBottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
-class MainNavScreen extends ConsumerWidget {
+class MainNavScreen extends ConsumerStatefulWidget {
   const MainNavScreen({super.key});
 
+  @override
+  ConsumerState<MainNavScreen> createState() => _MainNavScreenState();
+}
+
+class _MainNavScreenState extends ConsumerState<MainNavScreen> {
   static final List<Widget> _wifeScreens = [
     const CycleScreen(),
     const MoodScreen(),
@@ -26,7 +34,18 @@ class MainNavScreen extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final update = await AppUpdateService.checkForUpdate(forceCheck: false);
+      if (mounted && update != null) {
+        AppUpdateDialog.show(context, update);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userRole = ref.watch(userRoleProvider);
 
     if (userRole == UserRole.husband) {

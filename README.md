@@ -1,6 +1,6 @@
 # 🌙 Moona — Trợ Lý Chu Kỳ Sinh Học & Kết Nối Yêu Thương Cặp Đôi
 
-> **Phiên bản hiện tại:** `v0.5.2+12`  
+> **Phiên bản hiện tại:** `v0.6.0+15` (Release Build 27MB, In-App OTA Update & GitHub Actions CI/CD)  
 > **Chu Kỳ • Cảm Xúc • Dinh Dưỡng Đồng Bộ • Kết Nối Người Thương**  
 > Xây dựng trên nền tảng **Flutter (Dart)** hỗ trợ cả Android và iOS theo chuẩn **Feature-First Clean Architecture**, quản lý trạng thái bằng **Riverpod 2.x**, kết nối đồng bộ thời gian thực qua **Cloud Firestore** và lưu trữ cục bộ bảo mật ngoại tuyến bằng **Hive**.
 
@@ -14,9 +14,12 @@
 * **Theo dõi 4 pha sinh học chu kỳ:** Thuật toán phân tích chính xác từng giai đoạn (Kinh nguyệt, Nang trứng, Rụng trứng, Hoàng thể) kèm dự báo cửa sổ thụ thai và cảnh báo sớm hội chứng tiền kinh nguyệt (PMS).
 * **Động cơ dinh dưỡng & thể trạng:** Gợi ý thực phẩm, trà thảo mộc và chế độ tập luyện phù hợp với từng pha nội tiết tố.
 * **Góc Nhìn Người Thương (Husband View):** Màn hình chuyên biệt dành riêng cho chàng với nhiệt kế cảm xúc của nàng, cẩm nang Gentleman's Playbook (việc nên làm & nên tránh) và thẻ tóm tắt chu kỳ.
-* **Modal Chat Nhanh & Vòng lặp phản hồi 1 chạm:** Chàng chủ động gửi câu hỏi thăm thích ứng theo thể trạng nàng; Nàng phản hồi nhanh 1 chạm (🥺 Mệt mỏi, 🧋 Thèm trà sữa, 🥰 Khỏe re, 🛌 Đang nghỉ) đồng bộ realtime.
+* **Modal Chat Nhanh & Vòng lặp phản hồi 1 chạm:** Chàng chủ động gửi câu hỏi thăm thích ứng theo thể trạng nàng; Nàng phản hồi nhanh 1 chạm (🥺 Mệt mỏi, 🧋 Thèm trà sữa, 🥰 Khỏe re, 🛌 Đang nghỉ) đồng bộ realtime. Chuẩn hóa cơ chế ẩn thông minh khi chưa ghép đôi.
 * **Hệ thống danh xưng linh hoạt (Nickname Engine):** Tùy chỉnh danh xưng thân mật giữa hai người với 7 preset phổ biến và ô nhập riêng, đồng bộ toàn diện trên mọi màn hình.
-* **Đăng nhập Google & Phân vai trò linh hoạt:** Hỗ trợ đăng nhập Google Auth an toàn, luồng chọn vai trò Onboarding thanh thoát và chế độ Chàng tự thiết lập chu kỳ độc lập khi nàng chưa dùng app.
+* **Đăng nhập Google & Ràng buộc vai trò Cloud:** Hỗ trợ đăng nhập Google Auth an toàn, lưu trữ vai trò gắn liền theo tài khoản trên Firestore, tự động khôi phục vai trò xuyên suốt đa thiết bị.
+* **Cập nhật tự động trong ứng dụng (In-App OTA):** Kiểm tra và tải bản cập nhật mới nhất từ GitHub Releases định kỳ 24h trong nền hoặc kiểm tra thủ công 1 chạm.
+* **Tối ưu hóa dung lượng APK siêu nhẹ:** Đóng gói split-per-abi chỉ 27.1 MB (giảm 86.5% so với Fat APK 208MB).
+* **Pipeline CI/CD tự động (GitHub Actions):** Tự động chạy Quality Gate (100% tests pass, 0 analyze issues), biên dịch APK Release và xuất bản GitHub Release khi gắn tag.
 
 ---
 

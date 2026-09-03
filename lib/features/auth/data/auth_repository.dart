@@ -12,6 +12,10 @@ class AuthRepository {
   final GoogleSignIn _googleSignIn;
   final FirebaseFirestore _firestore;
 
+  /// Web Client ID (client_type: 3) từ Google Services Firebase Console của dự án Moona
+  static const String defaultServerClientId =
+      '928842055742-ama9jv6hella1oobunsfvkcbkvl58gl1.apps.googleusercontent.com';
+
   AuthRepository({
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
@@ -20,7 +24,7 @@ class AuthRepository {
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
-              serverClientId: serverClientId,
+              serverClientId: serverClientId ?? defaultServerClientId,
               scopes: const ['email', 'profile'],
             ),
         _firestore = firestore ?? FirebaseFirestore.instance;

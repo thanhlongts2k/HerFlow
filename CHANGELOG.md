@@ -4,6 +4,53 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.0+15] - 2026-09-03 (In-App OTA Updates, GitHub Actions CI/CD & Unpaired Logic Hardening)
+
+### [Added]
+- **🚀 Tính năng Cập nhật Tự Động Trong Ứng Dụng (In-App OTA Updates):**
+  * `AppUpdateService` tự động kết nối GitHub Releases API (`thanhlongts2k/HerFlow`) sử dụng `HttpClient` thuần, bảo toàn dung lượng nhẹ của app.
+  * Tự động kiểm tra bản phát hành mới định kỳ mỗi 24 giờ trong nền và hỗ trợ kiểm tra thủ công 1 chạm tại màn hình Cài đặt.
+  * Hộp thoại Glassmorphism hiện đại `AppUpdateDialog` hiển thị changelog, kích thước gói APK và nút tải trực tiếp bản `arm64-v8a` tối ưu.
+- **⚙️ Pipeline CI/CD GitHub Actions Đóng Gói Tự Động (`.github/workflows/build_release.yml`):**
+  * Kích hoạt tự động khi gắn tag phiên bản `v*` hoặc qua `workflow_dispatch`.
+  * Khôi phục an toàn `google-services.json` từ GitHub Secret `GOOGLE_SERVICES_JSON_BASE64` cho repo Public.
+  * Quality Gate tự động: `flutter analyze` & `flutter test` trước khi build.
+  * Biên dịch song song cả bản tách chip `moona-arm64-v8a.apk` (~27MB) và bản phổ thông `moona-universal.apk`, tự động đăng tải lên GitHub Releases.
+
+### [Changed]
+- **🔒 Chuẩn Hóa Logic Khi Chưa Ghép Đôi (`isPaired == false`):**
+  * Màn hình Chồng: Ẩn hoàn toàn tính năng Hỏi thăm & Nhắn nhủ nhanh, thay bằng thẻ hướng dẫn ghép đôi thân thiện.
+  * Màn hình Vợ: Ẩn banner thông báo tin nhắn và phản hồi từ Chồng khi tài khoản chưa kết nối.
+  * Hộp thoại Tín hiệu yêu thương (`CareSignalSheet`): Hiển thị banner cảnh báo và nút ghép đôi nhanh, vô hiệu hóa gửi tin khi chưa có đối tác.
+
+### [Fixed]
+- **🧹 Dọn dẹp Màn hình Cài đặt:**
+  * Xóa bỏ nút chữ lơ lửng "Đổi vai trò" ở góc trên bên phải để bảo vệ tính bất biến của luồng phân quyền tài khoản.
+  * Khắc phục bộ xem trước danh xưng khi người dùng chọn 2 danh xưng trùng nhau (ví dụ đều là "Người thương"), tự động hiển thị phân biệt rõ ràng `[Bạn]` và `[Người ấy]`.
+- **🎯 Chuẩn hóa Quality Gate 100%:**
+  * Khắc phục 14 cảnh báo `prefer_const_constructors` trong `husband_view_screen.dart` và `settings_screen.dart`.
+  * Đảm bảo `flutter analyze` đạt 0 issues và toàn bộ 20 unit tests pass 100%.
+
+---
+
+## [0.5.4+14] - 2026-09-03 (Release Size Optimization 27MB, Upright Moon Icon & Firestore Role Fix)
+
+### [Added]
+- **🔒 Quy tắc bảo mật Firestore Users (`firestore.rules`):** Bổ sung rule `match /users/{userId}` cho phép đọc/ghi vai trò người dùng phục vụ đồng bộ đám mây và ghép đôi.
+- **⚡ Tối ưu hoá dung lượng APK Split-per-ABI:** Đóng gói bản Release `app-arm64-v8a-release.apk` chỉ còn 27.1 MB (giảm 86.5% so với Fat APK 208 MB).
+- **🔑 Chuẩn hóa Shared Debug Keystore trong Repo (`android/app/debug.keystore`):** Cấu hình Gradle đọc trực tiếp keystore của project cho cả Debug và Release, đồng bộ chữ ký SHA-1 giữa máy công ty và máy ở nhà để loại trừ dứt điểm lỗi Google Sign-In `ApiException: 10`.
+
+### [Changed]
+- **🚀 Khôi phục vai trò tự động khi đăng nhập và khởi động:**
+  * Bổ sung `_checkCloudRoleAsync` trong `AuthController._init()` để tự động đối soát Firestore và nạp vai trò vào State khi app mở.
+  * `LoginScreen`: Nếu tài khoản đã có `role` trên Cloud, điều hướng thẳng vào `AppRoutes.home`, bỏ qua hoàn toàn `RoleSelectionScreen`.
+
+### [Fixed]
+- Sửa lỗi cú pháp Flutter UI (`CardThemeData` -> `CardTheme`, `activeThumbColor` -> `activeColor`).
+- Sửa cấu hình Gradle 8.9, AGP 8.7.0, Kotlin 2.0.21, NDK 27, `minSdk = 23`.
+
+---
+
 ## [0.5.3+13] - 2026-09-03 (Account-Bound Role Synchronization & Cross-Device Cloud Persistence)
 
 ### [Added]

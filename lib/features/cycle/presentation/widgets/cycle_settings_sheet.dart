@@ -127,7 +127,7 @@ class _CycleSettingsSheetState extends ConsumerState<CycleSettingsSheet> {
               secondary: const Icon(Icons.notifications_active_rounded, color: AppColors.secondary),
               title: const Text('Cảnh báo tiền kinh nguyệt (PMS)', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('Nhắc nhở chăm sóc trước PMS lúc 08:00 sáng', style: TextStyle(fontSize: 12)),
-              activeThumbColor: AppColors.secondary,
+              activeColor: AppColors.secondary,
               value: _isPmsNotificationEnabled,
               onChanged: (val) async {
                 if (val) {
