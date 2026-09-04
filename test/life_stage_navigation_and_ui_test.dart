@@ -347,7 +347,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Tab 0 biến chuyển thành 'Bố Bỉm'
-      expect(find.text('Bố Bỉm'), findsOneWidget);
+      expect(find.widgetWithText(NavigationDestination, 'Bố Bỉm'), findsOneWidget);
       expect(find.widgetWithIcon(NavigationDestination, Icons.family_restroom_rounded), findsOneWidget);
 
       // Banner góc nhìn Bố Bỉm xuất hiện

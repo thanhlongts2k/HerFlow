@@ -32,6 +32,10 @@ import '../widgets/quick_care_signals_row.dart';
 import '../widgets/survival_cheat_sheet_card.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/kick_counter_controller.dart';
 import 'package:herflow/features/lifecycle/presentation/widgets/kick_counter_sheet.dart';
+import 'package:herflow/features/motherhood/presentation/controllers/baby_log_controller.dart';
+import 'package:herflow/features/motherhood/presentation/controllers/child_profile_controller.dart';
+import 'package:herflow/features/motherhood/presentation/widgets/husband_motherhood_companion_card.dart';
+import 'package:herflow/features/motherhood/presentation/widgets/husband_baby_quick_care_row.dart';
 
 /// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
 class HusbandViewScreen extends ConsumerWidget {
@@ -177,6 +181,7 @@ class HusbandViewScreen extends ConsumerWidget {
               : moodEntry.energyLevel;
 
           final isPregnancy = currentStage == LifeStage.pregnancy;
+          final isMotherhood = currentStage == LifeStage.motherhood;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -190,8 +195,61 @@ class HusbandViewScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                 ],
 
-                // ── GIAI ĐOẠN THAI KỲ (PREGNANCY MODE DAD DASHBOARD) ──
-                if (isPregnancy) ...[
+                // ── GIAI ĐOẠN NUÔI CON (MOTHERHOOD MODE DAD DASHBOARD) ──
+                if (isMotherhood) ...[
+                  // 1.1. BANNER TRẠNG THÁI KẾT NỐI
+                  _buildConnectionHeader(context, savedCoupleId, isDark),
+                  const SizedBox(height: 12),
+
+                  // 1.2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG
+                  if (savedCoupleId != null && savedCoupleId.isNotEmpty && careSignal != null) ...[
+                    _buildCareSignalBox(context, ref, careSignal, isDark, partnerName),
+                    const SizedBox(height: 14),
+                  ],
+
+                  if (isPaused) ...[
+                    // SAFEGUARD KHI Ở CHẾ ĐỘ TẠM DỪNG & CHỮA LÀNH
+                    _buildHealingModeCardForDad(context, isDark, partnerName),
+                    const SizedBox(height: 14),
+                    QuickCareSignalsRow(
+                      partnerName: partnerName,
+                      isDark: isDark,
+                      isHealing: true,
+                    ),
+                    const SizedBox(height: 14),
+                  ] else ...[
+                    // a. Thẻ "Tình Hình Bé Yêu Hôm Nay" (HusbandMotherhoodCompanionCard)
+                    HusbandMotherhoodCompanionCard(
+                      status: ref.watch(motherhoodStatusStreamProvider).value,
+                      localChild: ref.watch(activeChildProvider),
+                      isDark: isDark,
+                      partnerName: partnerName,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // b. Thanh tác vụ nhanh của Bố Bỉm (HusbandBabyQuickCareRow)
+                    HusbandBabyQuickCareRow(
+                      isDark: isDark,
+                      partnerName: partnerName,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // c. Phím tắt gửi yêu thương cho Mẹ
+                    QuickCareSignalsRow(
+                      partnerName: partnerName,
+                      isDark: isDark,
+                      isPregnancy: false,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Thẻ Hỏi Thăm & Nhắn Nhủ Nàng (Quick Chat)
+                  if (savedCoupleId != null && savedCoupleId.isNotEmpty)
+                    _buildQuickChatCard(context, currentPhase, partnerName, isDark)
+                  else
+                    _buildUnpairedQuickChatCard(context, isDark, partnerName),
+                  const SizedBox(height: 32),
+                ] else if (isPregnancy) ...[
                   // 1.1. BANNER TRẠNG THÁI KẾT NỐI
                   _buildConnectionHeader(context, savedCoupleId, isDark),
                   const SizedBox(height: 12),

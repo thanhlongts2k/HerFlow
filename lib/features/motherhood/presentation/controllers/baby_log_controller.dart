@@ -14,6 +14,7 @@ import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/motherhood/domain/models/baby_activity_log_model.dart';
 import 'package:herflow/features/motherhood/domain/models/motherhood_status_model.dart';
+import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
 // STATE
@@ -394,4 +395,33 @@ class BabyLogController extends StateNotifier<BabyLogState> {
 final babyLogControllerProvider =
     StateNotifierProvider<BabyLogController, BabyLogState>((ref) {
   return BabyLogController();
+});
+
+/// StreamProvider lắng nghe trạng thái Nuôi Con từ Firestore theo thời gian thực:
+/// couples/{coupleId}/motherhoodStatus/today
+final motherhoodStatusStreamProvider =
+    StreamProvider.autoDispose<MotherhoodStatusModel?>((ref) {
+  final coupleId = ref.watch(savedCoupleIdProvider);
+  if (coupleId == null || coupleId.isEmpty) {
+    return Stream.value(null);
+  }
+
+  try {
+    return FirebaseFirestore.instance
+        .collection('couples')
+        .doc(coupleId)
+        .collection('motherhoodStatus')
+        .doc('today')
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists || doc.data() == null) return null;
+          return MotherhoodStatusModel.fromMap(doc.data()!);
+        })
+        .handleError((e) {
+          debugPrint('[motherhoodStatusStreamProvider] note: $e');
+          return null;
+        });
+  } catch (_) {
+    return Stream.value(null);
+  }
 });

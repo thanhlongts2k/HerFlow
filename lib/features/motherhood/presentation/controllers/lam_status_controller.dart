@@ -169,6 +169,14 @@ class LamStatusController extends StateNotifier<LamState> {
       msg = 'Kinh nguyệt đã trở lại. Chu kỳ sinh sản đã phục hồi, mẹ cần tránh thai chủ động.';
     }
 
+    if (state.isEligible == eligible &&
+        state.isUnder6Months == isUnder6M &&
+        state.isExclusiveBreastfeeding == isExclusive &&
+        state.statusMessage == msg &&
+        state.shouldSuppressLatePeriodAlert == eligible) {
+      return;
+    }
+
     state = state.copyWith(
       isEligible: eligible,
       isUnder6Months: isUnder6M,

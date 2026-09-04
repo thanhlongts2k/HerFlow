@@ -12,6 +12,7 @@ import 'package:herflow/features/husband_view/presentation/screens/husband_view_
 import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/lifecycle/presentation/screens/pregnancy_home_screen.dart';
+import 'package:herflow/features/motherhood/presentation/screens/motherhood_home_screen.dart';
 import 'package:herflow/features/mood/presentation/screens/mood_screen.dart';
 import 'package:herflow/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
@@ -150,11 +151,13 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
   ) {
     final currentIndex = ref.watch(currentBottomNavIndexProvider);
 
-    // Dynamic screens theo LifeStage: Chế độ Thai Kỳ chuyển Tab 0 sang PregnancyHomeScreen
+    // Dynamic screens theo LifeStage: Chế độ Nuôi Con / Thai Kỳ chuyển Tab 0 sang Dashboard tương ứng
     final wifeScreens = [
-      currentStage == LifeStage.pregnancy
-          ? const PregnancyHomeScreen()
-          : const CycleScreen(),
+      currentStage == LifeStage.motherhood
+          ? const MotherhoodHomeScreen()
+          : currentStage == LifeStage.pregnancy
+              ? const PregnancyHomeScreen()
+              : const CycleScreen(),
       const MoodScreen(),
       const NutritionScreen(),
       const SettingsScreen(),
@@ -168,10 +171,11 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
         children: [
           const OfflineBanner(),
           // Banner thông báo cho các mode Phase 2/3 đang hoàn thiện (an toàn SafeArea)
-          // Chế độ Thai Kỳ đã có PregnancyHomeScreen hoàn thiện, tự động ẩn banner lộ trình này
+          // Chế độ Thai Kỳ và Nuôi Con đã có Dashboard hoàn thiện, tự động ẩn banner lộ trình này
           if (currentStage != LifeStage.couple &&
               currentStage != LifeStage.solo &&
               currentStage != LifeStage.pregnancy &&
+              currentStage != LifeStage.motherhood &&
               !_isPhaseBannerDismissed)
             _buildPhaseNoticeBanner(context, currentStage),
           Expanded(
@@ -190,16 +194,24 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
         },
         destinations: [
           NavigationDestination(
-            icon: Icon(currentStage == LifeStage.pregnancy
-                ? Icons.pregnant_woman_outlined
-                : Icons.calendar_month_outlined),
+            icon: Icon(currentStage == LifeStage.motherhood
+                ? Icons.child_friendly_outlined
+                : currentStage == LifeStage.pregnancy
+                    ? Icons.pregnant_woman_outlined
+                    : Icons.calendar_month_outlined),
             selectedIcon: Icon(
-              currentStage == LifeStage.pregnancy
-                  ? Icons.pregnant_woman_rounded
-                  : Icons.calendar_month_rounded,
+              currentStage == LifeStage.motherhood
+                  ? Icons.child_friendly_rounded
+                  : currentStage == LifeStage.pregnancy
+                      ? Icons.pregnant_woman_rounded
+                      : Icons.calendar_month_rounded,
               color: AppColors.primary,
             ),
-            label: currentStage == LifeStage.pregnancy ? 'Thai Kỳ' : 'Chu kỳ',
+            label: currentStage == LifeStage.motherhood
+                ? 'Nuôi Con'
+                : currentStage == LifeStage.pregnancy
+                    ? 'Thai Kỳ'
+                    : 'Chu kỳ',
           ),
           const NavigationDestination(
             icon: Icon(Icons.mood_outlined),

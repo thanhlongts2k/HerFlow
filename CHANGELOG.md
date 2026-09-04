@@ -4,6 +4,30 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.8.1+27] - 2026-09-04 (Phase 3: Mother Dashboard, Feeding Timer & Husband Motherhood Companion)
+
+### [Added]
+- **🤱 Giao Diện Dashboard Mẹ Bỉm (`MotherhoodHomeScreen` - Task 3):**
+  * `MotherhoodHomeScreen`: Màn hình chính giai đoạn Nuôi Con, tích hợp trực tiếp vào Tab 0 của `MainNavScreen` (`Icons.child_friendly_rounded`, nhãn "Nuôi Con") khi `currentStage == LifeStage.motherhood`.
+  * `BabySummaryHeroCard`: Thẻ Hero tổng quan hôm nay hiển thị thông tin bé hoạt động (tên, ngày tuổi, tuần tuổi), các chỉ số hoạt động 24h qua (Cữ bú, Giấc ngủ, Tã bỉm) và đánh giá chuẩn tăng trưởng WHO.
+  * `BabyQuickActionBar`: Thanh tác vụ nhanh 4 nút 1-chạm (Bú sữa, Giấc ngủ, Thay tã, Đo bé WHO) kèm haptic feedback và modal ghi chép trực quan.
+  * `FeedingTimerSheet`: Modal bấm giờ cữ bú độc lập ngực Trái / Phải kèm chế độ ghi bú bình (ml). Áp dụng cơ chế lưu mốc `startTime` bằng `DateTime.now()` thực tế để bảo toàn độ chính xác tuyệt đối kể cả khi app chạy ngầm hoặc khóa màn hình.
+  * Thẻ Đánh Giá Ngừa Thai Tự Nhiên LAM WHO (`_buildLamStatusCard`): Tự động hiển thị hiệu lực phương pháp vô kinh cho con bú và trạng thái ức chế cảnh báo trễ kinh.
+  * Thẻ Dự Báo Wonder Weeks (`_buildWonderWeeksCard`): Dự báo tuần khủng hoảng nhận thức (Leaps) và tuần bão tố (storm period).
+  * Nhật Ký Sinh Hoạt Trong Ngày (`_buildDailyTimeline`): Dòng thời gian chi tiết các hoạt động trong ngày kèm badge phân quyền Cha/Mẹ (`wife` / `husband`).
+- **👨‍🍼 Góc Nhìn Bố Bỉm (`HusbandViewScreen` - Task 4):**
+  * `HusbandMotherhoodCompanionCard`: Thẻ tóm tắt thông tin bé yêu cho Bố Bỉm (tên, ngày tuổi, cữ bú/ngủ/tã gần nhất), cảnh báo tuần bão tố Wonder Weeks và lời khuyên tâm lý đỡ đần người thương cữ đêm.
+  * `HusbandBabyQuickCareRow`: Thanh tác vụ nhanh 1-chạm của Bố Bỉm (Cho bú bình, Thay tã sạch, Ru ngủ) tự động gán `loggedByRole: 'husband'` và đồng bộ trực tiếp sang máy Mẹ qua Cloud Firestore `couples/{coupleId}/motherhoodStatus/today`.
+  * `motherhoodStatusStreamProvider`: Stream Provider tự động lắng nghe trạng thái Nuôi Con realtime từ Bạn đời.
+- **🕊️ Chế Độ Chữa Lành Sau Sinh (Healing Mode Safeguard):**
+  * Tự động ẩn toàn bộ các chỉ số theo dõi bé khi `isPaused == true` hoặc `activeChild.isPaused == true`, hiển thị không gian hồi phục thể chất và vỗ về tâm lý cho mẹ sau sinh.
+- **🧪 Kiểm Toán Chất Lượng & Widget Testing (Rule 10, 11, 12 AGENTS.md):**
+  * Xây dựng bộ Widget Tests `test/features/motherhood/motherhood_home_screen_test.dart` đạt chuẩn Viewport 1080x2400 (5/5 tests PASS).
+  * `flutter analyze`: **0 issues found!**
+  * `flutter test`: **100% tests PASSED (272/272 tests)**.
+
+---
+
 ## [0.8.0+26] - 2026-09-04 (Phase 3: Motherhood Domain Foundation & 5x5 State Matrix)
 
 ### [Added]

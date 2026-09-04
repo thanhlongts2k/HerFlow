@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.8.0+26` (Phase 3: Motherhood Domain Foundation & 5x5 State Matrix)  
-> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Hardware Checkpoint Redmi Note 11, Tầng Domain Nuôi Con & Ma Trận Trạng Thái 5x5  
+> **Phiên bản hiện tại:** `v0.8.1+27` (Phase 3: Mother Dashboard, Feeding Timer & Husband Motherhood Companion)  
+> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Task 3 (Giao diện Mẹ Bỉm & Bấm giờ bú độc lập) & Task 4 (Góc nhìn Bố Bỉm & Đồng bộ 1-chạm)  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -11,7 +11,12 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **267/267 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Ma trận 5x5 25 cases, 10 cặp 2 chiều round-trip & Motherhood Domain) |
+| **Unit Testing (`flutter test`)** | ✅ **272/272 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Ma trận 5x5 25 cases, 10 cặp 2 chiều round-trip & Motherhood Widget Tests) |
+| **Mother Dashboard (`MotherhoodHomeScreen`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Tích hợp Tab 0 MainNavScreen khi `LifeStage.motherhood`. Gồm Hero Card, Quick Action Bar, LAM Card, Wonder Weeks & Daily Timeline |
+| **Bấm Giờ Bú Độc Lập (`FeedingTimerSheet`)** | ✅ **HOÀN TẤT & AN TOÀN NỀN** | Lưu mốc `startTime` bằng `DateTime.now()` thực tế để bảo toàn thời lượng kể cả khi app ngủ hoặc khóa máy. Hỗ trợ Ngực T/P & Bú bình |
+| **Góc Nhìn Bố Bỉm (`HusbandViewScreen`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | `HusbandMotherhoodCompanionCard` (tóm tắt trạng thái con, lời khuyên bố) & `HusbandBabyQuickCareRow` (3 nút ghi nhanh 1-chạm của Bố) |
+| **Realtime Sync Firestore Bạn Đời** | ✅ **HOÀN TẤT** | Đồng bộ trực tiếp `couples/{coupleId}/motherhoodStatus/today` qua Stream Provider `motherhoodStatusStreamProvider` an toàn offline |
+| **Safeguard Chữa Lành (`Healing Mode`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Tự động ẩn toàn bộ thông số bé khi `isPaused == true`, hiển thị không gian nghỉ ngơi tĩnh dưỡng và phục hồi sau sinh cho Mẹ |
 | **Hardware Checkpoint (Redmi Note 11)** | ✅ **HOÀN TẤT & ĐÃ XÁC THỰC** | Build & nạp APK vật lý; Vợ chuyển Chung Đôi ↔ Chuẩn Bị Bầu; Chồng lùi về Chung Đôi thành công; Lưu ảnh `docs/screenshots/hardware_test_couple_rollback.png` |
 | **Motherhood Domain & Models** | ✅ **HOÀN TẤT & ĐÃ TEST** | `ChildProfileModel`, `BabyActivityLogModel`, `WhoGrowthStandards`, `WonderWeeksData`, `MotherhoodStatusModel` |
 | **Hive Box Nuôi Con & UserScope** | ✅ **HOÀN TẤT** | Mở `AppConstants.motherhoodBoxName` tại `main.dart`, cô lập 100% key phân vùng `UserScope.key()` |
@@ -153,17 +158,28 @@ Khi sẵn sàng xuất bản một phiên bản release chính thức ra công c
 
 ---
 
-## 4. 🚀 KẾ HOẠCH BƯỚC TIẾP THEO (PHASE 3: MOTHERHOOD UI & DASHBOARD)
+## 4. 🚀 KẾ HOẠCH BƯỚC TIẾP THEO (PHASE 3: ADVANCED MOTHERHOOD)
 
-Sau khi hoàn tất nền tảng Domain & Ma trận trạng thái 5x5, 3 nhiệm vụ ưu tiên số 1 cho ca tiếp theo bao gồm:
+Sau khi hoàn thành Task 3 (Giao diện Mẹ Bỉm & Bấm giờ bú độc lập) và Task 4 (Góc nhìn Bố Bỉm & Đồng bộ 1-chạm), 3 nhiệm vụ ưu tiên số 1 cho ca tiếp theo:
 
-1. **Ưu tiên 1: Giao diện Dashboard Nuôi Con (`MotherhoodHomeScreen`):**
-   * Header hồ sơ bé đang hoạt động (kèm nút đổi bé nhanh, tính tuổi ngày/tháng/tuần trực quan).
-   * Thanh ghi chép nhanh 1 chạm (Quick Log Bar): Cữ bú (Trái/Phải/Bình), Giấc ngủ (Timer/Manual), Thay tã (Ướt/Bẩn).
-   * Dòng thời gian sinh hoạt trong ngày (Daily Activity Timeline) sắp xếp theo thứ tự mới nhất.
-2. **Ưu tiên 2: Biểu Đồ Tăng Trưởng Chuẩn WHO (WHO Growth Chart Visualizer):**
+1. **Ưu tiên 1: Biểu Đồ Tăng Trưởng Chuẩn WHO (WHO Growth Chart Visualizer):**
    * Trực quan hóa biểu đồ Z-Score cân nặng và chiều cao từ 0–24 tháng (đường cong P50 Median, ±1SD, ±2SD).
    * Vẽ các điểm đo thực tế của bé lên đồ thị, hiển thị nhãn đánh giá dinh dưỡng khoa học.
-3. **Ưu tiên 3: Tuần Khủng Hoảng Wonder Weeks & Góc Nhìn Bố Bỉm (`HusbandViewScreen`):**
-   * Thẻ dự báo Wonder Weeks Leaps 1–5, cảnh báo tuần bão tố (Storm period) và lời khuyên xoa dịu bé.
-   * Thẻ tóm tắt hoạt động sơ sinh cho Bố Bỉm trên `HusbandViewScreen` (đồng bộ realtime từ `couples/{coupleId}/motherhoodStatus/today`).
+2. **Ưu tiên 2: Cẩm Nang Dỗ Bé Wonder Weeks & Sổ Tay Cột Mốc (Milestones):**
+   * Trang chi tiết 10 tuần khủng hoảng nhận thức Wonder Weeks (kèm danh sách kỹ năng mới của từng Leap).
+   * Checklist các mốc vận động, giao tiếp và phản xạ đầu đời của bé sơ sinh.
+3. **Ưu tiên 3: Hardware Checkpoint Toàn Diện Phase 3 Trên Redmi Note 11:**
+   * Nạp bản build APK hoàn chỉnh sang thiết bị thật.
+   * Thử nghiệm luồng ghi nhật ký cữ bú bấm giờ, đổi bé và đồng bộ realtime sang góc nhìn Bố Bỉm.
+
+---
+
+## 5. 🛡️ ĐÁNH GIÁ KHẢ NĂNG LỌT BUG (BUG ESCAPE RISK ASSESSMENT - ĐIỀU 12 AGENTS.MD)
+
+| Rủi ro tiềm ẩn (Risk Vector) | Mức độ | Biện pháp phòng vệ đã triển khai (Implemented Safeguard) |
+|---|:---:|---|
+| **Lệch thời lượng cữ bú khi khóa máy (Timing Drift)** | Thấp | `FeedingTimerSheet` ghi nhận mốc `startTime` bằng `DateTime.now()` thực tế. Khi resume, thời lượng được tính theo hiệu số `difference()` thay vì đếm nhịp Timer đơn thuần, miễn nhiễm với việc hệ điều hành đóng băng background process. |
+| **Vòng lặp Re-render khi đánh giá LAM (State Loop)** | Thấp | Bổ sung equality check guard trong `LamStatusController.evaluateWithChild()`, chỉ cập nhật state khi có biến đổi thực tế. Di dời việc kích hoạt sang `initState` & `ref.listen` thay vì gọi trong `build()`. |
+| **Tràn khung hình Headless Test (Layout Overflow)** | Cực thấp | Áp dụng triệt để Rule 10: Toàn bộ Widget test thiết lập kích thước giả lập `1080x2400` pixel với `devicePixelRatio = 1.0`, dọn dẹp an toàn qua `addTearDown`. |
+| **Xung đột định danh tab Bố Bỉm (Name Collision)** | Cực thấp | Phân định rõ phạm vi NavigationDestination bằng `find.widgetWithText(NavigationDestination, 'Bố Bỉm')` để không bị trùng lặp với thẻ badge Bố Bỉm trong Hero Card. |
+| **Nhầm lẫn phân quyền cha mẹ (Role Attribution)** | Cực thấp | Các nút tác vụ nhanh của Bố được gắn cứng `loggedByRole: 'husband'` và của Mẹ `loggedByRole: 'wife'`, đảm bảo phân định rõ ràng trên timeline và Firestore. |
