@@ -22,6 +22,11 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
   * Bấm vào mở `KickCounterSheet` để Bố có thể cùng đếm cử động với Mẹ.
 
 ### [Fixed]
+- **CI Test Stability (`test/pregnancy_home_screen_test.dart`)**:
+  * Đổi assertion `find.textContaining('Tuần 11')` thành `find.text('Tuần 11')` chính xác để không xung đột với chip mốc khám thai `Tuần 11–13` của `PrenatalAppointmentsCard`.
+  * Chuyển assertion D-Day sang mẫu regex linh hoạt `RegExp(r'Còn \d+ ngày')` chống lệch ngày do chênh lệch múi giờ giữa máy cá nhân và GitHub Actions runner (UTC vs GMT+7).
+  * Áp dụng Viewport chuẩn 1080x2400 cho toàn bộ test case dashboard thai kỳ.
+- **Quy chuẩn CI/CD trong `AGENTS.md`**: Bổ sung mục 10 quy định bất biến về Viewport test, Timezone UTC Safety, và Quality Gate DoD.
 - Fix `Colors.white87` không tồn tại trong Flutter Colors class → `Colors.white.withAlpha(222)` trong `husband_view_screen.dart` và `prenatal_appointments_card.dart`.
 - Fix `const LinearGradient` missing trong `pregnancy_home_screen.dart`.
 

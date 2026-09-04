@@ -40,6 +40,17 @@
 
 ## 2. 💡 BÀI HỌC KINH NGHIỆM & CÁC LỖI KỸ THUẬT ĐÃ GIẢI QUYẾT
 
+### 2.4. Lỗi Flutter Widget Test Fail Trên GitHub Actions Runner
+* **Hiện tượng:** Test suite chạy trên GitHub Actions runner bị fail đúng 1 test: `test/pregnancy_home_screen_test.dart: Hiển thị đầy đủ Gestational Hero Card, D-Day và quả so sánh`.
+* **Nguyên nhân cốt lõi:**
+  1. **Trùng lặp chuỗi Text:** Khi tích hợp Phase 2.5 `PrenatalAppointmentsCard`, chip mốc khám đầu tiên hiển thị nhãn `Tuần 11–13`. Câu lệnh kiểm thử `find.textContaining('Tuần 11')` tìm thấy 2 phần tử (`Tuần 11` của Hero Card và `Tuần 11–13` của Lịch khám), gây lỗi `Too many elements found (found 2)`.
+  2. **Kích thước Viewport headless mặc định 800x600 px:** Dashboard thai kỳ có nhiều thẻ chức năng, cần khai báo kích thước giả lập `1080x2400` và `devicePixelRatio = 1.0` để render trọn vẹn.
+  3. **Chênh lệch múi giờ (UTC vs GMT+7):** Runner GitHub dùng múi giờ UTC, việc so sánh chuỗi số ngày cố định khi tính từ `DateTime.now()` có thể bị lệch 1 ngày.
+* **Khắc phục triệt để:**
+  1. Đổi sang `find.text('Tuần 11')` chính xác thay vì `find.textContaining`.
+  2. Sử dụng `find.textContaining(RegExp(r'Còn \d+ ngày'))` cho bộ đếm D-Day.
+  3. Thêm mục 10 vào `AGENTS.md` chuẩn hóa quy tắc kiểm thử và CI/CD.
+
 ### 2.3. Lỗi Google Sign-In `ApiException: 10`
 * **Hiện tượng:** Khi bấm "Đăng nhập với Google", ứng dụng trả về lỗi `PlatformException(sign_in_failed, com.google.android.gms.common.api.ApiException: 10: , null, null)`.
 * **Nguyên nhân cốt lõi (Kiểm toán nguyên mã):**

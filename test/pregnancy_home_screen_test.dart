@@ -135,7 +135,7 @@ void main() {
       // 2. Hero Card: Tuần tuổi thai & Tam cá nguyệt
       expect(find.text('Tuần 11'), findsOneWidget);
       expect(find.textContaining('Tam cá nguyệt 1'), findsWidgets);
-      expect(find.textContaining('D-Day: Còn'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'Còn \d+ ngày')), findsOneWidget);
 
       // 3. Fetal Comparison Card: Quả chanh ta 🍋
       expect(find.textContaining('Bé to bằng Quả chanh ta'), findsOneWidget);

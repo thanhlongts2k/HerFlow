@@ -127,3 +127,30 @@ Nếu phát hiện vi phạm: dùng `git rm --cached <file>` → thêm vào `.gi
 
 4. BẢO VỆ LIFECYCLE VỚI DIALOG NATIVE:
    - Mọi tương tác bung pop-up hệ thống (Biometric, FilePicker, ShareSheet, Permission): Bắt buộc dùng cờ chặn (Guarding Flag) để triệt tiêu sự kiện `AppLifecycleState.inactive` và `resumed` giả mạo do hệ điều hành kích hoạt.
+
+---
+
+### 10. 🧪 QUY CHUẨN KIỂM THỬ WIDGET & MÔI TRƯỜNG CI (TESTING & CI BEST PRACTICES)
+
+#### 1. 📱 Quy tắc Viewport Widget Test (Kích thước hiển thị màn hình)
+- Môi trường headless test của Flutter mặc định có khung hình giới hạn **800x600 px**.
+- **Bắt buộc**: Mọi Widget test của màn hình Dashboard, Home hoặc các màn hình có danh sách/cuộn dọc dài phải cấu hình kích thước giả lập ở đầu test case:
+  ```dart
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+  ```
+- Tránh tuyệt đối để kích thước mặc định 800x600 px làm các widget phía dưới (như Bộ đếm cử động thai, Lịch khám thai, Action buttons) bị đẩy ra khỏi Viewport hoặc bị lỗi overflow layout.
+
+#### 2. 🌐 Quy tắc Múi giờ & Thời gian động (Timezone & DateTime UTC Safety)
+- GitHub Actions runner chạy trên múi giờ chuẩn **UTC (GMT+0)**, khác biệt hoàn toàn với môi trường máy phát triển local (GMT+7, BST, v.v.).
+- **Tuyệt đối không kiểm tra (assert) chuỗi số ngày cố định** khi tính từ `DateTime.now()` (ví dụ cấm: `find.text('Còn 196 ngày')`).
+- **Bắt buộc dùng Regex hoặc so khớp linh hoạt:** Dùng `find.textContaining(RegExp(r'Còn \d+ ngày'))` hoặc chuẩn hóa thời gian về cùng mốc UTC trong test data để đảm bảo test vượt qua ổn định trên toàn bộ hệ thống CI/CD toàn cầu.
+- Khi kiểm tra text có khả năng bị trùng tiền tố (như thẻ `Tuần 11` của Hero Card và chip `Tuần 11–13` của Lịch khám), **bắt buộc** dùng `find.text('Tuần 11')` thay vì `find.textContaining('Tuần 11')` để tránh lỗi `Too many elements found`.
+
+#### 3. 🎯 Tiêu chuẩn nghiệm thu trước khi Commit & Push (Definition of Done - DoD Gate)
+- **Bắt buộc** chạy lệnh phân tích tĩnh: `flutter analyze` đạt **0 issues/errors**.
+- **Bắt buộc** chạy toàn bộ test suite: `flutter test` đạt **100% tests passed** trước khi thực hiện bất kỳ lệnh `git commit` hay `git push` nào.
