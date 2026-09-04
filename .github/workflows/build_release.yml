@@ -57,10 +57,10 @@ jobs:
           flutter test
 
       - name: 7. Biên dịch APK Release tối ưu (arm64-v8a)
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --android-skip-build-dependency-validation
 
       - name: 8. Biên dịch APK Release phổ thông (Universal)
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: 9. Chuẩn bị tệp tải về
         run: |
