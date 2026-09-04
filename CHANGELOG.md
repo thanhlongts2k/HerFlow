@@ -29,6 +29,12 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
   * Bấm vào mở `KickCounterSheet` để Bố có thể cùng đếm cử động với Mẹ.
 
 ### [Fixed]
+- **Khắc Phục Triệt Để Lỗi Đồng Bộ Hai Chiều LifeStage Vợ - Chồng (`LifeStageController`):**
+  * Sửa lỗi chuyển ngược về Chung Đôi (`conception -> couple`): bổ sung `await` khi ghi Firestore `couples/{coupleId}` và cập nhật song song cả 2 trường `currentStage` và `lifeStage`.
+  * Cập nhật đồng bộ cả Hive key phân vùng `UserScope.key(keyLifeStage, uid)` và fallback unscoped key `keyLifeStage`.
+  * Bổ sung `_listenerUid` cho `LifeStageController` để đảm bảo khi stream callback kích hoạt ngầm, dữ liệu luôn lưu đúng vùng lưu trữ của Chồng (không bị ghi đè sang tài khoản Vợ).
+  * Kích hoạt cập nhật `authControllerProvider.updateLifeStage()` khi Chồng nhận event stream từ Vợ.
+  * Tự động khởi động stream listener cho Chồng trong `loadForUser` nếu đã có `coupleId`.
 - **Tương Thích Đa Phiên Bản Flutter SDK (Flutter 3.24 Local & 3.29+ CI Runner):**
   * `app_theme.dart`: Chuyển `CardThemeData` thành `CardTheme` (tương thích cả Flutter 3.24 lẫn 3.29+).
   * `cycle_settings_sheet.dart`, `log_period_modal.dart`, `settings_screen.dart`: Chuyển `activeThumbColor` thành `activeColor` chuẩn Material Switch API.
@@ -42,8 +48,10 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 - Fix `const LinearGradient` missing trong `pregnancy_home_screen.dart`.
 
 ### [Tests]
-- Bổ sung kiểm thử Unit & Widget test cho Realtime Couple Sync và Solo Guard (`test/life_stage_controller_test.dart`, `test/life_stage_navigation_and_ui_test.dart`).
-- `flutter analyze` — **0 issues** | `flutter test` — **216/216 PASS (100%)**.
+- **Transition Matrix Test Suite (`test/life_stage_transition_matrix_test.dart`):**
+  * Kiểm thử toàn diện 6/6 cặp chuyển đổi trạng thái 2 chiều giữa 4 giai đoạn sống cặp đôi (`couple <-> conception`, `couple <-> pregnancy`, `couple <-> motherhood`, `conception <-> pregnancy`, `conception <-> motherhood`, `pregnancy <-> motherhood`).
+  * Xác minh đầy đủ 4 điều kiện: Vợ đổi A->B, Firestore nhận B, Chồng chuyển B; Vợ đổi B->A, Firestore nhận A, Chồng chuyển về A.
+- `flutter analyze` — **0 issues** | `flutter test` — **222/222 PASS (100%)**.
 
 ---
 

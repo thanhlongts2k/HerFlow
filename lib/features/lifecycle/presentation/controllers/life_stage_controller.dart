@@ -89,14 +89,16 @@ class LifeStageController extends StateNotifier<LifeStageState> {
   final FirebaseFirestore? _firestore;
   final Ref? _ref;
   StreamSubscription<DocumentSnapshot>? _coupleSubscription;
+  String? _listenerUid;
 
-  LifeStageController({Box? settingsBox, FirebaseFirestore? firestore, Ref? ref})
+  LifeStageController({Box? settingsBox, FirebaseFirestore? firestore, Ref? ref, String? defaultUid})
       : _settingsBox = settingsBox ?? Hive.box(AppConstants.settingsBoxName),
         _firestore = firestore,
         _ref = ref,
+        _listenerUid = defaultUid,
         super(const LifeStageState()) {
     // Khởi tạo state ngay từ Hive local (không cần async)
-    _loadFromLocal();
+    _loadFromLocal(defaultUid);
   }
 
   FirebaseFirestore? get _safeFirestore {
@@ -120,6 +122,12 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     if (scoped != null && scoped.isNotEmpty) return scoped;
     final fallback = _settingsBox.get('partner_couple_id') as String?;
     if (fallback != null && fallback.isNotEmpty) return fallback;
+    if (_ref != null) {
+      try {
+        final fromProvider = _ref.read(savedCoupleIdProvider);
+        if (fromProvider != null && fromProvider.isNotEmpty) return fromProvider;
+      } catch (_) {}
+    }
     return null;
   }
 
@@ -205,6 +213,8 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     // Lưu vào Hive (đảm bảo nhất quán)
     await _settingsBox.put(_k(AppConstants.keyLifeStage, uid), resolvedStage.toStorageString());
 
+    _listenerUid = uid;
+
     state = LifeStageState(
       currentStage: resolvedStage,
       isPaused: isPaused,
@@ -213,6 +223,17 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     );
 
     debugPrint('[LifeStageController] loadForUser uid=$uid → $resolvedStage');
+
+    // Khởi tạo stream listener cho Chồng nếu có coupleId
+    if (_ref != null && isActuallyCoupled) {
+      try {
+        final role = _ref.read(userRoleProvider);
+        final cid = savedCoupleId ?? getSavedCoupleId(uid);
+        if (role == UserRole.husband && cid != null && cid.isNotEmpty) {
+          startListeningToCouple(cid, uid);
+        }
+      } catch (_) {}
+    }
   }
 
   /// Chuyển đổi sang [LifeStage] mới.
@@ -250,20 +271,19 @@ class LifeStageController extends StateNotifier<LifeStageState> {
       }
     }
 
-    // 4. Sync Firestore fire-and-forget (không throw nếu offline hoặc test)
+    // 4. Sync Firestore users/{uid}
     if (effectiveUid.isNotEmpty) {
       try {
-        _safeFirestore?.collection('users').doc(effectiveUid).set(
+        await _safeFirestore?.collection('users').doc(effectiveUid).set(
           {
             'lifeStage': nextStage.toStorageString(),
+            'currentStage': nextStage.toStorageString(),
             'updatedAt': FieldValue.serverTimestamp(),
           },
           SetOptions(merge: true),
-        ).catchError((e) {
-          debugPrint('[LifeStageController] Firestore sync error (ignored): $e');
-        });
+        );
       } catch (e) {
-        debugPrint('[LifeStageController] Firestore sync skipped: $e');
+        debugPrint('[LifeStageController] Firestore user sync skipped/error: $e');
       }
     }
 
@@ -271,17 +291,19 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     final coupleId = getSavedCoupleId(effectiveUid);
     if (coupleId != null && coupleId.isNotEmpty) {
       try {
-        _safeFirestore?.collection('couples').doc(coupleId).set(
+        await _safeFirestore?.collection('couples').doc(coupleId).set(
           {
             'currentStage': nextStage.toStorageString(),
+            'lifeStage': nextStage.toStorageString(),
             'updatedAt': FieldValue.serverTimestamp(),
           },
           SetOptions(merge: true),
-        ).catchError((e) {
-          debugPrint('[LifeStageController] Firestore couple stage sync error (ignored): $e');
-        });
+        );
+        debugPrint(
+          '[LifeStageController] Đã đồng bộ Firestore couples/$coupleId: ${nextStage.toStorageString()}',
+        );
       } catch (e) {
-        debugPrint('[LifeStageController] Firestore couple sync skipped: $e');
+        debugPrint('[LifeStageController] Firestore couple sync error: $e');
       }
     }
 
@@ -362,16 +384,25 @@ class LifeStageController extends StateNotifier<LifeStageState> {
   }
 
   /// Lắng nghe thay đổi giai đoạn từ Document couples/{coupleId} theo thời gian thực (phía Chồng)
-  void startListeningToCouple(String coupleId) {
+  void startListeningToCouple(String coupleId, [String? listenerUid]) {
     _coupleSubscription?.cancel();
     if (coupleId.isEmpty) return;
+
+    if (listenerUid != null && listenerUid.isNotEmpty) {
+      _listenerUid = listenerUid;
+    } else if (_listenerUid == null || _listenerUid!.isEmpty) {
+      final current = UserScope.currentUid();
+      if (current.isNotEmpty) {
+        _listenerUid = current;
+      }
+    }
 
     try {
       _coupleSubscription = _safeFirestore
           ?.collection('couples')
           .doc(coupleId)
           .snapshots()
-          .listen((snapshot) {
+          .listen((snapshot) async {
         if (snapshot.exists && snapshot.data() != null) {
           final data = snapshot.data() as Map<String, dynamic>;
           final rawStage = data['currentStage'] as String? ?? data['lifeStage'] as String?;
@@ -379,11 +410,23 @@ class LifeStageController extends StateNotifier<LifeStageState> {
             final syncedStage = LifeStageExt.fromString(rawStage);
             if (syncedStage != state.currentStage) {
               debugPrint(
-                '[LifeStageController] Đồng bộ LifeStage từ Vợ: ${state.currentStage} → $syncedStage',
+                '[LifeStageController] Đồng bộ LifeStage từ Vợ: ${state.currentStage} → $syncedStage (raw=$rawStage)',
               );
-              final uid = UserScope.currentUid();
-              _settingsBox.put(_k(AppConstants.keyLifeStage, uid), syncedStage.toStorageString());
+              final uid = (_listenerUid != null && _listenerUid!.isNotEmpty)
+                  ? _listenerUid!
+                  : UserScope.currentUid();
+              await _settingsBox.put(_k(AppConstants.keyLifeStage, uid), syncedStage.toStorageString());
+              await _settingsBox.put(AppConstants.keyLifeStage, syncedStage.toStorageString());
+
+              // Cập nhật State RAM ngay để kích hoạt reactive rebuild toàn bộ UI
               state = state.copyWith(currentStage: syncedStage, isLoading: false);
+
+              // Cập nhật UserModel hiện tại nếu có Ref
+              if (_ref != null) {
+                try {
+                  _ref.read(authControllerProvider.notifier).updateLifeStage(stage: syncedStage);
+                } catch (_) {}
+              }
             }
           }
         }
@@ -412,6 +455,7 @@ class LifeStageController extends StateNotifier<LifeStageState> {
   /// Chỉ reset RAM — không xóa Hive (dữ liệu thuộc về tài khoản, không phải thiết bị).
   void reset() {
     cancelCoupleSubscription();
+    _listenerUid = null;
     state = const LifeStageState.normal();
   }
 }
@@ -429,15 +473,16 @@ final lifeStageControllerProvider =
     // Lắng nghe coupleId và userRole để Chồng tự động lắng nghe couples/{coupleId}
     ref.listen<String?>(savedCoupleIdProvider, (_, coupleId) {
       final role = ref.read(userRoleProvider);
-      if (role == UserRole.husband && coupleId != null && coupleId.isNotEmpty) {
-        controller.startListeningToCouple(coupleId);
-      } else if (coupleId == null || coupleId.isEmpty) {
+      final effectiveCoupleId = coupleId ?? controller.getSavedCoupleId();
+      if (role == UserRole.husband && effectiveCoupleId != null && effectiveCoupleId.isNotEmpty) {
+        controller.startListeningToCouple(effectiveCoupleId);
+      } else if (effectiveCoupleId == null || effectiveCoupleId.isEmpty) {
         controller.cancelCoupleSubscription();
       }
     });
 
     ref.listen<UserRole>(userRoleProvider, (_, role) {
-      final coupleId = ref.read(savedCoupleIdProvider);
+      final coupleId = ref.read(savedCoupleIdProvider) ?? controller.getSavedCoupleId();
       if (role == UserRole.husband && coupleId != null && coupleId.isNotEmpty) {
         controller.startListeningToCouple(coupleId);
       } else if (role != UserRole.husband) {
@@ -446,7 +491,7 @@ final lifeStageControllerProvider =
     });
 
     // Khởi tạo ngay nếu đã có coupleId và là Chồng
-    final initialCoupleId = ref.read(savedCoupleIdProvider);
+    final initialCoupleId = ref.read(savedCoupleIdProvider) ?? controller.getSavedCoupleId();
     final initialRole = ref.read(userRoleProvider);
     if (initialRole == UserRole.husband && initialCoupleId != null && initialCoupleId.isNotEmpty) {
       controller.startListeningToCouple(initialCoupleId);
