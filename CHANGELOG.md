@@ -4,6 +4,34 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.7+22] - 2026-09-04 (Actionable Husband Insights & Companion Experience)
+
+### [Added]
+- **🧭 Thẻ "Chế Độ Ứng Xử" Theo Chu Kỳ (Contextual Behavior Banner):**
+  * Tự động nhận diện giai đoạn chu kỳ sinh học của Vợ để kích hoạt chế độ ứng xử tâm lý phù hợp:
+    - *Hoàng thể / Tiền kinh nguyệt (Luteal):* "Chế độ Cưng chiều & Nhường nhịn" — Lời nhắc ưu tiên lắng nghe, nhường nhịn và ôm ấp khi nội tiết tố sụt giảm.
+    - *Hành kinh (Menstrual):* "Chế độ Chăm sóc & Tiếp sức (Kỳ dâu)" — Lời nhắc chuẩn bị nước ấm, túi chườm và gánh vác việc nhà khi nàng đau mỏi.
+    - *Nang trứng & Rụng trứng (Follicular/Ovulation):* "Chế độ Kết nối & Đồng hành" — Lời nhắc tận dụng thời điểm năng lượng đỉnh cao để hẹn hò, chia sẻ kế hoạch mới.
+- **🛡️ Bảng "Bí Kíp Sinh Tồn" 1 Chạm (Do's & Don'ts Cheat-Sheet):**
+  * Thiết kế dạng Card collapsible (gập/mở mượt mà) cung cấp danh sách hành động `DO` (Nên chủ động làm ngay) và `DON'T` (Tuyệt đối nên tránh) theo từng pha cụ thể.
+  * Giúp chàng tránh các câu nói gây tổn thương và chủ động chăm sóc tinh tế không cần nhắc.
+- **⚡ Phím Tắt "Cứu Nguy 1 Chạm" (Quick Care Signals):**
+  * Bộ 3 nút bấm nhanh đặt ngay dưới hero card giúp Chồng gửi tức thì các hành động yêu thương thiết thực:
+    - 🧋 *Mua đồ ngọt:* Tự động gửi tin nhắn mua đồ ngọt / trà sữa mang qua cho nàng.
+    - 💆‍♂️ *Massage:* Tự động gửi tin nhắn massage vai gáy thư giãn trước khi ngủ.
+    - 🫂 *Ôm sạc pin:* Gửi cái ôm ấm áp sạc pin năng lượng cho nàng.
+  * Đồng bộ trực tiếp qua Firestore với phản hồi rung xúc giác haptic và thông báo SnackBar nổi.
+- **🔋 Chỉ Số "Pin Năng Lượng" (Energy Battery Indicator):**
+  * Widget thanh pin 5 vạch phân đoạn (Segmented Battery Bar) đồng bộ từ thể trạng mới nhất của Vợ.
+  * Đổi màu thích ứng và cung cấp chú thích hướng dẫn hành động tương ứng với mức pin (Cạn kiệt, Pin yếu, Ổn định, Dồi dào, Cực đại).
+
+### [Changed]
+- **✨ Tối Ưu Hóa Giao Diện Màn Hình Chồng (`HusbandViewScreen`):**
+  * Tinh giản và kết hợp danh mục ẩm thực bồi bổ thành card thực đơn riêng biệt bổ trợ cho bảng bí kíp sinh tồn.
+  * Tối ưu khoảng cách, độ tương phản và hiệu ứng chuyển đổi giữa Dark Mode và Light Mode.
+
+---
+
 ## [0.6.6+21] - 2026-09-04 (Cold Start Seamless Splash & UI Optimization)
 
 ### [Fixed]

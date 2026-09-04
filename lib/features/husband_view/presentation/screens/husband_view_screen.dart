@@ -21,6 +21,10 @@ import 'package:herflow/features/settings/presentation/controllers/nickname_cont
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 import 'package:herflow/features/care_signals/presentation/widgets/love_notes_thread_modal.dart';
 import '../widgets/husband_quick_chat_sheet.dart';
+import '../widgets/contextual_behavior_banner.dart';
+import '../widgets/energy_battery_indicator.dart';
+import '../widgets/quick_care_signals_row.dart';
+import '../widgets/survival_cheat_sheet_card.dart';
 
 /// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
 class HusbandViewScreen extends ConsumerWidget {
@@ -146,7 +150,16 @@ class HusbandViewScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                 ],
 
-                // 1. BANNER TRẠNG THÁI KẾT NỐI
+                // 1. THẺ "CHẾ ĐỘ ỨNG XỬ" THEO CHU KỲ (CONTEXTUAL MODE BANNER)
+                ContextualBehaviorBanner(
+                  phase: currentPhase,
+                  partnerName: partnerName,
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 12),
+
+                // 1.2. BANNER TRẠNG THÁI KẾT NỐI
                 _buildConnectionHeader(context, savedCoupleId, isDark),
 
                 const SizedBox(height: 12),
@@ -175,6 +188,14 @@ class HusbandViewScreen extends ConsumerWidget {
 
                 const SizedBox(height: 14),
 
+                // 3.1. HÀNG PHÍM TẮT "CỨU NGUY 1 CHẠM" (QUICK CARE SIGNALS)
+                QuickCareSignalsRow(
+                  partnerName: partnerName,
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 14),
+
                 // 3.2. THẺ HỎI THĂM & NHẮN NHỦ NÀNG (HUSBAND QUICK CHAT)
                 if (savedCoupleId != null && savedCoupleId.isNotEmpty)
                   _buildQuickChatCard(context, currentPhase, partnerName, isDark)
@@ -188,7 +209,15 @@ class HusbandViewScreen extends ConsumerWidget {
 
                 const SizedBox(height: 16),
 
-                // 4. GENTLEMAN'S PLAYBOOK: TUYỆT CHIÊU CHO CHÀNG
+                // 4. BẢNG "BÍ KÍP SINH TỒN" 1 CHẠM (DO'S & DON'TS CHEAT-SHEET)
+                SurvivalCheatSheetCard(
+                  phase: currentPhase,
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 16),
+
+                // 4.2. GENTLEMAN'S PLAYBOOK: GỢI Ý MÓN ĂN / THỨC UỐNG
                 _buildPlaybookSection(context, currentPhase, isDark),
 
                 const SizedBox(height: 20),
@@ -988,31 +1017,11 @@ class HusbandViewScreen extends ConsumerWidget {
 
           const SizedBox(height: 14),
 
-          // Thanh Pin Năng lượng
-          Row(
-            children: [
-              Text(
-                'Pin năng lượng $partnerName:',
-                style: const TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: (energyLevel.clamp(1, 5)) / 5.0,
-                    backgroundColor: Colors.grey.withAlpha(40),
-                    valueColor: AlwaysStoppedAnimation<Color>(batteryInfo.color),
-                    minHeight: 7,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$energyLevel/5',
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
-              ),
-            ],
+          // CHỈ SỐ "PIN NĂNG LƯỢNG" (ENERGY BATTERY INDICATOR)
+          EnergyBatteryIndicator(
+            energyLevel: energyLevel,
+            partnerName: partnerName,
+            isDark: isDark,
           ),
 
           if (moodText.isNotEmpty) ...[
@@ -1348,7 +1357,7 @@ class HusbandViewScreen extends ConsumerWidget {
     );
   }
 
-  /// Hộp Tuyệt chiêu cho chàng (Gentleman's Playbook)
+  /// Hộp Gợi ý thực đơn & món nàng thích theo pha chu kỳ
   Widget _buildPlaybookSection(
     BuildContext context,
     CyclePhase phase,
@@ -1363,44 +1372,20 @@ class HusbandViewScreen extends ConsumerWidget {
           padding: EdgeInsets.only(left: 4, bottom: 10),
           child: Row(
             children: [
-              Icon(Icons.menu_book_rounded, size: 16, color: AppColors.secondary),
+              Icon(Icons.restaurant_rounded, size: 16, color: AppColors.accentPeach),
               SizedBox(width: 6),
               Text(
-                'Tuyệt Chiêu Của Chàng Hôm Nay',
+                'Thực Đơn Chiều Nàng Thích Hợp Nhất',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
               ),
             ],
           ),
         ),
 
-        // 1. Nên làm ngay
+        // Gợi ý món nàng thích
         _buildPlaybookCard(
           context,
-          title: 'Nên chủ động làm ngay',
-          badgeText: 'DO',
-          badgeColor: AppColors.success,
-          items: playbook.dos,
-          isDark: isDark,
-        ),
-
-        const SizedBox(height: 10),
-
-        // 2. Điều cấm kỵ
-        _buildPlaybookCard(
-          context,
-          title: 'Những điều tuyệt đối cấm kỵ',
-          badgeText: 'DON\'T',
-          badgeColor: AppColors.error,
-          items: playbook.donts,
-          isDark: isDark,
-        ),
-
-        const SizedBox(height: 10),
-
-        // 3. Gợi ý món nàng thích
-        _buildPlaybookCard(
-          context,
-          title: 'Gợi ý món ăn / thức uống nàng thích',
+          title: 'Món ăn & thức uống bồi bổ theo pha',
           badgeText: 'MENU',
           badgeColor: AppColors.accentPeach,
           items: playbook.treats,
