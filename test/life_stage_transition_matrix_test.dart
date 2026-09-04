@@ -174,8 +174,23 @@ void main() {
     required LifeStage toStage,
   }) async {
     // 1. Thiết lập trạng thái ban đầu: fromStage
+    await fakeFirestore.collection('couples').doc(coupleId).set({
+      'currentStage': fromStage.toStorageString(),
+      'lifeStage': fromStage.toStorageString(),
+    });
+    await wifeHive.put(
+      UserScope.key(AppConstants.keyLifeStage, wifeUid),
+      fromStage.toStorageString(),
+    );
+    await husbandHive.put(
+      UserScope.key(AppConstants.keyLifeStage, husbandUid),
+      fromStage.toStorageString(),
+    );
+
     UserScope.setActiveUid(wifeUid);
-    await wifeController.switchStage(fromStage, uid: wifeUid);
+    wifeController.state = LifeStageState.normal(stage: fromStage);
+    husbandController.state = LifeStageState.normal(stage: fromStage);
+
     expect(wifeController.state.currentStage, equals(fromStage));
 
     // Chồng bắt đầu lắng nghe stream từ document couples/{coupleId}
@@ -237,22 +252,18 @@ void main() {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PHẦN A: MA TRẬN ĐẦY ĐỦ 4x4 (16 TRƯỜNG HỢP CHUYỂN ĐỔI TOÀN DIỆN)
+  // ════════════════════════════════════════════════════════════════════════════
+  // PHẦN A: MA TRẬN ĐẦY ĐỦ 5x5 (25 TRƯỜNG HỢP CHUYỂN ĐỔI TOÀN DIỆN)
   // ════════════════════════════════════════════════════════════════════════════
 
-  const coupleStages = [
-    LifeStage.couple,
-    LifeStage.conception,
-    LifeStage.pregnancy,
-    LifeStage.motherhood,
-  ];
+  const allStages = LifeStage.values;
 
-  group('Full 4x4 State Transition Matrix (16 Cases):', () {
+  group('Full 5x5 State Transition Matrix (25 Cases):', () {
     int testIndex = 1;
-    for (final fromStage in coupleStages) {
-      for (final toStage in coupleStages) {
+    for (final fromStage in allStages) {
+      for (final toStage in allStages) {
         final isIdempotent = fromStage == toStage;
-        final caseTitle = 'Case $testIndex/16: [${fromStage.name} -> ${toStage.name}] '
+        final caseTitle = 'Case $testIndex/25: [${fromStage.name} -> ${toStage.name}] '
             '(${fromStage.displayName} -> ${toStage.displayName}) '
             '${isIdempotent ? "[Idempotent / No-op]" : "[State Transition]"}';
 
@@ -269,46 +280,74 @@ void main() {
   });
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PHẦN B: 6 CẶP CHUYỂN ĐỔI HAI CHIỀU (BIDIRECTIONAL ROUND-TRIP TESTS)
+  // PHẦN B: 10 CẶP CHUYỂN ĐỔI HAI CHIỀU (BIDIRECTIONAL ROUND-TRIP TESTS)
   // ════════════════════════════════════════════════════════════════════════════
 
-  group('Bidirectional Round-Trip: 6 Cặp Giai Đoạn Cặp Đôi', () {
-    test('Cặp 1: Chung Đôi <---> Chuẩn Bị Bầu (couple <-> conception)', () async {
+  group('Bidirectional Round-Trip: 10 Cặp Giai Đoạn Toàn Diện', () {
+    test('Cặp 1: Nàng <---> Chung Đôi (solo <-> couple)', () async {
+      await assertBidirectionalTransition(
+        stageA: LifeStage.solo,
+        stageB: LifeStage.couple,
+      );
+    });
+
+    test('Cặp 2: Nàng <---> Chuẩn Bị Bầu (solo <-> conception)', () async {
+      await assertBidirectionalTransition(
+        stageA: LifeStage.solo,
+        stageB: LifeStage.conception,
+      );
+    });
+
+    test('Cặp 3: Nàng <---> Thai Kỳ (solo <-> pregnancy)', () async {
+      await assertBidirectionalTransition(
+        stageA: LifeStage.solo,
+        stageB: LifeStage.pregnancy,
+      );
+    });
+
+    test('Cặp 4: Nàng <---> Nuôi Con (solo <-> motherhood)', () async {
+      await assertBidirectionalTransition(
+        stageA: LifeStage.solo,
+        stageB: LifeStage.motherhood,
+      );
+    });
+
+    test('Cặp 5: Chung Đôi <---> Chuẩn Bị Bầu (couple <-> conception)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.couple,
         stageB: LifeStage.conception,
       );
     });
 
-    test('Cặp 2: Chung Đôi <---> Thai Kỳ (couple <-> pregnancy)', () async {
+    test('Cặp 6: Chung Đôi <---> Thai Kỳ (couple <-> pregnancy)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.couple,
         stageB: LifeStage.pregnancy,
       );
     });
 
-    test('Cặp 3: Chung Đôi <---> Nuôi Con (couple <-> motherhood)', () async {
+    test('Cặp 7: Chung Đôi <---> Nuôi Con (couple <-> motherhood)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.couple,
         stageB: LifeStage.motherhood,
       );
     });
 
-    test('Cặp 4: Chuẩn Bị Bầu <---> Thai Kỳ (conception <-> pregnancy)', () async {
+    test('Cặp 8: Chuẩn Bị Bầu <---> Thai Kỳ (conception <-> pregnancy)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.conception,
         stageB: LifeStage.pregnancy,
       );
     });
 
-    test('Cặp 5: Chuẩn Bị Bầu <---> Nuôi Con (conception <-> motherhood)', () async {
+    test('Cặp 9: Chuẩn Bị Bầu <---> Nuôi Con (conception <-> motherhood)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.conception,
         stageB: LifeStage.motherhood,
       );
     });
 
-    test('Cặp 6: Thai Kỳ <---> Nuôi Con (pregnancy <-> motherhood)', () async {
+    test('Cặp 10: Thai Kỳ <---> Nuôi Con (pregnancy <-> motherhood)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.pregnancy,
         stageB: LifeStage.motherhood,

@@ -63,8 +63,11 @@ class AppConstants {
 
   // ── Phase 3 keys ────────────────────────────────────────────────────────
   static const String keyActiveChildId = 'active_child_id';
+  static const String keyChildrenList  = 'children_list';
+  static const String keyBabyLogs      = 'baby_logs';
+  static const String keyLamStatus     = 'lam_status';
 
-  // ── Phase 2/3 Hive Box Names (chưa mở box, chỉ đặt tên sẵn) ───────────
+  // ── Phase 2/3 Hive Box Names ─────────────────────────────────────────────
   static const String conceptionBoxName  = 'herflow_conception_box';
   static const String pregnancyBoxName   = 'herflow_pregnancy_box';
   static const String motherhoodBoxName  = 'herflow_motherhood_box';

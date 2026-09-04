@@ -36,6 +36,7 @@ void main() async {
   await Hive.openBox(AppConstants.moodBoxName);
   await Hive.openBox(AppConstants.settingsBoxName);
   await Hive.openBox(AppConstants.userBoxName);
+  await Hive.openBox(AppConstants.motherhoodBoxName);
 
   // DP-01: Chạy Hive Migration trước khi bất kỳ provider nào đọc dữ liệu.
   // Bọc try-catch phòng thủ: migration lỗi thì app vẫn chạy fallback an toàn.

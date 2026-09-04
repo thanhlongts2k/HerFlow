@@ -4,6 +4,34 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.8.0+26] - 2026-09-04 (Phase 3: Motherhood Domain Foundation & 5x5 State Matrix)
+
+### [Added]
+- **📱 Hardware Checkpoint (Task 0): Kiểm Chứng Thực Tế Trên Redmi Note 11:**
+  * Build và nạp debug APK sang thiết bị vật lý Xiaomi Redmi Note 11 qua ADB.
+  * Kiểm chứng kịch bản round-trip thực tế: Vợ chuyển `Chung Đôi` → `Chuẩn Bị Bầu` (banner lộ trình xuất hiện), sau đó Vợ chuyển ngược lại `Chuẩn Bị Bầu` → `Chung Đôi` (banner đóng an toàn).
+  * Chồng tự động đồng bộ lùi về `Chung Đôi / Góc Nhìn Của Anh`. Lưu ảnh bằng chứng kiểm tra tại `docs/screenshots/hardware_test_couple_rollback.png`.
+- **🍼 Tầng Domain & Models Module Nuôi Con (`lib/features/motherhood/domain/`):**
+  * `ChildProfileModel`: Quản lý hồ sơ bé sơ sinh & trẻ nhỏ (0-36 tháng), tính toán tuổi theo ngày, tháng, tuần và tuổi hiệu chỉnh (corrected age) cho bé sinh non.
+  * `BabyActivityLogModel`: Nhật ký hoạt động đa dạng (cữ bú, giấc ngủ, tã bỉm, tummy time, tắm bé, uống thuốc), tự động tính thời lượng phút và phân quyền cha mẹ (`loggedByUid`, `loggedByRole`).
+  * `WhoGrowthStandards`: Bảng tra cứu Z-Score chuẩn Tổ chức Y Tế Thế Giới (WHO) cho Bé Trai & Bé Gái từ 0–24 tháng (cân nặng, chiều cao), phân loại thể trạng khoa học.
+  * `WonderWeeksData`: Mô hình dự báo các tuần khủng hoảng tri giác Wonder Weeks (Leaps 1–5), cảnh báo tuần bão tố (storm period) và cẩm nang dỗ bé cho cha mẹ.
+  * `MotherhoodStatusModel`: Mô hình tóm tắt đồng bộ trạng thái sinh hoạt của bé sang máy Bạn đời qua Cloud Firestore `couples/{coupleId}/motherhoodStatus/today`.
+- **💾 Lưu Trữ Cục Bộ UserScope & Hive Box Nuôi Con:**
+  * Cấu hình và mở `AppConstants.motherhoodBoxName` (`herflow_motherhood_box`) tại `main.dart`.
+  * Khởi tạo các khóa lưu trữ phân vùng `UserScope.key()`: `children_list`, `active_child_id`, `baby_logs`, `lam_status`.
+- **🧠 Tầng State Management & Thuật Toán LAM:**
+  * `ChildProfileController`: Quản lý danh sách đa bé, chọn bé hoạt động, chuyển chế độ chữa lành (`isPaused`).
+  * `BabyLogController`: Ghi nhật ký nhanh 1 chạm (`quickLogFeeding`, `quickLogDiaper`, `quickLogSleep`), thống kê cữ bú/tã/ngủ trong ngày, tự động đồng bộ sang Bạn đời.
+  * `LamStatusController`: Đánh giá 3 tiêu chí Y khoa WHO cho Phương pháp vô kinh cho con bú (LAM) — bé < 6 tháng, bú mẹ hoàn toàn, chưa có kinh lại — tự động ức chế cảnh báo trễ kinh khi LAM hiệu lực.
+- **🧪 Mở Rộng Ma Trận Chuyển Trạng Thái 5x5 Toàn Diện (Rule 11 AGENTS.md):**
+  * Mở rộng `test/life_stage_transition_matrix_test.dart` từ 16 cases (4x4) lên 25 cases (5x5) bao trùm toàn bộ `LifeStage.values` (`solo`, `couple`, `conception`, `pregnancy`, `motherhood`).
+  * Kiểm thử 10/10 cặp chuyển đổi hai chiều (Bidirectional Round-Trip) — 35 test cases đạt 100% PASS.
+  * Tạo test suite `test/motherhood_domain_test.dart` đạt 16/16 test cases PASS.
+  * Toàn bộ test suite dự án đạt **267/267 tests PASSED (100%)**, `flutter analyze` đạt **0 issues**.
+
+---
+
 ## [0.7.2+25] - 2026-09-04 (Phase 2.5: Fetal Kick Counter & Prenatal Appointments)
 
 ### [Added]

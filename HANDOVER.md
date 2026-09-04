@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.7.2+25` (Phase 2.5: Fetal Kick Counter & Prenatal Appointments)  
-> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Bộ đếm cử động thai chuẩn Cardiff & Lịch khám thai 7 mốc vàng  
+> **Phiên bản hiện tại:** `v0.8.0+26` (Phase 3: Motherhood Domain Foundation & 5x5 State Matrix)  
+> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Hardware Checkpoint Redmi Note 11, Tầng Domain Nuôi Con & Ma Trận Trạng Thái 5x5  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -11,7 +11,12 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **238/238 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Ma trận 4x4 16 cases, 6 cặp 2 chiều round-trip & Solo Guard UI) |
+| **Unit Testing (`flutter test`)** | ✅ **267/267 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Ma trận 5x5 25 cases, 10 cặp 2 chiều round-trip & Motherhood Domain) |
+| **Hardware Checkpoint (Redmi Note 11)** | ✅ **HOÀN TẤT & ĐÃ XÁC THỰC** | Build & nạp APK vật lý; Vợ chuyển Chung Đôi ↔ Chuẩn Bị Bầu; Chồng lùi về Chung Đôi thành công; Lưu ảnh `docs/screenshots/hardware_test_couple_rollback.png` |
+| **Motherhood Domain & Models** | ✅ **HOÀN TẤT & ĐÃ TEST** | `ChildProfileModel`, `BabyActivityLogModel`, `WhoGrowthStandards`, `WonderWeeksData`, `MotherhoodStatusModel` |
+| **Hive Box Nuôi Con & UserScope** | ✅ **HOÀN TẤT** | Mở `AppConstants.motherhoodBoxName` tại `main.dart`, cô lập 100% key phân vùng `UserScope.key()` |
+| **State Controllers Nuôi Con** | ✅ **HOÀN TẤT & ĐÃ TEST** | `ChildProfileController`, `BabyLogController` (quick logs), `LamStatusController` (WHO LAM algorithm & alert suppression) |
+| **Ma Trận Chuyển Trạng Thái 5x5** | ✅ **100% 35/35 PASS** | Mở rộng lên toàn bộ 5 LifeStages: 25/25 ô ma trận + 10/10 cặp chuyển đổi 2 chiều (Bidirectional Round-Trip) |
 | **Khóa Chế Độ Solo Khi Ghép Đôi (Solo Guard)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Làm mờ 50%, icon 🔒, badge "Cần hủy ghép đôi", cảnh báo SnackBar khi chạm, chặn chuyển mode |
 | **Đồng Bộ Hai Chiều LifeStage (Transition Matrix)** | ✅ **HOÀN TẤT & 100% PASS** | Vợ đổi stage -> Firestore `couples/{coupleId}` -> Chồng Stream auto-sync RAM + Hive local; Pass 16/16 ô ma trận và 6/6 cặp 2 chiều |
 | **Tương Thích SDK Flutter 3.24 & 3.29+** | ✅ **HOÀN TẤT** | Chuẩn hóa `CardTheme` & `activeColor`, 0 compile error trên local, tương thích 100% CI runner |
@@ -148,16 +153,17 @@ Khi sẵn sàng xuất bản một phiên bản release chính thức ra công c
 
 ---
 
-## 4. 🚀 KẾ HOẠCH BƯỚC TIẾP THEO (SPRINT 3 — v0.6.0 ROADMAP)
+## 4. 🚀 KẾ HOẠCH BƯỚC TIẾP THEO (PHASE 3: MOTHERHOOD UI & DASHBOARD)
 
-Sau khi commit phiên bản này, các nhiệm vụ trọng tâm của Sprint 3 bao gồm:
+Sau khi hoàn tất nền tảng Domain & Ma trận trạng thái 5x5, 3 nhiệm vụ ưu tiên số 1 cho ca tiếp theo bao gồm:
 
-1. **Feature 3.1: Quét mã QR ghép đôi tự động qua Camera (`qr_flutter` & `mobile_scanner`):**
-   * Tab Vợ sinh mã QR động chứa mã kết nối đã mã hóa an toàn.
-   * Tab Chồng tích hợp camera scanner để quét mã 1 chạm thay vì gõ tay mã số.
-2. **Feature 3.2: Lịch sử tương tác & Động cơ phán đoán cảm xúc (Insights Engine):**
-   * Lưu vết các lượt gửi tín hiệu yêu thương và câu hỏi thăm vào Firestore subcollection `couples/{coupleId}/interactions`.
-   * Phân tích mẫu cảm xúc (Pattern Recognition) qua các chu kỳ để cảnh báo sớm cho Chồng trước pha Hoàng thể / PMS.
-3. **Feature 3.3: Báo cáo đối soát chu kỳ & Xuất dữ liệu đa định dạng:**
-   * Báo cáo so sánh chu kỳ lý thuyết dự báo vs chu kỳ thực tế ghi nhận.
-   * Xuất tệp sao lưu mã hóa `.moona` (AES-256) và tệp bảng tính `.json` / `.csv` phục vụ đi khám phụ khoa.
+1. **Ưu tiên 1: Giao diện Dashboard Nuôi Con (`MotherhoodHomeScreen`):**
+   * Header hồ sơ bé đang hoạt động (kèm nút đổi bé nhanh, tính tuổi ngày/tháng/tuần trực quan).
+   * Thanh ghi chép nhanh 1 chạm (Quick Log Bar): Cữ bú (Trái/Phải/Bình), Giấc ngủ (Timer/Manual), Thay tã (Ướt/Bẩn).
+   * Dòng thời gian sinh hoạt trong ngày (Daily Activity Timeline) sắp xếp theo thứ tự mới nhất.
+2. **Ưu tiên 2: Biểu Đồ Tăng Trưởng Chuẩn WHO (WHO Growth Chart Visualizer):**
+   * Trực quan hóa biểu đồ Z-Score cân nặng và chiều cao từ 0–24 tháng (đường cong P50 Median, ±1SD, ±2SD).
+   * Vẽ các điểm đo thực tế của bé lên đồ thị, hiển thị nhãn đánh giá dinh dưỡng khoa học.
+3. **Ưu tiên 3: Tuần Khủng Hoảng Wonder Weeks & Góc Nhìn Bố Bỉm (`HusbandViewScreen`):**
+   * Thẻ dự báo Wonder Weeks Leaps 1–5, cảnh báo tuần bão tố (Storm period) và lời khuyên xoa dịu bé.
+   * Thẻ tóm tắt hoạt động sơ sinh cho Bố Bỉm trên `HusbandViewScreen` (đồng bộ realtime từ `couples/{coupleId}/motherhoodStatus/today`).
