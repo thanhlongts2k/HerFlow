@@ -125,25 +125,29 @@ class NicknameConfig {
             : defaultCfg.partnerSelfCallAs, // Chàng xưng là gì
       );
     } else {
-      // Góc nhìn của Chồng:
-      final husbandCall = (data['husbandCallPartner'] as String?)?.trim();
-      final husbandSelf = (data['husbandSelfCall'] as String?)?.trim();
+      // Góc nhìn của Chồng (Wife-Led Nicknames khi đã ghép đôi):
+      // Nàng toàn quyền quyết định danh xưng:
+      // - 🌸 Cô ấy gọi bạn là: wifeCallPartner (VD: "Anh") -> Chồng tự xưng là wifeCallPartner
+      // - 💖 Cô ấy muốn bạn gọi cô ấy là: wifeSelfCall (VD: "Em bé") -> Chồng gọi nàng là wifeSelfCall
       final wifeCall = (data['wifeCallPartner'] as String?)?.trim();
       final wifeSelf = (data['wifeSelfCall'] as String?)?.trim();
 
+      final effectiveCallPartner = (wifeSelf != null && wifeSelf.isNotEmpty)
+          ? wifeSelf
+          : fallback.callPartnerAs;
+      final effectiveSelfCall = (wifeCall != null && wifeCall.isNotEmpty)
+          ? wifeCall
+          : fallback.selfCallAs;
+
       return NicknameConfig(
-        callPartnerAs: (husbandCall != null && husbandCall.isNotEmpty)
-            ? husbandCall
-            : fallback.callPartnerAs,
-        selfCallAs: (husbandSelf != null && husbandSelf.isNotEmpty)
-            ? husbandSelf
-            : fallback.selfCallAs,
+        callPartnerAs: effectiveCallPartner,
+        selfCallAs: effectiveSelfCall,
         partnerCallsMeAs: (wifeCall != null && wifeCall.isNotEmpty)
             ? wifeCall
             : defaultCfg.partnerCallsMeAs, // Nàng gọi Chàng là gì
         partnerSelfCallAs: (wifeSelf != null && wifeSelf.isNotEmpty)
             ? wifeSelf
-            : defaultCfg.partnerSelfCallAs, // Nàng xưng là gì
+            : defaultCfg.partnerSelfCallAs, // Nàng tự xưng là gì
       );
     }
   }

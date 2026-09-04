@@ -67,6 +67,71 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
     });
   }
 
+  /// Tự động đọc mã ghép đôi từ Clipboard, chuẩn hóa và điền vào ô nhập liệu
+  Future<void> _pastePairingCode() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final rawText = data?.text;
+      if (rawText == null || rawText.trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Khay nhớ tạm trống, chưa có mã kết nối.'),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Chuẩn hóa mã: bỏ khoảng trắng, dấu gạch ngang, viết hoa toàn bộ ký tự
+      var cleaned = rawText.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+      // Nếu sao chép cả đoạn dài có chứa HFxxxx, trích xuất chuỗi 6 ký tự phù hợp
+      final hfMatch = RegExp(r'HF[A-Z0-9]{4}').firstMatch(cleaned);
+      if (hfMatch != null) {
+        cleaned = hfMatch.group(0)!;
+      } else if (cleaned.length > 6) {
+        cleaned = cleaned.substring(0, 6);
+      }
+
+      setState(() {
+        _codeInputController.text = cleaned;
+        _codeInputController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _codeInputController.text.length),
+        );
+      });
+
+      HapticFeedback.lightImpact();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text('Đã dán mã ghép đôi: $cleaned 📋'),
+              ],
+            ),
+            backgroundColor: AppColors.secondary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể đọc mã từ khay nhớ tạm: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _pairingSub?.cancel();
@@ -477,6 +542,11 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
               counterText: '',
               filled: true,
               fillColor: isDark ? AppColors.cardDark : Colors.white,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.content_paste_rounded, color: AppColors.secondary),
+                tooltip: 'Dán mã từ khay nhớ tạm',
+                onPressed: _pastePairingCode,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(18),
                 borderSide: const BorderSide(color: AppColors.secondary),
@@ -492,7 +562,25 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 6),
+
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _pastePairingCode,
+              icon: const Icon(Icons.content_paste_rounded, size: 16, color: AppColors.secondary),
+              label: const Text(
+                'Dán mã đã sao chép',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.secondary,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
 
           ElevatedButton.icon(
             onPressed: state.isLoading

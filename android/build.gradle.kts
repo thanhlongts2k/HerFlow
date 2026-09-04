@@ -24,20 +24,11 @@ subprojects {
                 val getNamespace = android.javaClass.getMethod("getNamespace")
                 val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
                 if (getNamespace.invoke(android) == null) {
-                    val ns = if (proj.name == "ota_update") "sk.fourq.otaupdate" else "com.herflow.${proj.name.replace('-', '_')}"
+                    val ns = "com.herflow.${proj.name.replace('-', '_')}"
                     setNamespace.invoke(android, ns)
                 }
             } catch (_: Exception) {}
         }
-        try {
-            val manifestFile = file("${proj.projectDir}/src/main/AndroidManifest.xml")
-            if (manifestFile.exists()) {
-                val text = manifestFile.readText()
-                if (text.contains("package=\"sk.fourq.otaupdate\"")) {
-                    manifestFile.writeText(text.replace("package=\"sk.fourq.otaupdate\"", ""))
-                }
-            }
-        } catch (_: Exception) {}
     }
     afterEvaluate {
         if (project.hasProperty("android")) {

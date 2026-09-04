@@ -530,12 +530,15 @@ void main() {
       expect(wifeView.partnerCallsMeAs, 'Vợ Xinh');     // Chàng gọi tôi là Vợ Xinh
       expect(wifeView.partnerSelfCallAs, 'Anh Lớn');    // Chàng tự xưng là Anh Lớn
 
-      // 2. Góc nhìn của Chồng (Husband perspective)
+      // 2. Góc nhìn của Chồng (Wife-Led Nicknames perspective)
+      // Nàng toàn quyền quyết định:
+      // - Chồng gọi nàng là: wifeSelfCall ("Bé Nhỏ")
+      // - Chồng xưng là: wifeCallPartner ("Chồng Yêu")
       final husbandView = NicknameConfig.fromCoupleDoc(coupleDoc, UserRole.husband);
-      expect(husbandView.callPartnerAs, 'Vợ Xinh');     // Tôi gọi nàng là Vợ Xinh
-      expect(husbandView.selfCallAs, 'Anh Lớn');        // Tôi tự xưng là Anh Lớn
+      expect(husbandView.callPartnerAs, 'Bé Nhỏ');       // Cô ấy muốn bạn gọi cô ấy là Bé Nhỏ
+      expect(husbandView.selfCallAs, 'Chồng Yêu');       // Cô ấy gọi bạn là Chồng Yêu
       expect(husbandView.partnerCallsMeAs, 'Chồng Yêu'); // Nàng gọi tôi là Chồng Yêu
-      expect(husbandView.partnerSelfCallAs, 'Bé Nhỏ');  // Nàng tự xưng là Bé Nhỏ
+      expect(husbandView.partnerSelfCallAs, 'Bé Nhỏ');   // Nàng tự xưng là Bé Nhỏ
 
       // 3. Payload đồng bộ lên Firestore từ mỗi vai trò
       final wifePayload = wifeView.toCoupleSyncPayload(UserRole.wife);
@@ -543,8 +546,8 @@ void main() {
       expect(wifePayload['wifeSelfCall'], 'Bé Nhỏ');
 
       final husbandPayload = husbandView.toCoupleSyncPayload(UserRole.husband);
-      expect(husbandPayload['husbandCallPartner'], 'Vợ Xinh');
-      expect(husbandPayload['husbandSelfCall'], 'Anh Lớn');
+      expect(husbandPayload['husbandCallPartner'], 'Bé Nhỏ');
+      expect(husbandPayload['husbandSelfCall'], 'Chồng Yêu');
     });
   });
 
@@ -654,6 +657,123 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result, isTrue);
+    });
+
+    testWidgets('MoonaConfirmDialog with 10s cooldown starts disabled and enables after countdown', (tester) async {
+      bool? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  result = await MoonaConfirmDialog.show(
+                    context,
+                    title: 'Hủy Kết Nối Cặp Đôi?',
+                    message: 'Bạn có chắc muốn hủy kết nối?',
+                    icon: Icons.link_off_rounded,
+                    isDestructive: true,
+                    cooldownSeconds: 10,
+                    cooldownConfirmText: 'Tôi chắc chắn muốn hủy kết nối',
+                  );
+                },
+                child: const Text('Open Cooldown Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Cooldown Dialog'));
+      await tester.pump();
+
+      // Lúc đầu (0s): Nút bị disabled với nhãn "Xác nhận hủy (10s)..."
+      expect(find.text('Xác nhận hủy (10s)...'), findsOneWidget);
+      // Tap vào nút đang countdown không làm đóng dialog
+      await tester.tap(find.text('Xác nhận hủy (10s)...'));
+      await tester.pump();
+      expect(result, isNull);
+
+      // Đếm ngược 3 giây
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('Xác nhận hủy (7s)...'), findsOneWidget);
+
+      // Đếm ngược nốt 7 giây còn lại
+      await tester.pump(const Duration(seconds: 7));
+      expect(find.text('Tôi chắc chắn muốn hủy kết nối'), findsOneWidget);
+
+      // Bây giờ nút đã được enable -> bấm xác nhận
+      await tester.tap(find.text('Tôi chắc chắn muốn hủy kết nối'));
+      await tester.pumpAndSettle();
+      expect(result, isTrue);
+    });
+  });
+
+  group('Couple Business Rules Hardening Tests', () {
+    test('Wife-Led Nicknames: Husband maps callPartnerAs to wifeSelfCall and selfCallAs to wifeCallPartner', () {
+      final coupleData = {
+        'wifeCallPartner': 'Anh yêu',
+        'wifeSelfCall': 'Bé cưng',
+      };
+
+      // Vợ: Giữ nguyên góc nhìn của Vợ
+      final wifeConfig = NicknameConfig.fromCoupleDoc(coupleData, UserRole.wife);
+      expect(wifeConfig.callPartnerAs, 'Anh yêu');
+      expect(wifeConfig.selfCallAs, 'Bé cưng');
+
+      // Chồng: Áp dụng Wife-Led model
+      // Cô ấy gọi bạn là "Anh yêu" -> Chồng tự xưng là "Anh yêu", partnerCallsMeAs là "Anh yêu"
+      // Cô ấy muốn bạn gọi cô ấy là "Bé cưng" -> Chồng gọi nàng là "Bé cưng", partnerSelfCallAs là "Bé cưng"
+      final husbandConfig = NicknameConfig.fromCoupleDoc(coupleData, UserRole.husband);
+      expect(husbandConfig.callPartnerAs, 'Bé cưng');
+      expect(husbandConfig.selfCallAs, 'Anh yêu');
+      expect(husbandConfig.partnerCallsMeAs, 'Anh yêu');
+      expect(husbandConfig.partnerSelfCallAs, 'Bé cưng');
+    });
+
+    test('PartnerStatusModel syncs mood, energy and symptoms accurately', () {
+      final model = PartnerStatusModel(
+        coupleId: 'c123',
+        currentPhase: 'menstrual',
+        cycleDay: 2,
+        energyLevel: 2,
+        mood: 'Nhạy cảm',
+        symptoms: ['Đau bụng kinh', 'Đau thắt lưng'],
+        moodTags: ['Nhạy cảm', 'Đau bụng kinh', 'Đau thắt lưng'],
+        moodSummary: 'Nàng đang mệt, cần nghỉ ngơi',
+        husbandActionTip: 'Hãy chăm sóc nàng thật chu đáo',
+        updatedAt: DateTime(2026, 9, 4, 10, 0),
+      );
+
+      final map = model.toMap();
+      expect(map['mood'], 'Nhạy cảm');
+      expect(map['symptoms'], ['Đau bụng kinh', 'Đau thắt lưng']);
+      expect(map['energyLevel'], 2);
+
+      final fromMap = PartnerStatusModel.fromMap(map);
+      expect(fromMap.mood, 'Nhạy cảm');
+      expect(fromMap.symptoms, contains('Đau bụng kinh'));
+      expect(fromMap.symptoms, contains('Đau thắt lưng'));
+      expect(fromMap.energyLevel, 2);
+    });
+
+    test('Pairing Code normalization formats clipboard text to 6-char uppercase', () {
+      String normalizeCode(String input) {
+        var cleaned = input.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+        final hfMatch = RegExp(r'HF[A-Z0-9]{4}').firstMatch(cleaned);
+        if (hfMatch != null) {
+          return hfMatch.group(0)!;
+        } else if (cleaned.length > 6) {
+          return cleaned.substring(0, 6);
+        }
+        return cleaned;
+      }
+
+      expect(normalizeCode('hf-82a1'), 'HF82A1');
+      expect(normalizeCode('  HF - 39B2  '), 'HF39B2');
+      expect(normalizeCode('hf82a1 extra junk'), 'HF82A1');
+      expect(normalizeCode('Mã của em là HF94K2 nha anh'), 'HF94K2');
+      expect(normalizeCode('hf94k2'), 'HF94K2');
     });
   });
 }

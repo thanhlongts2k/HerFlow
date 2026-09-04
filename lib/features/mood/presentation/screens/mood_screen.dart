@@ -55,10 +55,44 @@ class MoodScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedCalendarDateProvider);
-    final moodEntry = ref.watch(selectedDateMoodProvider);
+    final localMoodEntry = ref.watch(selectedDateMoodProvider);
     final recentHistory = ref.watch(recentMoodHistoryProvider);
     final userRole = ref.watch(userRoleProvider);
     final isHusband = userRole == UserRole.husband;
+    final savedCoupleId = ref.watch(savedCoupleIdProvider);
+    final isPaired = savedCoupleId != null && savedCoupleId.isNotEmpty;
+    final liveStatusAsync = ref.watch(partnerLiveStatusStreamProvider);
+    final liveStatus = liveStatusAsync.valueOrNull;
+
+    // Khi là Chồng và ĐÃ ghép đôi -> Sử dụng dữ liệu Realtime Stream từ Vợ (không dùng mock/demo)
+    final MoodEntry moodEntry;
+    if (isHusband && isPaired && liveStatus != null) {
+      final now = DateTime.now();
+      final isToday = selectedDate.year == now.year &&
+          selectedDate.month == now.month &&
+          selectedDate.day == now.day;
+      if (isToday) {
+        final parsedSymptoms = liveStatus.symptoms.isNotEmpty
+            ? liveStatus.symptoms
+            : liveStatus.moodTags.where((t) => _symptomOptions.contains(t)).toList();
+        final parsedMood = liveStatus.mood.isNotEmpty
+            ? liveStatus.mood
+            : (liveStatus.moodTags.isNotEmpty ? liveStatus.moodTags.first : 'Thư thái');
+
+        moodEntry = MoodEntry(
+          date: selectedDate,
+          energyLevel: liveStatus.energyLevel,
+          mood: parsedMood,
+          symptoms: parsedSymptoms,
+          note: liveStatus.moodSummary,
+        );
+      } else {
+        moodEntry = localMoodEntry;
+      }
+    } else {
+      moodEntry = localMoodEntry;
+    }
+
     final nicknameConfig = ref.watch(nicknameConfigProvider);
     final partnerName = nicknameConfig.callPartnerAs.isNotEmpty
         ? nicknameConfig.callPartnerAs
@@ -95,6 +129,39 @@ class MoodScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // DÀNH CHO CHỒNG: BANNER ĐỒNG BỘ THỜI GIAN THỰC TỪ NÀNG
+            if (isHusband && isPaired) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(isDark ? 35 : 20),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.secondary.withAlpha(isDark ? 80 : 50),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.sync_rounded, color: AppColors.secondary, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        liveStatus != null
+                            ? 'Đồng bộ thời gian thực từ $partnerName • Cập nhật lúc ${DateFormat('HH:mm').format(liveStatus.updatedAt)}'
+                            : 'Đang kết nối luồng thể trạng thời gian thực từ $partnerName...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : AppColors.secondaryDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // DÀNH CHO CHỒNG: BẢNG HÀNH ĐỘNG CHĂM SÓC & TÍN HIỆU YÊU THƯƠNG
             if (isHusband) ...[
               _buildHusbandCareActionCard(context, ref, partnerName),

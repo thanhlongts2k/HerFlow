@@ -207,6 +207,8 @@ class PartnerSyncController extends StateNotifier<PairingState> {
       currentPhase: phase.vietnameseName,
       cycleDay: cycleDay,
       energyLevel: moodEntry.energyLevel,
+      mood: moodEntry.mood,
+      symptoms: moodEntry.symptoms,
       moodTags: [if (moodEntry.mood.isNotEmpty) moodEntry.mood, ...moodEntry.symptoms],
       moodSummary: moodSummary,
       husbandActionTip: phase.husbandAdvice,

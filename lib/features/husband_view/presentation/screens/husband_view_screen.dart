@@ -9,6 +9,7 @@ import 'package:herflow/core/utils/date_utils.dart';
 import 'package:herflow/core/utils/haptic_feedback_utils.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/mood/presentation/controllers/mood_controller.dart';
+import 'package:herflow/features/partner_sync/domain/models/partner_status_model.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
@@ -164,6 +165,7 @@ class HusbandViewScreen extends ConsumerWidget {
                   energyLevel: energyLevel,
                   isDark: isDark,
                   partnerName: partnerName,
+                  liveStatus: liveStatus,
                   moodText: liveStatus?.moodSummary.isNotEmpty == true
                       ? liveStatus!.moodSummary
                       : (liveStatus?.moodTags.isNotEmpty == true
@@ -884,6 +886,7 @@ class HusbandViewScreen extends ConsumerWidget {
     required String moodText,
     required String partnerName,
     String? partnerAvatarUrl,
+    PartnerStatusModel? liveStatus,
   }) {
     final theme = Theme.of(context);
     final batteryInfo = _getBatteryStatus(energyLevel);
@@ -1017,6 +1020,51 @@ class HusbandViewScreen extends ConsumerWidget {
             Text(
               'Tâm trạng $partnerName: $moodText',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+            ),
+          ],
+
+          // HIỂN THỊ TAG CẢM XÚC & TRIỆU CHỨNG CƠ THỂ VỢ VỪA TICK THỜI GIAN THỰC
+          if (liveStatus != null && liveStatus.moodTags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: liveStatus.moodTags.map((tag) {
+                final isSymptom = liveStatus.symptoms.contains(tag) ||
+                    const [
+                      'Đau bụng kinh',
+                      'Đau thắt lưng',
+                      'Căng tức ngực',
+                      'Thèm đồ ngọt',
+                      'Đầy hơi',
+                      'Nổi mụn',
+                      'Nhức đầu',
+                      'Khó ngủ',
+                      'Chóng mặt',
+                    ].contains(tag);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isSymptom ? AppColors.error : AppColors.secondary)
+                        .withAlpha(isDark ? 45 : 25),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: (isSymptom ? AppColors.error : AppColors.secondary)
+                          .withAlpha(isDark ? 90 : 60),
+                    ),
+                  ),
+                  child: Text(
+                    isSymptom ? '🩹 $tag' : '✨ $tag',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isSymptom
+                          ? (isDark ? const Color(0xFFFF8B8B) : AppColors.error)
+                          : (isDark ? const Color(0xFFC0A9FF) : AppColors.secondary),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ],

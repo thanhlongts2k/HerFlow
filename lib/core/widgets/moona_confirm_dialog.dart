@@ -1,16 +1,19 @@
 // lib/core/widgets/moona_confirm_dialog.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:herflow/core/constants/app_colors.dart';
 import 'package:herflow/core/utils/haptic_feedback_utils.dart';
 
 /// Hộp thoại xác nhận chuẩn hóa toàn hệ thống Moona (Material 3 / Soft Glassmorphic)
-/// Giải quyết triệt để lỗi nút bấm lệch hàng, bất cân xứng và thiếu tính nhận diện.
-class MoonaConfirmDialog extends StatelessWidget {
+/// Hỗ trợ bộ đếm ngược chống hành vi bốc đồng (Cooldown Timer) cho các hành động nhạy cảm như Hủy kết nối.
+class MoonaConfirmDialog extends StatefulWidget {
   final String title;
   final String message;
   final IconData icon;
   final String cancelText;
   final String confirmText;
+  final String? cooldownConfirmText;
+  final int cooldownSeconds;
   final bool isDestructive;
   final Color? customColor;
 
@@ -21,6 +24,8 @@ class MoonaConfirmDialog extends StatelessWidget {
     required this.icon,
     this.cancelText = 'Hủy',
     this.confirmText = 'Xác nhận',
+    this.cooldownConfirmText,
+    this.cooldownSeconds = 0,
     this.isDestructive = false,
     this.customColor,
   });
@@ -33,6 +38,8 @@ class MoonaConfirmDialog extends StatelessWidget {
     required IconData icon,
     String cancelText = 'Hủy',
     String confirmText = 'Xác nhận',
+    String? cooldownConfirmText,
+    int cooldownSeconds = 0,
     bool isDestructive = false,
     Color? customColor,
   }) {
@@ -45,10 +52,48 @@ class MoonaConfirmDialog extends StatelessWidget {
         icon: icon,
         cancelText: cancelText,
         confirmText: confirmText,
+        cooldownConfirmText: cooldownConfirmText,
+        cooldownSeconds: cooldownSeconds,
         isDestructive: isDestructive,
         customColor: customColor,
       ),
     );
+  }
+
+  @override
+  State<MoonaConfirmDialog> createState() => _MoonaConfirmDialogState();
+}
+
+class _MoonaConfirmDialogState extends State<MoonaConfirmDialog> {
+  late int _remainingSeconds;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _remainingSeconds = widget.cooldownSeconds;
+    if (_remainingSeconds > 0) {
+      _startCooldownTimer();
+    }
+  }
+
+  void _startCooldownTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_remainingSeconds <= 1) {
+        timer.cancel();
+        setState(() => _remainingSeconds = 0);
+        AppHaptics.medium();
+      } else {
+        setState(() => _remainingSeconds--);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -57,9 +102,11 @@ class MoonaConfirmDialog extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     // Màu chủ đạo cho dialog: Nếu destructive -> Đỏ san hô, nếu không -> customColor hoặc AppColors.primary
-    final effectiveColor = isDestructive
+    final effectiveColor = widget.isDestructive
         ? const Color(0xFFE05353)
-        : (customColor ?? AppColors.primary);
+        : (widget.customColor ?? AppColors.primary);
+
+    final isCountingDown = _remainingSeconds > 0;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -98,7 +145,7 @@ class MoonaConfirmDialog extends StatelessWidget {
               ),
               child: Center(
                 child: Icon(
-                  icon,
+                  widget.icon,
                   color: effectiveColor,
                   size: 28,
                 ),
@@ -108,7 +155,7 @@ class MoonaConfirmDialog extends StatelessWidget {
 
             // 2. Title: Bold 19sp, căn giữa, tương phản cao
             Text(
-              title,
+              widget.title,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontSize: 19,
@@ -123,7 +170,7 @@ class MoonaConfirmDialog extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Text(
-                message,
+                widget.message,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13.5,
@@ -138,7 +185,7 @@ class MoonaConfirmDialog extends StatelessWidget {
             // 4. Action Bar: Cân xứng ngang hàng (Row) 50:50, cao cố định 48px
             Row(
               children: [
-                // Nút Phụ (Hủy / Ở lại)
+                // Nút Phụ (Hủy / Ở lại / Giữ kết nối)
                 Expanded(
                   child: SizedBox(
                     height: 48,
@@ -158,7 +205,7 @@ class MoonaConfirmDialog extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        cancelText,
+                        widget.cancelText,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -170,32 +217,49 @@ class MoonaConfirmDialog extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
 
-                // Nút Chính (Xác nhận / Đăng xuất / Hoán đổi)
+                // Nút Chính (Xác nhận / Đăng xuất / Hủy kết nối)
                 Expanded(
                   child: SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (isDestructive) {
-                          AppHaptics.medium();
-                        } else {
-                          AppHaptics.light();
-                        }
-                        Navigator.pop(context, true);
-                      },
+                      onPressed: isCountingDown
+                          ? null
+                          : () {
+                              if (widget.isDestructive) {
+                                AppHaptics.medium();
+                              } else {
+                                AppHaptics.light();
+                              }
+                              Navigator.pop(context, true);
+                            },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: effectiveColor,
-                        foregroundColor: Colors.white,
+                        backgroundColor: isCountingDown
+                            ? (isDark ? Colors.white.withAlpha(20) : Colors.grey.shade300)
+                            : effectiveColor,
+                        disabledBackgroundColor: isDark
+                            ? Colors.white.withAlpha(18)
+                            : Colors.grey.shade300,
+                        foregroundColor: isCountingDown
+                            ? (isDark ? Colors.white38 : Colors.grey.shade600)
+                            : Colors.white,
+                        disabledForegroundColor: isDark
+                            ? Colors.white38
+                            : Colors.grey.shade600,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: Text(
-                        confirmText,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          isCountingDown
+                              ? 'Xác nhận hủy (${_remainingSeconds}s)...'
+                              : (widget.cooldownConfirmText ?? widget.confirmText),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isCountingDown ? FontWeight.w600 : FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),

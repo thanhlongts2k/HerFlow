@@ -104,9 +104,20 @@ class NicknameController extends StateNotifier<NicknameConfig> {
     });
   }
 
+  bool _isPaired([String? explicitUid]) {
+    final uid = explicitUid ?? UserScope.currentUid();
+    final coupleId = _settingsBox.get(UserScope.key('partner_couple_id', uid)) as String?;
+    return coupleId != null && coupleId.isNotEmpty;
+  }
+
   Future<void> setCallPartnerAs(String name) async {
     final uid = UserScope.currentUid();
     final role = _resolveRole(uid);
+    if (role == UserRole.husband && _isPaired(uid)) {
+      debugPrint('Wife-Led Nicknames: Husband cannot modify nicknames when paired.');
+      return;
+    }
+
     final defaultName = role == UserRole.husband
         ? NicknameConfig.defaultForHusbandCallingWife
         : NicknameConfig.defaultForWifeCallingHusband;
@@ -122,6 +133,11 @@ class NicknameController extends StateNotifier<NicknameConfig> {
   Future<void> setSelfCallAs(String name) async {
     final uid = UserScope.currentUid();
     final role = _resolveRole(uid);
+    if (role == UserRole.husband && _isPaired(uid)) {
+      debugPrint('Wife-Led Nicknames: Husband cannot modify nicknames when paired.');
+      return;
+    }
+
     final defaultName = role == UserRole.husband
         ? NicknameConfig.defaultForHusbandCallingSelf
         : NicknameConfig.defaultForWifeCallingSelf;
@@ -137,6 +153,11 @@ class NicknameController extends StateNotifier<NicknameConfig> {
   Future<void> applyConfig(NicknameConfig config, [String? explicitUid]) async {
     final uid = explicitUid ?? UserScope.currentUid();
     final role = _resolveRole(uid);
+    if (role == UserRole.husband && _isPaired(uid)) {
+      debugPrint('Wife-Led Nicknames: Husband cannot modify nicknames when paired.');
+      return;
+    }
+
     final defaultCfg = NicknameConfig.defaultForRole(role);
 
     final safePartner = config.callPartnerAs.trim().isNotEmpty
@@ -160,6 +181,11 @@ class NicknameController extends StateNotifier<NicknameConfig> {
   Future<void> resetToDefault() async {
     final uid = UserScope.currentUid();
     final role = _resolveRole(uid);
+    if (role == UserRole.husband && _isPaired(uid)) {
+      debugPrint('Wife-Led Nicknames: Husband cannot modify nicknames when paired.');
+      return;
+    }
+
     await _settingsBox.delete(UserScope.key(keyNicknameCallPartner, uid));
     await _settingsBox.delete(UserScope.key(keyNicknameSelfCall, uid));
     state = NicknameConfig.defaultForRole(role);

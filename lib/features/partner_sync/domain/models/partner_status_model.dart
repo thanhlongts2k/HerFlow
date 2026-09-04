@@ -7,6 +7,8 @@ class PartnerStatusModel {
   final String currentPhase;
   final int cycleDay;
   final int energyLevel;
+  final String mood;
+  final List<String> symptoms;
   final List<String> moodTags;
   final String moodSummary;
   final String husbandActionTip;
@@ -17,6 +19,8 @@ class PartnerStatusModel {
     required this.currentPhase,
     this.cycleDay = 1,
     required this.energyLevel,
+    this.mood = '',
+    this.symptoms = const [],
     required this.moodTags,
     this.moodSummary = '',
     required this.husbandActionTip,
@@ -29,6 +33,8 @@ class PartnerStatusModel {
       'currentPhase': currentPhase,
       'cycleDay': cycleDay,
       'energyLevel': energyLevel,
+      'mood': mood,
+      'symptoms': symptoms,
       'moodTags': moodTags,
       'moodSummary': moodSummary,
       'husbandActionTip': husbandActionTip,
@@ -43,12 +49,24 @@ class PartnerStatusModel {
       return DateTime.now();
     }
 
+    final tags = List<String>.from(map['moodTags'] ?? []);
+    final rawMood = map['mood'] as String? ?? '';
+    final parsedMood = rawMood.isNotEmpty
+        ? rawMood
+        : (tags.isNotEmpty ? tags.first : 'Thư thái');
+
+    final rawSymptoms = map['symptoms'] != null
+        ? List<String>.from(map['symptoms'])
+        : (tags.length > 1 ? tags.sublist(1) : <String>[]);
+
     return PartnerStatusModel(
       coupleId: map['coupleId'] as String? ?? '',
       currentPhase: map['currentPhase'] as String? ?? 'Nang trứng',
       cycleDay: (map['cycleDay'] as num?)?.toInt() ?? 1,
       energyLevel: (map['energyLevel'] as num?)?.toInt() ?? 3,
-      moodTags: List<String>.from(map['moodTags'] ?? []),
+      mood: parsedMood,
+      symptoms: rawSymptoms,
+      moodTags: tags,
       moodSummary: map['moodSummary'] as String? ?? '',
       husbandActionTip: map['husbandActionTip'] as String? ?? '',
       updatedAt: parseDate(map['updatedAt']),
@@ -65,6 +83,8 @@ class PartnerStatusModel {
     String? currentPhase,
     int? cycleDay,
     int? energyLevel,
+    String? mood,
+    List<String>? symptoms,
     List<String>? moodTags,
     String? moodSummary,
     String? husbandActionTip,
@@ -75,6 +95,8 @@ class PartnerStatusModel {
       currentPhase: currentPhase ?? this.currentPhase,
       cycleDay: cycleDay ?? this.cycleDay,
       energyLevel: energyLevel ?? this.energyLevel,
+      mood: mood ?? this.mood,
+      symptoms: symptoms ?? this.symptoms,
       moodTags: moodTags ?? this.moodTags,
       moodSummary: moodSummary ?? this.moodSummary,
       husbandActionTip: husbandActionTip ?? this.husbandActionTip,

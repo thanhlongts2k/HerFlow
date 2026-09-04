@@ -1,4 +1,5 @@
 // lib/features/home/presentation/screens/main_nav_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:herflow/core/constants/app_colors.dart';
@@ -46,7 +47,7 @@ class _MainNavScreenState extends ConsumerState<MainNavScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final update = await AppUpdateService.checkForUpdate(forceCheck: false);
+      final update = await AppUpdateService.checkForUpdate(forceCheck: kDebugMode);
       if (mounted && update != null) {
         AppUpdateDialog.show(context, update);
       }

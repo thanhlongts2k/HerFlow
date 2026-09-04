@@ -4,6 +4,26 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.5+20] - 2026-09-04 (Native In-App OTA Updater with Dio & AndroidX FileProvider)
+
+### [Added]
+- **🚀 Hệ Thống Tự Động Cập Nhật Trong Ứng Dụng (Native In-App OTA Updater):**
+  * Thay thế triệt để cơ chế mở trình duyệt tải file APK thủ công bằng luồng tải và cài đặt trực tiếp không gián đoạn trong ứng dụng.
+  * Sử dụng **Dio** để tải file APK từ GitHub Releases với luồng Stream tiến trình thời gian thực (`Stream<OtaDownloadProgress>`).
+  * Đo lường và hiển thị chi tiết: Phần trăm (`%`), dung lượng đã tải (`MB / MB`), tốc độ truyền dữ liệu thực tế (`MB/s`) mỗi 300ms mượt mà và hỗ trợ `CancelToken` hủy tải bất cứ lúc nào.
+- **🛡️ Cầu Nối Native Android Hiện Đại (MethodChannel & AndroidX FileProvider):**
+  * Thiết lập kênh giao tiếp `com.herflow.app/installer` trên Kotlin `MainActivity.kt`.
+  * Cấu hình `androidx.core.content.FileProvider` với quyền `REQUEST_INSTALL_PACKAGES` và `file_paths.xml` an toàn.
+  * Kích hoạt `Intent.ACTION_VIEW` cùng cờ `FLAG_GRANT_READ_URI_PERMISSION`, tương thích tuyệt đối với Android 10, 11, 12, 13, 14 và Xiaomi HyperOS/MIUI.
+  * Tự động kiểm tra quyền cài đặt ứng dụng không rõ nguồn gốc (`canRequestPackageInstalls()`), mở 1 chạm tới `ACTION_MANAGE_UNKNOWN_APP_SOURCES`.
+  * Tích hợp `WidgetsBindingObserver`: Tự động nhận diện khi người dùng vừa cấp quyền và quay lại app để lập tức kích hoạt PackageInstaller.
+- **✨ Nâng Cấp Giao Diện Hộp Thoại Cập Nhật (`AppUpdateDialog`):**
+  * Thiết kế hiện đại với biểu tượng Moona phát sáng, badge thông tin phiên bản và dung lượng.
+  * Thanh tiến trình `LinearProgressIndicator` bo góc mượt mà, pill hiển thị tốc độ MB/s nổi bật.
+  * Các thẻ trạng thái thông minh: Đang tải, Hướng dẫn cấp quyền, Sẵn sàng cài đặt và Tải lại qua trình duyệt web dự phòng.
+
+---
+
 ## [0.6.4+19] - 2026-09-03 (Bidirectional Mini Love Notes Thread & Outgoing Blindspot Elimination)
 
 ### [Added]

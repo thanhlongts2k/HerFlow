@@ -179,11 +179,37 @@ class SettingsScreen extends ConsumerWidget {
                 color: isDark ? AppColors.cardDark : AppColors.cardLight,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 80 : 50),
+                  color: isConnected
+                      ? (isDark ? Colors.white24 : Colors.black12)
+                      : (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 80 : 50),
                 ),
               ),
               child: InkWell(
-                onTap: () => _showRoleSelectionBottomSheet(context, ref, currentRole, isConnected),
+                onTap: () {
+                  if (isConnected) {
+                    AppHaptics.light();
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Row(
+                          children: [
+                            Icon(Icons.lock_rounded, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text('Tài khoản đang liên kết. Cần hủy kết nối nếu muốn đổi vai trò.'),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: isDark ? const Color(0xFF2C243B) : const Color(0xFF3B334C),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                    return;
+                  }
+                  _showRoleSelectionBottomSheet(context, ref, currentRole, isConnected);
+                },
                 borderRadius: BorderRadius.circular(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,29 +255,50 @@ class SettingsScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 45 : 30),
+                            color: isConnected
+                                ? Colors.grey.withAlpha(isDark ? 35 : 20)
+                                : (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 45 : 30),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(80),
+                              color: isConnected
+                                  ? Colors.grey.withAlpha(isDark ? 60 : 40)
+                                  : (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(80),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                'Đổi vai trò',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
+                              if (isConnected) ...[
+                                const Icon(
+                                  Icons.lock_rounded,
+                                  size: 13,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Đã khóa',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ] else ...[
+                                Text(
+                                  'Đổi vai trò',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 14,
                                   color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
                                 ),
-                              ),
-                              const SizedBox(width: 2),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                size: 14,
-                                color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -260,13 +307,26 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Icon(Icons.touch_app_rounded, size: 14, color: isDark ? Colors.white38 : Colors.grey),
+                        Icon(
+                          isConnected ? Icons.lock_outline_rounded : Icons.touch_app_rounded,
+                          size: 14,
+                          color: isConnected
+                              ? (isDark ? Colors.amber[300] : Colors.amber[800])
+                              : (isDark ? Colors.white38 : Colors.grey),
+                        ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Chạm để chuyển đổi linh hoạt giữa giao diện Vợ và Chồng.',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: isDark ? Colors.white54 : Colors.grey[600],
+                        Expanded(
+                          child: Text(
+                            isConnected
+                                ? 'Tài khoản đang liên kết. Cần hủy kết nối nếu muốn đổi vai trò.'
+                                : 'Chạm để chuyển đổi linh hoạt giữa giao diện Vợ và Chồng.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isConnected ? FontWeight.w600 : FontWeight.normal,
+                              color: isConnected
+                                  ? (isDark ? Colors.amber[300] : Colors.amber[900])
+                                  : (isDark ? Colors.white54 : Colors.grey[600]),
+                            ),
                           ),
                         ),
                       ],
@@ -280,7 +340,14 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsDivider(),
 
           // ── NHÓM: HỒ SƠ & DANH XƯNG (NICKNAME ENGINE) ──────────
-          _buildNicknameSection(context, ref, isDark, nicknameConfig),
+          _buildNicknameSection(
+            context,
+            ref,
+            isDark,
+            nicknameConfig,
+            isConnected: isConnected,
+            currentRole: currentRole,
+          ),
 
           _SettingsDivider(),
 
@@ -341,6 +408,8 @@ class SettingsScreen extends ConsumerWidget {
                             confirmText: 'Hủy kết nối',
                             cancelText: 'Giữ kết nối',
                             isDestructive: true,
+                            cooldownSeconds: 10,
+                            cooldownConfirmText: 'Tôi chắc chắn muốn hủy kết nối',
                           );
                           if (confirmed == true) {
                             await ref.read(partnerSyncControllerProvider.notifier).disconnect();
@@ -641,6 +710,7 @@ class SettingsScreen extends ConsumerWidget {
     UserRole currentRole,
     bool isConnected,
   ) {
+    if (isConnected) return;
     AppHaptics.medium();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -929,8 +999,10 @@ class SettingsScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     bool isDark,
-    NicknameConfig nicknameConfig,
-  ) {
+    NicknameConfig nicknameConfig, {
+    required bool isConnected,
+    required UserRole currentRole,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -941,138 +1013,337 @@ class SettingsScreen extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: (isConnected && currentRole == UserRole.husband)
+              ? _buildWifeLedNicknameCard(context, isDark, nicknameConfig)
+              : _buildEditableNicknameForm(context, ref, isDark, nicknameConfig),
+        ),
+      ],
+    );
+  }
+
+  /// Thẻ hiển thị tĩnh (Read-Only) phong cách mềm mại dành riêng cho Chồng khi đã ghép đôi
+  /// Thể hiện nguyên tắc: "Phân quyền danh xưng theo ý Vợ" (Wife-Led Nicknames)
+  Widget _buildWifeLedNicknameCard(
+    BuildContext context,
+    bool isDark,
+    NicknameConfig nicknameConfig,
+  ) {
+    final sheCallsYou = nicknameConfig.partnerCallsMeAs.isNotEmpty
+        ? nicknameConfig.partnerCallsMeAs
+        : 'Anh';
+    final sheWantsYouToCallHer = nicknameConfig.callPartnerAs.isNotEmpty
+        ? nicknameConfig.callPartnerAs
+        : 'Em bé';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.secondary.withAlpha(25)
+            : const Color(0xFFFFF0F5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.primary.withAlpha(isDark ? 70 : 90),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withAlpha(isDark ? 20 : 15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // 1. Bạn gọi người ấy là
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Bạn gọi người ấy là:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  TextButton.icon(
-                    onPressed: () => _showCustomNicknameDialog(
-                      context,
-                      title: 'Cách bạn gọi người ấy',
-                      currentValue: nicknameConfig.callPartnerAs,
-                      onSave: (val) => ref.read(nicknameConfigProvider.notifier).setCallPartnerAs(val),
-                    ),
-                    icon: const Icon(Icons.edit_rounded, size: 14),
-                    label: const Text('Tự gõ', style: TextStyle(fontSize: 12)),
-                  ),
-                ],
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: NicknameConfig.presets.map((name) {
-                    final isSel = nicknameConfig.callPartnerAs == name;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(name),
-                        selected: isSel,
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                          color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
-                          fontSize: 12,
-                        ),
-                        onSelected: (val) {
-                          if (val) {
-                            ref.read(nicknameConfigProvider.notifier).setCallPartnerAs(name);
-                          }
-                        },
-                      ),
-                    );
-                  }).toList(),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(30),
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 20),
               ),
-
-              const SizedBox(height: 12),
-
-              // 2. Bạn tự xưng với người ấy là
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Bạn tự xưng là:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  TextButton.icon(
-                    onPressed: () => _showCustomNicknameDialog(
-                      context,
-                      title: 'Cách bạn tự xưng',
-                      currentValue: nicknameConfig.selfCallAs,
-                      onSave: (val) => ref.read(nicknameConfigProvider.notifier).setSelfCallAs(val),
-                    ),
-                    icon: const Icon(Icons.edit_rounded, size: 14),
-                    label: const Text('Tự gõ', style: TextStyle(fontSize: 12)),
-                  ),
-                ],
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: NicknameConfig.presets.map((name) {
-                    final isSel = nicknameConfig.selfCallAs == name;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(name),
-                        selected: isSel,
-                        selectedColor: AppColors.secondary,
-                        labelStyle: TextStyle(
-                          color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
-                          fontSize: 12,
-                        ),
-                        onSelected: (val) {
-                          if (val) {
-                            ref.read(nicknameConfigProvider.notifier).setSelfCallAs(name);
-                          }
-                        },
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Danh Xưng Do Cô Ấy Quyết Định 💕',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        letterSpacing: -0.2,
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Khi đã ghép đôi, danh xưng được đồng bộ trực tiếp theo ý nàng.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // 3. Live Preview Card
-              Builder(
-                builder: (context) {
-                  final isSame = nicknameConfig.selfCallAs.trim().toLowerCase() ==
-                      nicknameConfig.callPartnerAs.trim().toLowerCase();
-                  final selfDisplay = isSame ? '${nicknameConfig.selfCallAs} (Bạn)' : nicknameConfig.selfCallAs;
-                  final partnerDisplay = isSame ? '${nicknameConfig.callPartnerAs} (Người ấy)' : nicknameConfig.callPartnerAs;
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withAlpha(isDark ? 25 : 15),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.primary.withAlpha(isDark ? 60 : 40)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Text('💬', style: TextStyle(fontSize: 16)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Xem trước: "$selfDisplay vừa gửi tín hiệu yêu thương cho $partnerDisplay 💕"',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white70 : AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Mục 1: Cô ấy gọi bạn là
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withAlpha(10) : Colors.white.withAlpha(180),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.black.withAlpha(isDark ? 20 : 10)),
+            ),
+            child: Row(
+              children: [
+                const Text('🌸', style: TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cô ấy gọi bạn là:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        sheCallsYou,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Mục 2: Cô ấy muốn bạn gọi cô ấy là
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withAlpha(10) : Colors.white.withAlpha(180),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.black.withAlpha(isDark ? 20 : 10)),
+            ),
+            child: Row(
+              children: [
+                const Text('💖', style: TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cô ấy muốn bạn gọi cô ấy là:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        sheWantsYouToCallHer,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Live Preview
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(isDark ? 25 : 15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Text('💬', style: TextStyle(fontSize: 15)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Xem trước: "$sheCallsYou vừa gửi tín hiệu yêu thương cho $sheWantsYouToCallHer 💕"',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditableNicknameForm(
+    BuildContext context,
+    WidgetRef ref,
+    bool isDark,
+    NicknameConfig nicknameConfig,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Bạn gọi người ấy là
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Bạn gọi người ấy là:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            TextButton.icon(
+              onPressed: () => _showCustomNicknameDialog(
+                context,
+                title: 'Cách bạn gọi người ấy',
+                currentValue: nicknameConfig.callPartnerAs,
+                onSave: (val) => ref.read(nicknameConfigProvider.notifier).setCallPartnerAs(val),
+              ),
+              icon: const Icon(Icons.edit_rounded, size: 14),
+              label: const Text('Tự gõ', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: NicknameConfig.presets.map((name) {
+              final isSel = nicknameConfig.callPartnerAs == name;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(name),
+                  selected: isSel,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                    fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                  onSelected: (val) {
+                    if (val) {
+                      ref.read(nicknameConfigProvider.notifier).setCallPartnerAs(name);
+                    }
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // 2. Bạn tự xưng với người ấy là
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Bạn tự xưng là:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            TextButton.icon(
+              onPressed: () => _showCustomNicknameDialog(
+                context,
+                title: 'Cách bạn tự xưng',
+                currentValue: nicknameConfig.selfCallAs,
+                onSave: (val) => ref.read(nicknameConfigProvider.notifier).setSelfCallAs(val),
+              ),
+              icon: const Icon(Icons.edit_rounded, size: 14),
+              label: const Text('Tự gõ', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: NicknameConfig.presets.map((name) {
+              final isSel = nicknameConfig.selfCallAs == name;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(name),
+                  selected: isSel,
+                  selectedColor: AppColors.secondary,
+                  labelStyle: TextStyle(
+                    color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                    fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                  onSelected: (val) {
+                    if (val) {
+                      ref.read(nicknameConfigProvider.notifier).setSelfCallAs(name);
+                    }
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // 3. Live Preview Card
+        Builder(
+          builder: (context) {
+            final isSame = nicknameConfig.selfCallAs.trim().toLowerCase() ==
+                nicknameConfig.callPartnerAs.trim().toLowerCase();
+            final selfDisplay = isSame ? '${nicknameConfig.selfCallAs} (Bạn)' : nicknameConfig.selfCallAs;
+            final partnerDisplay = isSame ? '${nicknameConfig.callPartnerAs} (Người ấy)' : nicknameConfig.callPartnerAs;
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(isDark ? 25 : 15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primary.withAlpha(isDark ? 60 : 40)),
+              ),
+              child: Row(
+                children: [
+                  const Text('💬', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Xem trước: "$selfDisplay vừa gửi tín hiệu yêu thương cho $partnerDisplay 💕"',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );
@@ -1676,6 +1947,8 @@ class SettingsScreen extends ConsumerWidget {
                         confirmText: 'Hủy kết nối',
                         cancelText: 'Giữ kết nối',
                         isDestructive: true,
+                        cooldownSeconds: 10,
+                        cooldownConfirmText: 'Tôi chắc chắn muốn hủy kết nối',
                       );
                       if (confirmed == true) {
                         if (modalContext.mounted) {

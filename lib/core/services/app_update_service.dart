@@ -1,11 +1,14 @@
 // lib/core/services/app_update_service.dart
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/core/services/ota_installer_service.dart';
 
 /// Model thông tin bản phát hành từ GitHub Release
 class AppReleaseInfo {
@@ -33,19 +36,171 @@ class AppReleaseInfo {
   }
 }
 
-/// Dịch vụ kiểm tra và cập nhật ứng dụng qua GitHub Releases (In-App OTA)
+/// Trạng thái tiến trình tải file APK cập nhật
+class OtaDownloadProgress {
+  final int progress; // 0 -> 100
+  final int receivedBytes;
+  final int totalBytes;
+  final double speedBytesPerSec; // Bytes per second
+  final String? filePath;
+  final bool isCompleted;
+  final String? errorMessage;
+
+  const OtaDownloadProgress({
+    required this.progress,
+    required this.receivedBytes,
+    required this.totalBytes,
+    required this.speedBytesPerSec,
+    this.filePath,
+    this.isCompleted = false,
+    this.errorMessage,
+  });
+
+  /// Định dạng tốc độ tải (KB/s hoặc MB/s)
+  String get formattedSpeed {
+    if (speedBytesPerSec <= 0) return '0 KB/s';
+    final kb = speedBytesPerSec / 1024;
+    if (kb < 1024) {
+      return '${kb.toStringAsFixed(1)} KB/s';
+    }
+    final mb = kb / 1024;
+    return '${mb.toStringAsFixed(1)} MB/s';
+  }
+
+  /// Định dạng dung lượng đã tải (MB)
+  String get formattedReceived {
+    final mb = receivedBytes / (1024 * 1024);
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+
+  /// Định dạng tổng dung lượng file (MB)
+  String get formattedTotal {
+    if (totalBytes <= 0) return '-- MB';
+    final mb = totalBytes / (1024 * 1024);
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+}
+
+/// Dịch vụ kiểm tra và cập nhật ứng dụng qua GitHub Releases (In-App OTA Updater)
 class AppUpdateService {
   static const String _githubApiUrl =
       'https://api.github.com/repos/thanhlongts2k/HerFlow/releases/latest';
   static const String _keyLastCheckTime = 'last_ota_check_timestamp';
   static const int _checkIntervalHours = 24;
 
-  /// Khởi chạy tiến trình tải Native OTA và tự động kích hoạt Package Installer
-  static Stream<OtaEvent> executeOtaDownload(String apkUrl) {
-    return OtaUpdate().execute(
-      apkUrl,
-      destinationFilename: 'moona-latest.apk',
+  /// Stream tải tệp APK qua Dio với luồng báo cáo tiến trình chi tiết (% • MB/s • MB/MB)
+  static Stream<OtaDownloadProgress> downloadApk({
+    required String downloadUrl,
+    CancelToken? cancelToken,
+  }) async* {
+    final tempDir = await getTemporaryDirectory();
+    final filePath = '${tempDir.path}/moona_update.apk';
+    final file = File(filePath);
+
+    // Xóa file cũ nếu đã tồn tại để tránh xung đột hoặc corrupt
+    if (await file.exists()) {
+      try {
+        await file.delete();
+      } catch (e) {
+        debugPrint('AppUpdateService: Không thể xóa file APK cũ: $e');
+      }
+    }
+
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(minutes: 5),
+        followRedirects: true,
+        maxRedirects: 5,
+      ),
     );
+    final streamController = StreamController<OtaDownloadProgress>();
+
+    int lastReceived = 0;
+    DateTime lastTime = DateTime.now();
+    double currentSpeed = 0.0;
+
+    // Phát sự kiện khởi đầu 0%
+    streamController.add(
+      const OtaDownloadProgress(
+        progress: 0,
+        receivedBytes: 0,
+        totalBytes: 0,
+        speedBytesPerSec: 0,
+      ),
+    );
+
+    dio.download(
+      downloadUrl,
+      filePath,
+      cancelToken: cancelToken,
+      deleteOnError: true,
+      onReceiveProgress: (received, total) {
+        final now = DateTime.now();
+        final elapsedMs = now.difference(lastTime).inMilliseconds;
+
+        // Tính toán tốc độ mỗi 300ms để hiển thị mượt mà không bị giật số
+        if (elapsedMs >= 300) {
+          final bytesDiff = received - lastReceived;
+          if (elapsedMs > 0 && bytesDiff >= 0) {
+            currentSpeed = bytesDiff / (elapsedMs / 1000.0);
+          }
+          lastReceived = received;
+          lastTime = now;
+        }
+
+        final progress = total > 0 ? ((received / total) * 100).clamp(0, 100).toInt() : 0;
+
+        streamController.add(
+          OtaDownloadProgress(
+            progress: progress,
+            receivedBytes: received,
+            totalBytes: total,
+            speedBytesPerSec: currentSpeed,
+          ),
+        );
+      },
+    ).then((_) {
+      streamController.add(
+        OtaDownloadProgress(
+          progress: 100,
+          receivedBytes: lastReceived,
+          totalBytes: lastReceived,
+          speedBytesPerSec: 0,
+          filePath: filePath,
+          isCompleted: true,
+        ),
+      );
+      streamController.close();
+    }).catchError((err) {
+      if (err is DioException && err.type == DioExceptionType.cancel) {
+        streamController.addError(Exception('Đã hủy tiến trình tải bản cập nhật.'));
+      } else {
+        streamController.addError(err);
+      }
+      streamController.close();
+    });
+
+    yield* streamController.stream;
+  }
+
+  /// Tải tệp APK và tự động kích hoạt PackageInstaller khi hoàn tất
+  static Future<void> downloadAndInstallApk({
+    required String downloadUrl,
+    void Function(OtaDownloadProgress)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    String? downloadedFilePath;
+    await for (final progress in downloadApk(downloadUrl: downloadUrl, cancelToken: cancelToken)) {
+      onProgress?.call(progress);
+      if (progress.isCompleted && progress.filePath != null) {
+        downloadedFilePath = progress.filePath;
+      }
+    }
+
+    if (downloadedFilePath != null) {
+      await OtaInstallerService.installApk(downloadedFilePath);
+    }
   }
 
   /// So sánh Semantic Versioning: trả về true nếu `latestVer` mới hơn `currentVer`
