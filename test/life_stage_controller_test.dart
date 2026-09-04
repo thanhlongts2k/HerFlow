@@ -477,4 +477,53 @@ void main() {
       expect(container.read(currentLifeStageProvider), equals(LifeStage.conception));
     });
   });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // GROUP 5: Realtime Couple LifeStage Sync (Vợ -> Chồng)
+  // ════════════════════════════════════════════════════════════════════════════
+  group('Realtime Couple LifeStage Sync', () {
+    test('getSavedCoupleId trả về coupleId hợp lệ từ Hive', () {
+      final fakeBox = _FakeHiveBox();
+      const uid = 'user_123';
+      fakeBox.seed({
+        UserScope.key('partner_couple_id', uid): 'couple_xyz',
+      });
+      final controller = LifeStageController(settingsBox: fakeBox);
+      expect(controller.getSavedCoupleId(uid), equals('couple_xyz'));
+    });
+
+    test('getSavedCoupleId fallback về unscoped key khi scoped key null', () {
+      final fakeBox = _FakeHiveBox();
+      fakeBox.seed({
+        'partner_couple_id': 'couple_fallback_456',
+      });
+      final controller = LifeStageController(settingsBox: fakeBox);
+      expect(controller.getSavedCoupleId('uid_no_scoped'), equals('couple_fallback_456'));
+    });
+
+    test('switchStage với coupleId hoạt động an toàn (offline/no-app fallback)', () async {
+      final fakeBox = _FakeHiveBox();
+      const uid = 'user_wife_123';
+      fakeBox.seed({
+        UserScope.key('partner_couple_id', uid): 'couple_abc_456',
+      });
+      final controller = LifeStageController(settingsBox: fakeBox);
+      await controller.switchStage(LifeStage.pregnancy, uid: uid);
+      expect(controller.state.currentStage, equals(LifeStage.pregnancy));
+      expect(
+        fakeBox.get(UserScope.key(AppConstants.keyLifeStage, uid)),
+        equals('pregnancy'),
+      );
+    });
+
+    test('cancelCoupleSubscription & dispose dọn dẹp subscription an toàn', () {
+      final fakeBox = _FakeHiveBox();
+      final controller = LifeStageController(settingsBox: fakeBox);
+      expect(controller.state.currentStage, equals(LifeStage.solo));
+      controller.cancelCoupleSubscription();
+      expect(() => controller.cancelCoupleSubscription(), returnsNormally);
+      expect(() => controller.dispose(), returnsNormally);
+    });
+  });
 }
+

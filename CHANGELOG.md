@@ -7,6 +7,13 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 ## [0.7.2+25] - 2026-09-04 (Phase 2.5: Fetal Kick Counter & Prenatal Appointments)
 
 ### [Added]
+- **🔒 Khóa Chế Độ Solo (Solo Guard) Khi Đã Ghép Đôi (`SettingsScreen`):**
+  * Khi `isPaired == true`, tùy chọn "🌸 Nàng" (Solo) bị làm mờ (opacity 0.5), gắn icon khóa 🔒 và badge "Cần hủy ghép đôi".
+  * Chặn chuyển đổi chế độ và hiển thị SnackBar cảnh báo: *"Bạn đang trong chế độ Cặp Đôi. Vui lòng hủy kết nối trước khi chuyển về chế độ Nàng."*.
+- **🔄 Đồng Bộ Realtime Giai Đoạn Cuộc Sống Cặp Đôi (`LifeStageController`):**
+  * Vợ đổi stage (`switchStage`) → tự động cập nhật `currentStage` lên Firestore document `couples/{coupleId}` (merge: true).
+  * Chồng tự động lắng nghe Stream `couples/{coupleId}` → cập nhật RAM state và Hive local của Chồng realtime để toàn bộ giao diện đổi đồng bộ.
+
 - **👶 Bộ Đếm Cử Động Thai Chuẩn Y Khoa Cardiff "Count to 10" (`KickCounterSheet`):**
   * Giao diện đếm cử động thai đẹp mắt với nút Tap lớn bo tròn, Ripple Effect, rung Haptic phản hồi mỗi lần bé đạp.
   * Thuật toán Cardiff: đủ 10 cử động trong ≤ 2 giờ → auto-complete; vượt 2 giờ → cảnh báo timeout.
@@ -22,6 +29,10 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
   * Bấm vào mở `KickCounterSheet` để Bố có thể cùng đếm cử động với Mẹ.
 
 ### [Fixed]
+- **Tương Thích Đa Phiên Bản Flutter SDK (Flutter 3.24 Local & 3.29+ CI Runner):**
+  * `app_theme.dart`: Chuyển `CardThemeData` thành `CardTheme` (tương thích cả Flutter 3.24 lẫn 3.29+).
+  * `cycle_settings_sheet.dart`, `log_period_modal.dart`, `settings_screen.dart`: Chuyển `activeThumbColor` thành `activeColor` chuẩn Material Switch API.
+  * Triệt tiêu hoàn toàn 7 lỗi compile analyzer trên môi trường local và đảm bảo CI runner đạt 0 issues.
 - **CI Test Stability (`test/pregnancy_home_screen_test.dart`)**:
   * Đổi assertion `find.textContaining('Tuần 11')` thành `find.text('Tuần 11')` chính xác để không xung đột với chip mốc khám thai `Tuần 11–13` của `PrenatalAppointmentsCard`.
   * Chuyển assertion D-Day sang mẫu regex linh hoạt `RegExp(r'Còn \d+ ngày')` chống lệch ngày do chênh lệch múi giờ giữa máy cá nhân và GitHub Actions runner (UTC vs GMT+7).
@@ -31,9 +42,8 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 - Fix `const LinearGradient` missing trong `pregnancy_home_screen.dart`.
 
 ### [Tests]
-- Thêm 48 unit tests mới: `test/features/lifecycle/kick_counter_test.dart`
-  * 6 nhóm kiểm thử: KickSessionModel, Session logic (Cardiff), State computed getters, Hive Persistence, PrenatalAppointmentModel (7 mốc vàng), Appointments controller.
-  * `flutter analyze` — **0 issues** | `flutter test` — **48/48 PASS**.
+- Bổ sung kiểm thử Unit & Widget test cho Realtime Couple Sync và Solo Guard (`test/life_stage_controller_test.dart`, `test/life_stage_navigation_and_ui_test.dart`).
+- `flutter analyze` — **0 issues** | `flutter test` — **216/216 PASS (100%)**.
 
 ---
 

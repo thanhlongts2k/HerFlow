@@ -11,7 +11,10 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **211/211 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm KickCounter, Appointments & PregnancyHome) |
+| **Unit Testing (`flutter test`)** | ✅ **216/216 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm LifeStage Realtime Sync & Solo Guard UI) |
+| **Khóa Chế Độ Solo Khi Ghép Đôi (Solo Guard)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Làm mờ 50%, icon 🔒, badge "Cần hủy ghép đôi", cảnh báo SnackBar khi chạm, chặn chuyển mode |
+| **Đồng Bộ Realtime LifeStage Cặp Đôi** | ✅ **HOÀN TẤT & ĐÃ TEST** | Vợ đổi stage -> Firestore `couples/{coupleId}` -> Chồng Stream auto-sync RAM + Hive local |
+| **Tương Thích SDK Flutter 3.24 & 3.29+** | ✅ **HOÀN TẤT** | Chuẩn hóa `CardTheme` & `activeColor`, 0 compile error trên local, tương thích 100% CI runner |
 | **Bộ Đếm Cử Động Thai (Kick Counter)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | Chuẩn Cardiff Count to 10 (2h), vòng tròn đếm gợn sóng + haptic feedback, lịch sử phiên đếm |
 | **Lịch Khám Thai Mốc Vàng (Prenatal Appointments)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | 7 mốc y tế Việt Nam, tự động tính tuần/status (upcoming/current/done), checklist tích chọn |
 | **Tóm Tắt Thai Máy Cho Bố Bầu (Husband View)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | `_buildKickSummaryCard` đồng bộ số cử động hôm nay của con cho Bố Bầu |

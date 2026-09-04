@@ -1,13 +1,15 @@
-// lib/features/lifecycle/presentation/controllers/life_stage_controller.dart
-
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/core/constants/user_role.dart';
+import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
 import 'package:herflow/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
 // STATE
@@ -84,20 +86,42 @@ class LifeStageState {
 /// đã chạy trước và ghi mặc định → controller đọc được giá trị hợp lệ.
 class LifeStageController extends StateNotifier<LifeStageState> {
   final Box _settingsBox;
+  final FirebaseFirestore? _firestore;
   final Ref? _ref;
+  StreamSubscription<DocumentSnapshot>? _coupleSubscription;
 
-  LifeStageController({Box? settingsBox, Ref? ref})
+  LifeStageController({Box? settingsBox, FirebaseFirestore? firestore, Ref? ref})
       : _settingsBox = settingsBox ?? Hive.box(AppConstants.settingsBoxName),
+        _firestore = firestore,
         _ref = ref,
         super(const LifeStageState()) {
     // Khởi tạo state ngay từ Hive local (không cần async)
     _loadFromLocal();
   }
 
+  FirebaseFirestore? get _safeFirestore {
+    if (_firestore != null) return _firestore;
+    try {
+      return FirebaseFirestore.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   /// Scoped key cho Hive (theo UID để tránh rò rỉ dữ liệu giữa tài khoản).
   String _k(String base, [String? uid]) => UserScope.key(base, uid);
+
+  /// Lấy coupleId nếu người dùng đã ghép đôi
+  String? getSavedCoupleId([String? explicitUid]) {
+    final uid = explicitUid ?? UserScope.currentUid();
+    final scoped = _settingsBox.get(_k('partner_couple_id', uid)) as String?;
+    if (scoped != null && scoped.isNotEmpty) return scoped;
+    final fallback = _settingsBox.get('partner_couple_id') as String?;
+    if (fallback != null && fallback.isNotEmpty) return fallback;
+    return null;
+  }
 
   /// Đọc LifeStage từ Hive một cách null-safe (DP-01).
   LifeStage _readStageFromHive([String? uid]) {
@@ -229,7 +253,7 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     // 4. Sync Firestore fire-and-forget (không throw nếu offline hoặc test)
     if (effectiveUid.isNotEmpty) {
       try {
-        FirebaseFirestore.instance.collection('users').doc(effectiveUid).set(
+        _safeFirestore?.collection('users').doc(effectiveUid).set(
           {
             'lifeStage': nextStage.toStorageString(),
             'updatedAt': FieldValue.serverTimestamp(),
@@ -240,6 +264,24 @@ class LifeStageController extends StateNotifier<LifeStageState> {
         });
       } catch (e) {
         debugPrint('[LifeStageController] Firestore sync skipped: $e');
+      }
+    }
+
+    // 5. Cập nhật currentStage lên document couple trên Firestore (couples/{coupleId})
+    final coupleId = getSavedCoupleId(effectiveUid);
+    if (coupleId != null && coupleId.isNotEmpty) {
+      try {
+        _safeFirestore?.collection('couples').doc(coupleId).set(
+          {
+            'currentStage': nextStage.toStorageString(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        ).catchError((e) {
+          debugPrint('[LifeStageController] Firestore couple stage sync error (ignored): $e');
+        });
+      } catch (e) {
+        debugPrint('[LifeStageController] Firestore couple sync skipped: $e');
       }
     }
 
@@ -299,7 +341,7 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     // 4. Sync Firestore fire-and-forget
     if (effectiveUid.isNotEmpty) {
       try {
-        FirebaseFirestore.instance.collection('users').doc(effectiveUid).set(
+        _safeFirestore?.collection('users').doc(effectiveUid).set(
           {
             'isPaused': isPaused,
             'pauseReason': isPaused ? reason : null,
@@ -319,9 +361,57 @@ class LifeStageController extends StateNotifier<LifeStageState> {
     );
   }
 
+  /// Lắng nghe thay đổi giai đoạn từ Document couples/{coupleId} theo thời gian thực (phía Chồng)
+  void startListeningToCouple(String coupleId) {
+    _coupleSubscription?.cancel();
+    if (coupleId.isEmpty) return;
+
+    try {
+      _coupleSubscription = _safeFirestore
+          ?.collection('couples')
+          .doc(coupleId)
+          .snapshots()
+          .listen((snapshot) {
+        if (snapshot.exists && snapshot.data() != null) {
+          final data = snapshot.data() as Map<String, dynamic>;
+          final rawStage = data['currentStage'] as String? ?? data['lifeStage'] as String?;
+          if (rawStage != null && rawStage.isNotEmpty) {
+            final syncedStage = LifeStageExt.fromString(rawStage);
+            if (syncedStage != state.currentStage) {
+              debugPrint(
+                '[LifeStageController] Đồng bộ LifeStage từ Vợ: ${state.currentStage} → $syncedStage',
+              );
+              final uid = UserScope.currentUid();
+              _settingsBox.put(_k(AppConstants.keyLifeStage, uid), syncedStage.toStorageString());
+              state = state.copyWith(currentStage: syncedStage, isLoading: false);
+            }
+          }
+        }
+      }, onError: (e) {
+        debugPrint('[LifeStageController] Lỗi stream couple: $e');
+      });
+    } catch (e) {
+      debugPrint('[LifeStageController] startListeningToCouple skipped: $e');
+    }
+  }
+
+  /// Hủy lắng nghe stream couple (DP-04)
+  void cancelCoupleSubscription() {
+    _coupleSubscription?.cancel();
+    _coupleSubscription = null;
+    debugPrint('[LifeStageController] Đã hủy couple subscription');
+  }
+
+  @override
+  void dispose() {
+    cancelCoupleSubscription();
+    super.dispose();
+  }
+
   /// Reset về trạng thái mặc định khi logout.
   /// Chỉ reset RAM — không xóa Hive (dữ liệu thuộc về tài khoản, không phải thiết bị).
   void reset() {
+    cancelCoupleSubscription();
     state = const LifeStageState.normal();
   }
 }
@@ -333,7 +423,38 @@ class LifeStageController extends StateNotifier<LifeStageState> {
 /// Provider chính quản lý LifeStage state.
 final lifeStageControllerProvider =
     StateNotifierProvider<LifeStageController, LifeStageState>(
-  (ref) => LifeStageController(ref: ref),
+  (ref) {
+    final controller = LifeStageController(ref: ref);
+
+    // Lắng nghe coupleId và userRole để Chồng tự động lắng nghe couples/{coupleId}
+    ref.listen<String?>(savedCoupleIdProvider, (_, coupleId) {
+      final role = ref.read(userRoleProvider);
+      if (role == UserRole.husband && coupleId != null && coupleId.isNotEmpty) {
+        controller.startListeningToCouple(coupleId);
+      } else if (coupleId == null || coupleId.isEmpty) {
+        controller.cancelCoupleSubscription();
+      }
+    });
+
+    ref.listen<UserRole>(userRoleProvider, (_, role) {
+      final coupleId = ref.read(savedCoupleIdProvider);
+      if (role == UserRole.husband && coupleId != null && coupleId.isNotEmpty) {
+        controller.startListeningToCouple(coupleId);
+      } else if (role != UserRole.husband) {
+        controller.cancelCoupleSubscription();
+      }
+    });
+
+    // Khởi tạo ngay nếu đã có coupleId và là Chồng
+    final initialCoupleId = ref.read(savedCoupleIdProvider);
+    final initialRole = ref.read(userRoleProvider);
+    if (initialRole == UserRole.husband && initialCoupleId != null && initialCoupleId.isNotEmpty) {
+      controller.startListeningToCouple(initialCoupleId);
+    }
+
+    ref.onDispose(() => controller.dispose());
+    return controller;
+  },
 );
 
 /// Alias theo tài liệu kiến trúc kỹ thuật (Riverpod)

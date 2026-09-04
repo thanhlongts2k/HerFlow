@@ -110,7 +110,7 @@ class _LogPeriodModalState extends ConsumerState<LogPeriodModal> {
             contentPadding: EdgeInsets.zero,
             title: const Text('Kỳ kinh đang diễn ra', style: TextStyle(fontWeight: FontWeight.w600)),
             value: _isOngoing,
-            activeThumbColor: AppColors.primary,
+            activeColor: AppColors.primary,
             onChanged: (val) {
               setState(() {
                 _isOngoing = val;

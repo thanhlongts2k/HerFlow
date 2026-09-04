@@ -453,6 +453,50 @@ void main() {
     });
 
     testWidgets(
+        'Role Vợ khi isPaired == true: chạm vào option "Nàng" bị từ chối và hiện SnackBar khóa Solo',
+        (tester) async {
+      final fakeController = LifeStageController(settingsBox: settingsBox);
+      fakeController.state = const LifeStageState(
+        currentStage: LifeStage.couple,
+        isPaused: false,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          child: const SettingsScreen(),
+          overrides: baseOverrides(
+            lifeStageController: fakeController,
+            role: UserRole.wife,
+            coupleId: 'couple_test_123',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Mở BottomSheet
+      await tester.tap(find.text('Chung Đôi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Thấy badge khóa 'Cần hủy ghép đôi' tại option Nàng
+      expect(find.text('Cần hủy ghép đôi'), findsOneWidget);
+
+      // Chạm vào option Nàng
+      await tester.tap(find.text('Nàng'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // SnackBar xuất hiện cảnh báo
+      expect(
+        find.textContaining('Bạn đang trong chế độ Cặp Đôi. Vui lòng hủy kết nối'),
+        findsOneWidget,
+      );
+      // State không bị đổi về solo, vẫn giữ nguyên couple
+      expect(fakeController.state.currentStage, equals(LifeStage.couple));
+    });
+
+    testWidgets(
         'Khi LifeStage là Solo: ẩn hoàn toàn các cấu hình Cặp đôi trong Settings',
         (tester) async {
       final fakeController = LifeStageController(settingsBox: settingsBox);

@@ -112,6 +112,7 @@ class SettingsScreen extends ConsumerWidget {
             currentStage,
             lifeStageState,
             currentRole,
+            isConnected: isConnected,
           ),
 
           const SizedBox(height: 6),
@@ -137,7 +138,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Khóa bằng sinh trắc học', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text('Yêu cầu vân tay / FaceID khi mở Moona', style: TextStyle(fontSize: 12)),
             value: isBiometricEnabled,
-            activeThumbColor: AppColors.primary,
+            activeColor: AppColors.primary,
             onChanged: (val) async {
               final box = Hive.box(AppConstants.settingsBoxName);
               await box.put(AppConstants.keyIsBiometricEnabled, val);
@@ -507,7 +508,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Phản hồi xúc giác (Haptic)', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text('Rung nhẹ khi tương tác với ứng dụng', style: TextStyle(fontSize: 12)),
             value: isHapticEnabled,
-            activeThumbColor: Colors.purple,
+            activeColor: Colors.purple,
             onChanged: (val) async {
               final box = Hive.box(AppConstants.settingsBoxName);
               await box.put('haptic_enabled', val);
@@ -950,8 +951,9 @@ class SettingsScreen extends ConsumerWidget {
     bool isDark,
     LifeStage currentStage,
     LifeStageState lifeStageState,
-    UserRole currentRole,
-  ) {
+    UserRole currentRole, {
+    bool isConnected = false,
+  }) {
     final isHusband = currentRole == UserRole.husband;
 
     return Container(
@@ -999,7 +1001,13 @@ class SettingsScreen extends ConsumerWidget {
                 );
                 return;
               }
-              _showLifeStageBottomSheet(context, ref, currentStage, lifeStageState.isPaused);
+              _showLifeStageBottomSheet(
+                context,
+                ref,
+                currentStage,
+                lifeStageState.isPaused,
+                isPaired: isConnected,
+              );
             },
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1238,7 +1246,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 Switch(
                   value: lifeStageState.isPaused,
-                  activeThumbColor: const Color(0xFF10B981),
+                  activeColor: const Color(0xFF10B981),
                   onChanged: isHusband
                       ? null
                       : (val) async {
@@ -1276,8 +1284,9 @@ class SettingsScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     LifeStage currentStage,
-    bool isPaused,
-  ) {
+    bool isPaused, {
+    bool isPaired = false,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -1337,10 +1346,12 @@ class SettingsScreen extends ConsumerWidget {
                   final isSelected = stage == currentStage;
                   return _buildLifeStageOptionItem(
                     context: bottomSheetContext,
+                    rootContext: context,
                     ref: ref,
                     isDark: isDark,
                     stage: stage,
                     isSelected: isSelected,
+                    isPaired: isPaired,
                   );
                 }),
                 const SizedBox(height: 12),
@@ -1354,12 +1365,16 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildLifeStageOptionItem({
     required BuildContext context,
+    required BuildContext rootContext,
     required WidgetRef ref,
     required bool isDark,
     required LifeStage stage,
     required bool isSelected,
+    required bool isPaired,
   }) {
-    return Container(
+    final isSoloLocked = stage == LifeStage.solo && isPaired;
+
+    final itemWidget = Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: isSelected
@@ -1376,6 +1391,29 @@ class SettingsScreen extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () async {
+          if (isSoloLocked) {
+            AppHaptics.light();
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.lock_rounded, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Bạn đang trong chế độ Cặp Đôi. Vui lòng hủy kết nối trước khi chuyển về chế độ Nàng.'),
+                    ),
+                  ],
+                ),
+                backgroundColor: isDark ? const Color(0xFF2C243B) : const Color(0xFF3B334C),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
+
           AppHaptics.selection();
           Navigator.pop(context);
           if (!isSelected) {
@@ -1383,9 +1421,9 @@ class SettingsScreen extends ConsumerWidget {
             if (stage == LifeStage.pregnancy) {
               final pregnancyConfig = ref.read(pregnancyConfigProvider);
               if (pregnancyConfig == null || !pregnancyConfig.isTrackingActive) {
-                final configured = await PregnancySetupSheet.show(context);
-                if (configured == true && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                final configured = await PregnancySetupSheet.show(rootContext);
+                if (configured == true && rootContext.mounted) {
+                  ScaffoldMessenger.of(rootContext).showSnackBar(
                     SnackBar(
                       content: const Text('Đã thiết lập thai kỳ & chuyển sang giai đoạn "Thai Kỳ" 🤰'),
                       backgroundColor: AppColors.primary,
@@ -1400,8 +1438,8 @@ class SettingsScreen extends ConsumerWidget {
             }
 
             await ref.read(lifeStageControllerProvider.notifier).switchStage(stage);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+            if (rootContext.mounted) {
+              ScaffoldMessenger.of(rootContext).showSnackBar(
                 SnackBar(
                   content: Text('Đã chuyển sang giai đoạn "${stage.displayName}".'),
                   backgroundColor: AppColors.primary,
@@ -1426,13 +1464,46 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      stage.displayName,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? AppColors.primary : null,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          stage.displayName,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? AppColors.primary : null,
+                          ),
+                        ),
+                        if (isSoloLocked) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white12 : Colors.black12,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.lock_rounded,
+                                  size: 11,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Cần hủy ghép đôi',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -1445,7 +1516,13 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (isSelected)
+              if (isSoloLocked)
+                Icon(
+                  Icons.lock_rounded,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                  size: 20,
+                )
+              else if (isSelected)
                 const Icon(
                   Icons.check_circle_rounded,
                   color: AppColors.primary,
@@ -1456,6 +1533,14 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+
+    if (isSoloLocked) {
+      return Opacity(
+        opacity: 0.5,
+        child: itemWidget,
+      );
+    }
+    return itemWidget;
   }
 
   Widget _buildNicknameSection(
