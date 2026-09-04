@@ -4,6 +4,33 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.7.0+23] - 2026-09-04 (Female Lifecycle Platform Foundation & Modular Architecture)
+
+### [Added]
+- **🌸 Kiến Trúc Nền Tảng 5 Giai Đoạn Sống (Female Lifecycle Platform):**
+  * Chuyển dịch kiến trúc toàn diện từ ứng dụng cặp đôi sang Nền tảng Chăm sóc Sức khỏe Nữ giới theo Vòng đời với 5 giai đoạn cốt lõi:
+    - 🌸 **Nàng (Solo):** Theo dõi chu kỳ kinh nguyệt & chăm sóc bản thân độc lập, bảo mật riêng tư, không phụ thuộc kết nối cặp đôi.
+    - 💑 **Chung Đôi (Couple):** Đồng bộ realtime với người thương, góc nhìn Chồng và tín hiệu yêu thương chăm sóc.
+    - 🥚 **Đón Bé (Conception):** Cửa sổ thụ thai chuyên sâu, theo dõi nhiệt độ cơ thể cơ bản (BBT), dự đoán rụng trứng và lịch yêu tối ưu.
+    - 🤰 **Thai Kỳ (Pregnancy):** Đồng hành thai kỳ theo 40 tuần thai, chỉ số thai nhi, kích thước bé, lịch khám định kỳ & nhật ký thai nghén.
+    - 🍼 **Nuôi Con (Motherhood):** Quản lý hồ sơ nhiều bé, nhật ký cữ bú/ngủ/bỉm, biểu đồ tăng trưởng chiều cao & cân nặng chuẩn WHO.
+  * Tích hợp `LifeStage` enum, `LifeStageConfig`, `LifeStageState` và `LifeStageController` quản lý trạng thái tập trung qua Riverpod.
+  * Tích hợp chế độ tạm dừng / nghỉ ngơi (`Pause Mode` / `Loss Mode`) tôn trọng cảm xúc và quyền riêng tư của phụ nữ khi gặp biến cố thai kỳ hoặc mất mát.
+- **🧭 Dynamic Navigation Tự Co Giãn Tab Thông Minh:**
+  * `MainNavigationWrapper` tự động tính toán danh sách tab theo giai đoạn sống hiện tại:
+    - Chế độ Solo (Nàng, Đón Bé, Thai Kỳ, Nuôi Con): Co giãn thành 4 tab an toàn (ẩn hoàn toàn tab Cặp đôi).
+    - Chế độ Cặp đôi (Chung Đôi): Hiển thị đầy đủ 5 tab (Chu kỳ, Cảm xúc, Cặp đôi, Dinh dưỡng, Cài đặt).
+- **🛡️ Bộ 4 Tầng Phòng Vệ Kiến Trúc (DP-01 -> DP-04):**
+  * **DP-01 (Safe Hive Migration):** Khởi tạo `UserPreferencesHiveBox` và `MigrationService` tự động chuyển đổi an toàn người dùng cũ `v0.6.x` sang `LifeStage.couple` mà không làm mất dữ liệu.
+  * **DP-02 (Navigation Clamping):** Tự động ép chỉ số tab về phạm vi hợp lệ (`math.min`) khi chuyển đổi giữa các giai đoạn sống, triệt tiêu lỗi `IndexOutOfBoundsException`.
+  * **DP-03 (Role Guarding Q3):** Khóa an toàn người dùng vai trò Chồng ở chế độ `LifeStage.couple` cố định, ngăn chặn sai lệch luồng dữ liệu.
+  * **DP-04 (Realtime Stream Gating):** Tự động ngắt các luồng lắng nghe cặp đôi (`cancelSubscriptions`) khi người dùng ở chế độ Solo, tiết kiệm pin và băng thông.
+- **🎛️ Thẻ Giai Đoạn Cuộc Sống Tại Màn Hình Cài Đặt (`SettingsScreen`):**
+  * Thẻ hiển thị trực quan giai đoạn hiện tại, badge trạng thái hoạt động và công tắc Chế độ nghỉ ngơi / Tạm dừng.
+  * BottomSheet chuyển đổi mượt mà giữa 5 giai đoạn cuộc sống với hình ảnh minh họa, mô tả chi tiết và phản hồi xác nhận.
+
+---
+
 ## [0.6.7+22] - 2026-09-04 (Actionable Husband Insights & Companion Experience)
 
 ### [Added]

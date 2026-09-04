@@ -4,6 +4,7 @@ import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/network/network_connectivity_provider.dart';
 import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/mood/presentation/controllers/mood_controller.dart';
 import 'package:herflow/features/partner_sync/data/partner_sync_repository.dart';
 import 'package:herflow/features/partner_sync/domain/models/pairing_model.dart';
@@ -21,10 +22,10 @@ final savedCoupleIdProvider = StateProvider<String?>((ref) {
   return repo.getSavedCoupleId();
 });
 
-/// Provider kiểm tra trạng thái ghép đôi tập trung
+/// Provider kiểm tra trạng thái đã ghép đôi hay chưa
 final isPairedProvider = Provider<bool>((ref) {
   final coupleId = ref.watch(savedCoupleIdProvider);
-  return coupleId != null && coupleId.trim().isNotEmpty;
+  return coupleId != null && coupleId.isNotEmpty;
 });
 
 /// Provider vai trò người dùng ('wife' hoặc 'husband')
@@ -42,7 +43,13 @@ final isPendingSyncProvider = Provider<bool>((ref) {
 });
 
 /// StreamProvider lắng nghe trực tiếp trạng thái hôm nay của đối phương theo thời gian thực
+/// DP-04: Ngắt kết nối nếu không ở Couple mode để tránh zombie streams
 final partnerLiveStatusStreamProvider = StreamProvider<PartnerStatusModel?>((ref) {
+  final isCouple = ref.watch(isCoupleModeProvider);
+  if (!isCouple) {
+    return Stream.value(null);
+  }
+
   final repo = ref.watch(partnerSyncRepositoryProvider);
   final coupleId = ref.watch(savedCoupleIdProvider);
 

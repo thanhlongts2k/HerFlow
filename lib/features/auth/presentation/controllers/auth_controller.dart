@@ -11,6 +11,8 @@ import 'package:herflow/features/home/presentation/screens/main_nav_screen.dart'
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
+import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/models/user_model.dart';
 
@@ -81,11 +83,32 @@ class AuthController extends StateNotifier<AsyncValue<UserModel?>> {
           } else {
             await _ref.read(nicknameConfigProvider.notifier).loadForUser(uid);
           }
+
+          // 4. Phục hồi LifeStage (Phase 1)
+          final cloudLifeStage = data['lifeStage'] as String?;
+          final hasCoupleId = cloudCoupleId != null && cloudCoupleId.isNotEmpty;
+          await _ref.read(lifeStageControllerProvider.notifier).loadForUser(
+            uid: uid,
+            cloudLifeStage: cloudLifeStage,
+            hasCoupleId: hasCoupleId,
+          );
+
+          final stageState = _ref.read(lifeStageControllerProvider);
+          final current = state.valueOrNull;
+          if (current != null) {
+            state = AsyncValue.data(current.copyWith(
+              role: cloudRole ?? current.role,
+              lifeStage: stageState.currentStage.toStorageString(),
+              isPaused: stageState.isPaused,
+              pauseReason: stageState.pauseReason,
+            ));
+          }
         }
       } else {
         // Tài khoản hoàn toàn mới trên Firestore -> bảo đảm trạng thái mặc định tinh khôi
         _ref.read(savedCoupleIdProvider.notifier).state = null;
         await _ref.read(nicknameConfigProvider.notifier).loadForUser(uid);
+        await _ref.read(lifeStageControllerProvider.notifier).loadForUser(uid: uid);
       }
 
       // Làm tươi Cycle state cho user mới
@@ -95,6 +118,12 @@ class AuthController extends StateNotifier<AsyncValue<UserModel?>> {
       _ref.read(savedCoupleIdProvider.notifier).state =
           _ref.read(partnerSyncRepositoryProvider).getSavedCoupleId(uid);
       await _ref.read(nicknameConfigProvider.notifier).loadForUser(uid);
+      final savedCoupleId = _ref.read(savedCoupleIdProvider);
+      final hasCoupleId = savedCoupleId != null && savedCoupleId.isNotEmpty;
+      await _ref.read(lifeStageControllerProvider.notifier).loadForUser(
+        uid: uid,
+        hasCoupleId: hasCoupleId,
+      );
       _ref.invalidate(cycleControllerProvider);
     }
   }
@@ -178,6 +207,23 @@ class AuthController extends StateNotifier<AsyncValue<UserModel?>> {
     }
   }
 
+  /// Cập nhật LifeStage vào UserModel hiện tại trong RAM State
+  void updateLifeStage({
+    required LifeStage stage,
+    bool? isPaused,
+    String? pauseReason,
+    bool clearPauseReason = false,
+  }) {
+    final current = state.valueOrNull;
+    if (current != null) {
+      state = AsyncValue.data(current.copyWith(
+        lifeStage: stage.toStorageString(),
+        isPaused: isPaused ?? current.isPaused,
+        pauseReason: clearPauseReason ? null : (pauseReason ?? current.pauseReason),
+      ));
+    }
+  }
+
   /// Làm tươi toàn bộ State Tree gắn liền với người dùng
   void _invalidateAllUserScopedProviders() {
     _ref.invalidate(userRoleProvider);
@@ -191,6 +237,7 @@ class AuthController extends StateNotifier<AsyncValue<UserModel?>> {
     _ref.invalidate(partnerLiveStatusStreamProvider);
     _ref.invalidate(latestCareSignalStreamProvider);
     _ref.invalidate(currentBottomNavIndexProvider);
+    _ref.invalidate(lifeStageControllerProvider);
   }
 }
 

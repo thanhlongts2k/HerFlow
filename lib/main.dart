@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'core/constants/app_constants.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/routes/app_routes.dart';
+import 'core/storage/hive_migration_validator.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/screens/biometric_lock_screen.dart';
 
@@ -35,6 +36,22 @@ void main() async {
   await Hive.openBox(AppConstants.moodBoxName);
   await Hive.openBox(AppConstants.settingsBoxName);
   await Hive.openBox(AppConstants.userBoxName);
+
+  // DP-01: Chạy Hive Migration trước khi bất kỳ provider nào đọc dữ liệu.
+  // Bọc try-catch phòng thủ: migration lỗi thì app vẫn chạy fallback an toàn.
+  try {
+    final settingsBox = Hive.box(AppConstants.settingsBoxName);
+    final userBox     = Hive.box(AppConstants.userBoxName);
+    // Lấy UID nếu user đã từng đăng nhập (có thể rỗng = lần đầu cài app)
+    final existingUid = userBox.get(AppConstants.keyUserUid) as String? ?? '';
+    await HiveMigrationValidator.runMigrations(
+      settingsBox: settingsBox,
+      uid: existingUid,
+    );
+  } catch (e) {
+    // Migration lỗi KHÔNG crash app — chỉ log để debug
+    debugPrint('[main] HiveMigration error (safe fallback): $e');
+  }
 
   // Khởi tạo Firebase
   try {

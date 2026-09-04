@@ -57,6 +57,7 @@ class HusbandViewScreen extends ConsumerWidget {
               )
             : null,
         title: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -77,15 +78,13 @@ class HusbandViewScreen extends ConsumerWidget {
               ],
             ),
             // BUG-03 FIX: Cho phép maxLines: 2 và dùng ellipsis tránh bị cắt cụt 1 dòng
-            Flexible(
-              child: Text(
-                'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isDark ? Colors.white60 : Colors.black54,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+            Text(
+              'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: isDark ? Colors.white60 : Colors.black54,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

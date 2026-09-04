@@ -3,11 +3,18 @@ import 'package:uuid/uuid.dart';
 import 'package:herflow/core/constants/user_role.dart';
 import 'package:herflow/core/providers/user_role_provider.dart';
 import 'package:herflow/features/care_signals/domain/models/care_signal_model.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 
 /// StreamProvider lắng nghe tín hiệu yêu thương mới nhất (1 bản ghi)
+/// DP-04: Ngắt kết nối nếu không ở Couple mode để tránh zombie streams
 final latestCareSignalStreamProvider = StreamProvider<CareSignalModel?>((ref) {
+  final isCouple = ref.watch(isCoupleModeProvider);
+  if (!isCouple) {
+    return Stream.value(null);
+  }
+
   final coupleId = ref.watch(savedCoupleIdProvider) ?? '';
   if (coupleId.isEmpty) {
     return Stream.value(null);
@@ -17,7 +24,13 @@ final latestCareSignalStreamProvider = StreamProvider<CareSignalModel?>((ref) {
 });
 
 /// StreamProvider lắng nghe danh sách toàn bộ tin nhắn / tín hiệu trong Hộp Thư 2 chiều (Thread)
+/// DP-04: Ngắt kết nối nếu không ở Couple mode để tránh zombie streams
 final coupleCareSignalsStreamProvider = StreamProvider<List<CareSignalModel>>((ref) {
+  final isCouple = ref.watch(isCoupleModeProvider);
+  if (!isCouple) {
+    return Stream.value([]);
+  }
+
   final coupleId = ref.watch(savedCoupleIdProvider) ?? '';
   if (coupleId.isEmpty) {
     return Stream.value([]);

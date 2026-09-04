@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:herflow/core/constants/app_constants.dart';
+import 'package:herflow/core/utils/user_scope.dart';
 import '../domain/models/user_model.dart';
 
 class AuthRepository {
@@ -88,12 +89,22 @@ class AuthRepository {
       final email = _userBox.get(AppConstants.keyUserEmail) as String? ?? '';
       final photoUrl = _userBox.get(AppConstants.keyUserPhotoUrl) as String?;
 
+      final stageStr = _settingsBox.get(UserScope.key(AppConstants.keyLifeStage, uid)) as String?
+          ?? _settingsBox.get(AppConstants.keyLifeStage) as String?;
+      final isPaused = _settingsBox.get(UserScope.key(AppConstants.keyIsPausedMode, uid)) as bool?
+          ?? _settingsBox.get(AppConstants.keyIsPausedMode) as bool? ?? false;
+      final pauseReason = _settingsBox.get(UserScope.key(AppConstants.keyPauseReason, uid)) as String?
+          ?? _settingsBox.get(AppConstants.keyPauseReason) as String?;
+
       return UserModel(
         uid: uid,
         displayName: displayName,
         email: email,
         photoUrl: photoUrl,
         role: savedRole,
+        lifeStage: stageStr,
+        isPaused: isPaused,
+        pauseReason: pauseReason,
       );
     } catch (e) {
       debugPrint('Error getting current user: $e');

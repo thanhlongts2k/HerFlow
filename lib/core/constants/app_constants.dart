@@ -39,4 +39,26 @@ class AppConstants {
   static const String keyUserEmail = 'user_email';
   static const String keyUserPhotoUrl = 'user_photo_url';
   static const String keyUserIsLoggedIn = 'user_is_logged_in';
+
+  // ── Phase 1: LifeStage & Lifecycle keys (BẮT BUỘC thêm vào migration) ──
+  /// Lưu tên enum LifeStage dưới dạng String (ví dụ: 'solo', 'couple').
+  static const String keyLifeStage = 'life_stage';
+
+  /// Cờ Pause/Loss Mode (bool). Mặc định false.
+  static const String keyIsPausedMode = 'is_paused_mode';
+
+  /// Lý do Pause: 'loss' | 'medical' | 'personal'. Null khi isPaused = false.
+  static const String keyPauseReason = 'pause_reason';
+
+  // ── Phase 2 keys (chuẩn bị trước, chưa dùng đến khi implement Phase 2) ──
+  static const String keyPregnancyDueDate    = 'pregnancy_due_date';
+  static const String keyConceptionStartDate = 'conception_start_date';
+
+  // ── Phase 3 keys ────────────────────────────────────────────────────────
+  static const String keyActiveChildId = 'active_child_id';
+
+  // ── Phase 2/3 Hive Box Names (chưa mở box, chỉ đặt tên sẵn) ───────────
+  static const String conceptionBoxName  = 'herflow_conception_box';
+  static const String pregnancyBoxName   = 'herflow_pregnancy_box';
+  static const String motherhoodBoxName  = 'herflow_motherhood_box';
 }
