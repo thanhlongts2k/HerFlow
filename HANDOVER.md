@@ -11,7 +11,7 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **48/48 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm KickCounter & PrenatalAppointments) |
+| **Unit Testing (`flutter test`)** | ✅ **211/211 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm KickCounter, Appointments & PregnancyHome) |
 | **Bộ Đếm Cử Động Thai (Kick Counter)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | Chuẩn Cardiff Count to 10 (2h), vòng tròn đếm gợn sóng + haptic feedback, lịch sử phiên đếm |
 | **Lịch Khám Thai Mốc Vàng (Prenatal Appointments)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | 7 mốc y tế Việt Nam, tự động tính tuần/status (upcoming/current/done), checklist tích chọn |
 | **Tóm Tắt Thai Máy Cho Bố Bầu (Husband View)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | `_buildKickSummaryCard` đồng bộ số cử động hôm nay của con cho Bố Bầu |

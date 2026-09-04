@@ -133,7 +133,7 @@ void main() {
       expect(find.byIcon(Icons.edit_calendar_rounded), findsOneWidget);
 
       // 2. Hero Card: Tuần tuổi thai & Tam cá nguyệt
-      expect(find.textContaining('Tuần 11'), findsOneWidget);
+      expect(find.text('Tuần 11'), findsOneWidget);
       expect(find.textContaining('Tam cá nguyệt 1'), findsWidgets);
       expect(find.textContaining('D-Day: Còn'), findsOneWidget);
 
@@ -144,6 +144,10 @@ void main() {
       expect(find.text('Cân nặng'), findsOneWidget);
       expect(find.textContaining('Cột mốc kỳ diệu tuần này:'), findsOneWidget);
       expect(find.textContaining('Lời khuyên cho mẹ tuần này'), findsOneWidget);
+
+      // 4. Phase 2.5: Kick Counter & Prenatal Appointments
+      expect(find.textContaining('Đếm Cử Động Thai'), findsOneWidget);
+      expect(find.textContaining('Lịch Khám Thai Mốc Vàng'), findsOneWidget);
     });
 
     testWidgets('Week Carousel: Chuyển tuần tương tác xem trước Tuần 20 (Quả chuối tiêu 🍌)', (tester) async {
