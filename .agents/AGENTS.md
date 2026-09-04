@@ -154,3 +154,19 @@ Nếu phát hiện vi phạm: dùng `git rm --cached <file>` → thêm vào `.gi
 #### 3. 🎯 Tiêu chuẩn nghiệm thu trước khi Commit & Push (Definition of Done - DoD Gate)
 - **Bắt buộc** chạy lệnh phân tích tĩnh: `flutter analyze` đạt **0 issues/errors**.
 - **Bắt buộc** chạy toàn bộ test suite: `flutter test` đạt **100% tests passed** trước khi thực hiện bất kỳ lệnh `git commit` hay `git push` nào.
+
+---
+
+### 11. 🔄 QUY TẮC BẮT BUỘC: MA TRẬN TRẠNG THÁI & BIÊN DỮ LIỆU (STATE TRANSITION MATRIX RULE)
+- **TUYỆT ĐỐI CẤM "Single-case Patching"** (sửa và test đối phó một trường hợp vừa phát sinh).
+- Với mọi tính năng liên quan đến Chuyển trạng thái (LifeStage, Role, Auth), Điều hướng (Navigation), Đồng bộ (Firestore/Hive):
+  * **BẮT BUỘC** lập Bảng Ma trận Chuyển đổi hai chiều (Full NxN Transition Matrix).
+  * **BẮT BUỘC** viết Test Suite dạng vòng lặp kiểm tra 100% các ô trong ma trận (gồm chiều xuôi A->B, chiều ngược B->A, và trường hợp không đổi A->A).
+
+---
+
+### 12. 📋 QUY CHUẨN BÀN GIAO & ĐÁNH GIÁ RỦI RO LỌT BUG (POST-TASK PROTOCOL & RISK ASSESSMENT)
+- Sau khi hoàn thành bất kỳ task nào, **BẮT BUỘC**:
+  1. Cập nhật đồng bộ các tài liệu kỹ thuật: `HANDOVER.md`, `CHANGELOG.md` và kiến trúc liên quan.
+  2. Báo cáo bảng ma trận kiểm thử chi tiết trong nội dung bàn giao.
+  3. **BẮT BUỘC** có mục "Đánh giá khả năng lọt bug" (Bug Escape Risk Assessment): Phân tích rõ các trường hợp biên, độ trễ mạng, xung đột race-condition hoặc các case chưa thể cover 100% để đội ngũ nắm bắt.

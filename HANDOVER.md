@@ -11,9 +11,9 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **222/222 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm LifeStage Realtime Sync, Transition Matrix 6/6 & Solo Guard UI) |
+| **Unit Testing (`flutter test`)** | ✅ **238/238 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Ma trận 4x4 16 cases, 6 cặp 2 chiều round-trip & Solo Guard UI) |
 | **Khóa Chế Độ Solo Khi Ghép Đôi (Solo Guard)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Làm mờ 50%, icon 🔒, badge "Cần hủy ghép đôi", cảnh báo SnackBar khi chạm, chặn chuyển mode |
-| **Đồng Bộ Hai Chiều LifeStage (Transition Matrix)** | ✅ **HOÀN TẤT & 100% PASS** | Vợ đổi stage -> Firestore `couples/{coupleId}` -> Chồng Stream auto-sync RAM + Hive local; Pass 6/6 cặp 2 chiều |
+| **Đồng Bộ Hai Chiều LifeStage (Transition Matrix)** | ✅ **HOÀN TẤT & 100% PASS** | Vợ đổi stage -> Firestore `couples/{coupleId}` -> Chồng Stream auto-sync RAM + Hive local; Pass 16/16 ô ma trận và 6/6 cặp 2 chiều |
 | **Tương Thích SDK Flutter 3.24 & 3.29+** | ✅ **HOÀN TẤT** | Chuẩn hóa `CardTheme` & `activeColor`, 0 compile error trên local, tương thích 100% CI runner |
 | **Bộ Đếm Cử Động Thai (Kick Counter)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | Chuẩn Cardiff Count to 10 (2h), vòng tròn đếm gợn sóng + haptic feedback, lịch sử phiên đếm |
 | **Lịch Khám Thai Mốc Vàng (Prenatal Appointments)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | 7 mốc y tế Việt Nam, tự động tính tuần/status (upcoming/current/done), checklist tích chọn |

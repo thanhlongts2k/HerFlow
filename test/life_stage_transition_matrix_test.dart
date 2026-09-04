@@ -1,10 +1,11 @@
 // ignore_for_file: subtype_of_sealed_class, annotate_overrides
 // test/life_stage_transition_matrix_test.dart
 //
-// Test suite chuyên biệt kiểm tra toàn bộ ma trận chuyển đổi 2 chiều (Bidirectional Transition Matrix)
-// giữa 4 giai đoạn sống có hỗ trợ người đồng hành (Chung Đôi, Chuẩn Bị Bầu, Thai Kỳ, Nuôi Con).
+// Test suite chuyên biệt kiểm tra toàn bộ Ma Trận Chuyển Đổi Trạng Thái 4x4 (16 Cases)
+// và 6 Cặp Chuyển Đổi Hai Chiều (Bidirectional Round-Trip) giữa 4 giai đoạn sống cặp đôi
+// (Chung Đôi, Chuẩn Bị Bầu, Thai Kỳ, Nuôi Con).
 //
-// Chạy: flutter test test/life_stage_transition_matrix_test.dart
+// Tuân thủ quy định AGENTS.md Điều 11 & 12: Kỷ luật Ma trận Trạng thái & Biên dữ liệu.
 
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -167,143 +168,147 @@ void main() {
     husbandController.dispose();
   });
 
+  /// Kiểm tra 1 bước chuyển đổi đơn lẻ [fromStage] -> [toStage] trong Ma trận 4x4
+  Future<void> assertSingleTransition({
+    required LifeStage fromStage,
+    required LifeStage toStage,
+  }) async {
+    // 1. Thiết lập trạng thái ban đầu: fromStage
+    UserScope.setActiveUid(wifeUid);
+    await wifeController.switchStage(fromStage, uid: wifeUid);
+    expect(wifeController.state.currentStage, equals(fromStage));
+
+    // Chồng bắt đầu lắng nghe stream từ document couples/{coupleId}
+    UserScope.setActiveUid(husbandUid);
+    husbandController.startListeningToCouple(coupleId, husbandUid);
+    await Future.delayed(const Duration(milliseconds: 25));
+
+    // Xác minh ban đầu Chồng đã ở đúng fromStage
+    expect(husbandController.state.currentStage, equals(fromStage));
+    expect(
+      husbandHive.get(UserScope.key(AppConstants.keyLifeStage, husbandUid)),
+      equals(fromStage.toStorageString()),
+    );
+
+    // 2. Vợ thực hiện chuyển đổi sang toStage
+    UserScope.setActiveUid(wifeUid);
+    await wifeController.switchStage(toStage, uid: wifeUid);
+
+    // 3. Xác minh Vợ đã đổi sang toStage trên RAM và Hive của Vợ
+    expect(wifeController.state.currentStage, equals(toStage));
+    expect(
+      wifeHive.get(UserScope.key(AppConstants.keyLifeStage, wifeUid)),
+      equals(toStage.toStorageString()),
+    );
+
+    // 4. Xác minh Firestore couples/{coupleId} nhận đúng toStage
+    final firestoreData = fakeFirestore.getDocumentData('couples/$coupleId');
+    expect(firestoreData, isNotNull);
+    expect(firestoreData!['currentStage'], equals(toStage.toStorageString()));
+    expect(firestoreData['lifeStage'], equals(toStage.toStorageString()));
+
+    // Đợi stream của Chồng nhận event
+    await Future.delayed(const Duration(milliseconds: 25));
+
+    // 5. Xác minh Chồng tự động đồng bộ sang toStage trên RAM và Hive của Chồng
+    expect(
+      husbandController.state.currentStage,
+      equals(toStage),
+      reason: 'Chồng phải tự chuyển sang ${toStage.displayName} khi Vợ chọn',
+    );
+    expect(
+      husbandHive.get(UserScope.key(AppConstants.keyLifeStage, husbandUid)),
+      equals(toStage.toStorageString()),
+      reason: 'Hive của Chồng phải lưu đúng ${toStage.displayName}',
+    );
+  }
+
   /// Hàm tiện ích kiểm tra chu trình chuyển đổi 2 chiều hoàn chỉnh:
   /// Stage A -> Stage B, sau đó Stage B -> Stage A.
   Future<void> assertBidirectionalTransition({
     required LifeStage stageA,
     required LifeStage stageB,
   }) async {
-    // Thiết lập trạng thái ban đầu: Stage A
-    UserScope.setActiveUid(wifeUid);
-    await wifeController.switchStage(stageA, uid: wifeUid);
-    expect(wifeController.state.currentStage, equals(stageA));
+    // Chiều đi: A -> B
+    await assertSingleTransition(fromStage: stageA, toStage: stageB);
 
-    // Chồng bắt đầu lắng nghe stream từ document couples/{coupleId}
-    UserScope.setActiveUid(husbandUid);
-    husbandController.startListeningToCouple(coupleId, husbandUid);
-    await Future.delayed(const Duration(milliseconds: 20));
-
-    // Verify Chồng nhận được Stage A ban đầu
-    expect(husbandController.state.currentStage, equals(stageA));
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // CHIỀU ĐI: Vợ chuyển từ Stage A -> Stage B
-    // ──────────────────────────────────────────────────────────────────────────
-    UserScope.setActiveUid(wifeUid);
-    await wifeController.switchStage(stageB, uid: wifeUid);
-
-    // 1. Xác minh Vợ đã đổi sang Stage B trên RAM và Hive của Vợ
-    expect(wifeController.state.currentStage, equals(stageB));
-    expect(
-      wifeHive.get(UserScope.key(AppConstants.keyLifeStage, wifeUid)),
-      equals(stageB.toStorageString()),
-    );
-
-    // 2. Xác minh Firestore couples/{coupleId} nhận đúng Stage B
-    final firestoreDataB = fakeFirestore.getDocumentData('couples/$coupleId');
-    expect(firestoreDataB, isNotNull);
-    expect(firestoreDataB!['currentStage'], equals(stageB.toStorageString()));
-    expect(firestoreDataB['lifeStage'], equals(stageB.toStorageString()));
-
-    // Đợi stream của Chồng nhận event
-    await Future.delayed(const Duration(milliseconds: 20));
-
-    // 3. Xác minh Chồng tự động đồng bộ sang Stage B trên RAM và Hive của Chồng
-    expect(
-      husbandController.state.currentStage,
-      equals(stageB),
-      reason: 'Chồng phải tự chuyển sang ${stageB.displayName} khi Vợ chọn',
-    );
-    expect(
-      husbandHive.get(UserScope.key(AppConstants.keyLifeStage, husbandUid)),
-      equals(stageB.toStorageString()),
-    );
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // CHIỀU VỀ: Vợ chuyển ngược lại từ Stage B -> Stage A
-    // ──────────────────────────────────────────────────────────────────────────
-    UserScope.setActiveUid(wifeUid);
-    await wifeController.switchStage(stageA, uid: wifeUid);
-
-    // 4. Xác minh Vợ đã đổi về Stage A trên RAM và Hive của Vợ
-    expect(wifeController.state.currentStage, equals(stageA));
-    expect(
-      wifeHive.get(UserScope.key(AppConstants.keyLifeStage, wifeUid)),
-      equals(stageA.toStorageString()),
-    );
-
-    // 5. Xác minh Firestore couples/{coupleId} nhận đúng Stage A
-    final firestoreDataA = fakeFirestore.getDocumentData('couples/$coupleId');
-    expect(firestoreDataA, isNotNull);
-    expect(firestoreDataA!['currentStage'], equals(stageA.toStorageString()));
-    expect(firestoreDataA['lifeStage'], equals(stageA.toStorageString()));
-
-    // Đợi stream của Chồng nhận event
-    await Future.delayed(const Duration(milliseconds: 20));
-
-    // 6. Xác minh Chồng tự động đồng bộ quay về Stage A trên RAM và Hive của Chồng
-    expect(
-      husbandController.state.currentStage,
-      equals(stageA),
-      reason: 'Chồng phải tự chuyển quay về ${stageA.displayName} khi Vợ chọn',
-    );
-    expect(
-      husbandHive.get(UserScope.key(AppConstants.keyLifeStage, husbandUid)),
-      equals(stageA.toStorageString()),
-    );
+    // Chiều về: B -> A
+    await assertSingleTransition(fromStage: stageB, toStage: stageA);
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // TOÀN BỘ MA TRẬN 6 CẶP CHUYỂN ĐỔI 2 CHIỀU GIỮA 4 GIAI ĐOẠN CẶP ĐÔI
+  // PHẦN A: MA TRẬN ĐẦY ĐỦ 4x4 (16 TRƯỜNG HỢP CHUYỂN ĐỔI TOÀN DIỆN)
   // ════════════════════════════════════════════════════════════════════════════
 
-  group('Transition Matrix: Cặp 1 (couple <---> conception)', () {
-    test('Chung Đôi <-> Chuẩn Bị Bầu đồng bộ 2 chiều tức thì giữa Vợ và Chồng', () async {
+  const coupleStages = [
+    LifeStage.couple,
+    LifeStage.conception,
+    LifeStage.pregnancy,
+    LifeStage.motherhood,
+  ];
+
+  group('Full 4x4 State Transition Matrix (16 Cases):', () {
+    int testIndex = 1;
+    for (final fromStage in coupleStages) {
+      for (final toStage in coupleStages) {
+        final isIdempotent = fromStage == toStage;
+        final caseTitle = 'Case $testIndex/16: [${fromStage.name} -> ${toStage.name}] '
+            '(${fromStage.displayName} -> ${toStage.displayName}) '
+            '${isIdempotent ? "[Idempotent / No-op]" : "[State Transition]"}';
+
+        test(caseTitle, () async {
+          await assertSingleTransition(
+            fromStage: fromStage,
+            toStage: toStage,
+          );
+        });
+
+        testIndex++;
+      }
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // PHẦN B: 6 CẶP CHUYỂN ĐỔI HAI CHIỀU (BIDIRECTIONAL ROUND-TRIP TESTS)
+  // ════════════════════════════════════════════════════════════════════════════
+
+  group('Bidirectional Round-Trip: 6 Cặp Giai Đoạn Cặp Đôi', () {
+    test('Cặp 1: Chung Đôi <---> Chuẩn Bị Bầu (couple <-> conception)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.couple,
         stageB: LifeStage.conception,
       );
     });
-  });
 
-  group('Transition Matrix: Cặp 2 (couple <---> pregnancy)', () {
-    test('Chung Đôi <-> Thai Kỳ đồng bộ 2 chiều tức thì giữa Vợ và Chồng', () async {
+    test('Cặp 2: Chung Đôi <---> Thai Kỳ (couple <-> pregnancy)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.couple,
         stageB: LifeStage.pregnancy,
       );
     });
-  });
 
-  group('Transition Matrix: Cặp 3 (couple <---> motherhood)', () {
-    test('Chung Đôi <-> Nuôi Con đồng bộ 2 chiều tức thì giữa Vợ và Chồng', () async {
+    test('Cặp 3: Chung Đôi <---> Nuôi Con (couple <-> motherhood)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.couple,
         stageB: LifeStage.motherhood,
       );
     });
-  });
 
-  group('Transition Matrix: Cặp 4 (conception <---> pregnancy)', () {
-    test('Chuẩn Bị Bầu <-> Thai Kỳ đồng bộ 2 chiều tức thì giữa Vợ và Chồng', () async {
+    test('Cặp 4: Chuẩn Bị Bầu <---> Thai Kỳ (conception <-> pregnancy)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.conception,
         stageB: LifeStage.pregnancy,
       );
     });
-  });
 
-  group('Transition Matrix: Cặp 5 (conception <---> motherhood)', () {
-    test('Chuẩn Bị Bầu <-> Nuôi Con đồng bộ 2 chiều tức thì giữa Vợ và Chồng', () async {
+    test('Cặp 5: Chuẩn Bị Bầu <---> Nuôi Con (conception <-> motherhood)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.conception,
         stageB: LifeStage.motherhood,
       );
     });
-  });
 
-  group('Transition Matrix: Cặp 6 (pregnancy <---> motherhood)', () {
-    test('Thai Kỳ <-> Nuôi Con đồng bộ 2 chiều tức thì giữa Vợ và Chồng', () async {
+    test('Cặp 6: Thai Kỳ <---> Nuôi Con (pregnancy <-> motherhood)', () async {
       await assertBidirectionalTransition(
         stageA: LifeStage.pregnancy,
         stageB: LifeStage.motherhood,

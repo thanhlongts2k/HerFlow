@@ -49,9 +49,10 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ### [Tests]
 - **Transition Matrix Test Suite (`test/life_stage_transition_matrix_test.dart`):**
-  * Kiểm thử toàn diện 6/6 cặp chuyển đổi trạng thái 2 chiều giữa 4 giai đoạn sống cặp đôi (`couple <-> conception`, `couple <-> pregnancy`, `couple <-> motherhood`, `conception <-> pregnancy`, `conception <-> motherhood`, `pregnancy <-> motherhood`).
-  * Xác minh đầy đủ 4 điều kiện: Vợ đổi A->B, Firestore nhận B, Chồng chuyển B; Vợ đổi B->A, Firestore nhận A, Chồng chuyển về A.
-- `flutter analyze` — **0 issues** | `flutter test` — **222/222 PASS (100%)**.
+  * Kiểm thử toàn diện Ma Trận Chuyển Đổi Trạng Thái 4x4 (16/16 cases): gồm 4 trường hợp giữ nguyên (idempotent / no-op) và 12 trường hợp chuyển đổi giữa các trạng thái `{couple, conception, pregnancy, motherhood}`.
+  * Kiểm thử 6/6 cặp chuyển đổi hai chiều hoàn chỉnh (Bidirectional Round-Trip: A -> B -> A).
+  * Xác minh đầy đủ: Vợ đổi X -> Y, Firestore nhận Y (cả 2 trường `currentStage` và `lifeStage`), Chồng nhận stream Y (State RAM + Hive của Chồng khớp chính xác Y).
+- `flutter analyze` — **0 issues** | `flutter test` — **238/238 PASS (100%)**.
 
 ---
 
