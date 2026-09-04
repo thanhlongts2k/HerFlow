@@ -23,6 +23,7 @@ import 'package:herflow/features/care_signals/presentation/widgets/love_notes_th
 import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/lifecycle/domain/models/fetal_week_data.dart';
+import 'package:herflow/features/lifecycle/domain/services/maternal_calculator_service.dart';
 import 'package:herflow/features/lifecycle/domain/services/pregnancy_calculator_service.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/pregnancy_controller.dart';
 import '../widgets/husband_quick_chat_sheet.dart';
@@ -57,6 +58,7 @@ class HusbandViewScreen extends ConsumerWidget {
     final isPaused = ref.watch(isPausedModeProvider);
     final gestationalAge = ref.watch(currentGestationalAgeProvider);
     final fetalWeekData = ref.watch(currentFetalWeekDataProvider);
+    final maternalEval = ref.watch(maternalEvaluationProvider);
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -312,6 +314,7 @@ class HusbandViewScreen extends ConsumerWidget {
                       isDark: isDark,
                       partnerName: partnerName,
                       liveStatus: liveStatus,
+                      maternalEval: maternalEval,
                       moodText: liveStatus?.moodSummary.isNotEmpty == true
                           ? liveStatus!.moodSummary
                           : (liveStatus?.moodTags.isNotEmpty == true
@@ -2496,6 +2499,7 @@ class HusbandViewScreen extends ConsumerWidget {
     required String moodText,
     required String partnerName,
     PartnerStatusModel? liveStatus,
+    MaternalEvaluationResult? maternalEval,
   }) {
     final theme = Theme.of(context);
     final batteryInfo = _getBatteryStatus(energyLevel);
@@ -2654,6 +2658,124 @@ class HusbandViewScreen extends ConsumerWidget {
                   ),
                 );
               }).toList(),
+            ),
+          ],
+
+          // ── THỂ TRẠNG VỢ BẦU CHUẨN IOM & GỢI Ý THỰC ĐƠN BỐ BẦU ─────────
+          if (maternalEval != null && maternalEval.bmiCategory != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(6),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.black.withAlpha(12),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('⚖️', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Thể Trạng Chuẩn IOM Của $partnerName',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: maternalEval.bmiCategory!.color.withAlpha(isDark ? 40 : 20),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: maternalEval.bmiCategory!.color.withAlpha(60)),
+                        ),
+                        child: Text(
+                          'BMI: ${maternalEval.bmi ?? "--"} (${maternalEval.bmiCategory!.label})',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: maternalEval.bmiCategory!.color,
+                          ),
+                        ),
+                      ),
+                      if (maternalEval.weeklyGainRange != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(isDark ? 35 : 18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Khuyến nghị: ${maternalEval.weeklyGainRange!.formattedRange}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      if (maternalEval.actualGainKg != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (maternalEval.gainStatus?.color ?? AppColors.success)
+                                .withAlpha(isDark ? 35 : 18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Thực tế: ${maternalEval.actualGainKg! >= 0 ? "+" : ""}${maternalEval.actualGainKg} kg',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: maternalEval.gainStatus?.color ?? AppColors.success,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (maternalEval.husbandNutritionAdvice.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withAlpha(isDark ? 30 : 18),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.secondary.withAlpha(40)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('👨‍🍳', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              maternalEval.husbandNutritionAdvice,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ],

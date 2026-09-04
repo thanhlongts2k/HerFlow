@@ -20,6 +20,7 @@ import 'package:herflow/features/cycle/domain/repositories/cycle_repository.dart
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
 import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
+import 'package:herflow/features/lifecycle/domain/models/maternal_health_profile_model.dart';
 import 'package:herflow/features/lifecycle/domain/models/pregnancy_config_model.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/pregnancy_controller.dart';
@@ -260,6 +261,39 @@ void main() {
 
       expect(find.textContaining('Hành Trình Thai Kỳ Cùng'), findsOneWidget);
       expect(find.textContaining('chưa thiết lập ngày dự sinh trên máy'), findsOneWidget);
+    });
+
+    testWidgets('Hiển thị Thể Trạng Chuẩn IOM của Vợ và Gợi ý thực đơn cho Bố Bầu', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final lmp = DateTime.now().subtract(const Duration(days: 140)); // Tuần 20
+      const profile = MaternalHealthProfileModel(
+        birthYear: 1996,
+        heightCm: 160.0,
+        prePregnancyWeightKg: 50.0,
+        currentWeightKg: 50.5, // Tăng ít -> Tăng chậm hơn chuẩn IOM
+        parity: 'Con so (Con đầu)',
+      );
+
+      final config = PregnancyConfigModel(
+        lastMenstrualPeriod: lmp,
+        estimatedDueDate: lmp.add(const Duration(days: 280)),
+        isTrackingActive: true,
+        maternalProfile: profile,
+      );
+
+      await tester.pumpWidget(buildTestScreen(config: config));
+      await tester.pumpAndSettle();
+
+      // Thẻ Bố Bầu hiển thị thông tin thể trạng IOM của Vợ
+      expect(find.textContaining('Thể Trạng Chuẩn IOM Của'), findsOneWidget);
+      expect(find.textContaining('BMI: 19.5'), findsOneWidget);
+      expect(find.textContaining('Vợ đang tăng cân chậm hơn chuẩn IOM'), findsOneWidget);
     });
   });
 }

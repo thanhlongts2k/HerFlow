@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.8.1+27` (Phase 3: Mother Dashboard, Feeding Timer & Husband Motherhood Companion)  
-> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Task 3 (Giao diện Mẹ Bỉm & Bấm giờ bú độc lập) & Task 4 (Góc nhìn Bố Bỉm & Đồng bộ 1-chạm)  
+> **Phiên bản hiện tại:** `v0.8.2+28` (Maternal Health Profile, Progressive Profiling & IOM BMI Standards)  
+> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Phân hệ Hồ sơ Thể trạng Mẹ Bầu & Tăng cân chuẩn IOM  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -11,7 +11,13 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **272/272 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Ma trận 5x5 25 cases, 10 cặp 2 chiều round-trip & Motherhood Widget Tests) |
+| **Unit & Widget Testing (`flutter test`)** | ✅ **292/292 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm 16 tests MaternalCalculatorService, 3 tests Maternal Profile Widget, 7 tests Husband Pregnancy View) |
+| **Hồ Sơ Thể Trạng Mẹ Bầu (`MaternalHealthProfileModel`)** | ✅ **HOÀN TẤT & SAFE MIGRATION** | Quản lý năm sinh, chiều cao, cân nặng trước bầu, cân nặng hiện tại, con thứ mấy, nơi sinh; tương thích ngược 100% Hive cũ (mặc định null) |
+| **Tính Toán Y Khoa IOM (`MaternalCalculatorService`)** | ✅ **HOÀN TẤT & AN TOÀN PHÉP CHIA** | Chuẩn 4 nhóm IOM (12.5-18kg, 11.5-16kg, 7-11.5kg, 5-9kg), dải tuần 1..40 (mặc định thai đơn), bảo vệ phép chia cho 0, phân tầng mẹ $\ge 35$ tuổi |
+| **Thẻ Tiến Trình (`MaternalHealthSummaryCard`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Progressive Profiling: hiển thị thanh % hoàn thiện khi thiếu dữ liệu, tự động chuyển thành Thẻ Thể trạng IOM + Lời khuyên y khoa khi hoàn tất |
+| **Modal Nhập Liệu (`MaternalProfileSheet`)** | ✅ **HOÀN TẤT & LIVE PREVIEW** | Giao diện Liquid Glass tính live BMI ngay khi gõ chiều cao/cân nặng, tính tuổi mẹ, chip chọn con thứ mấy và phương pháp sinh |
+| **Góc Nhìn Bố Bầu (`HusbandViewScreen`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Thẻ Thể Trạng Chuẩn IOM của Vợ hiển thị mức tăng thực tế vs khuyến nghị, kèm hộp gợi ý thực đơn cụ thể cho Chồng chuẩn bị |
+| **Realtime Sync Thể Trạng Bạn Đời** | ✅ **HOÀN TẤT** | Khi cập nhật hồ sơ, tự động đồng bộ tóm tắt thể trạng (BMI, cân nặng, thực đơn cho bố) sang document `couples/{coupleId}` cho máy Chồng |
 | **Mother Dashboard (`MotherhoodHomeScreen`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | Tích hợp Tab 0 MainNavScreen khi `LifeStage.motherhood`. Gồm Hero Card, Quick Action Bar, LAM Card, Wonder Weeks & Daily Timeline |
 | **Bấm Giờ Bú Độc Lập (`FeedingTimerSheet`)** | ✅ **HOÀN TẤT & AN TOÀN NỀN** | Lưu mốc `startTime` bằng `DateTime.now()` thực tế để bảo toàn thời lượng kể cả khi app ngủ hoặc khóa máy. Hỗ trợ Ngực T/P & Bú bình |
 | **Góc Nhìn Bố Bỉm (`HusbandViewScreen`)** | ✅ **HOÀN TẤT & ĐÃ TEST** | `HusbandMotherhoodCompanionCard` (tóm tắt trạng thái con, lời khuyên bố) & `HusbandBabyQuickCareRow` (3 nút ghi nhanh 1-chạm của Bố) |
@@ -183,3 +189,6 @@ Sau khi hoàn thành Task 3 (Giao diện Mẹ Bỉm & Bấm giờ bú độc l�
 | **Tràn khung hình Headless Test (Layout Overflow)** | Cực thấp | Áp dụng triệt để Rule 10: Toàn bộ Widget test thiết lập kích thước giả lập `1080x2400` pixel với `devicePixelRatio = 1.0`, dọn dẹp an toàn qua `addTearDown`. |
 | **Xung đột định danh tab Bố Bỉm (Name Collision)** | Cực thấp | Phân định rõ phạm vi NavigationDestination bằng `find.widgetWithText(NavigationDestination, 'Bố Bỉm')` để không bị trùng lặp với thẻ badge Bố Bỉm trong Hero Card. |
 | **Nhầm lẫn phân quyền cha mẹ (Role Attribution)** | Cực thấp | Các nút tác vụ nhanh của Bố được gắn cứng `loggedByRole: 'husband'` và của Mẹ `loggedByRole: 'wife'`, đảm bảo phân định rõ ràng trên timeline và Firestore. |
+| **Phép chia cho 0 khi tính BMI (Zero Division)** | Cực thấp | `MaternalCalculatorService.calculateBmi` kiểm tra bắt buộc `heightCm == null || heightCm <= 0 || weightKg == null || weightKg <= 0`, trả về `null` an toàn, miễn nhiễm với `double.infinity` hay NaN. |
+| **Gãy cấu hình Hive cũ (Safe Hive Migration)** | Cực thấp | Mọi trường dữ liệu mới của `MaternalHealthProfileModel` đều mặc định null. Parser `PregnancyConfigModel.fromMap` có null-check và `try/catch` bọc ngoài, dữ liệu cũ đọc an toàn 100%. |
+| **Gián đoạn lưu offline khi sync Bạn Đời (Sync Fault)** | Cực thấp | Lưu RAM & Hive local thực hiện trước; thao tác ghi Firestore `users/{uid}` và `couples/{coupleId}` được bọc trong khối `try/catch` với `.catchError`, bảo toàn tuyệt đối trải nghiệm offline. |

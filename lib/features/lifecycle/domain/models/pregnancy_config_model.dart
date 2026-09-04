@@ -1,5 +1,6 @@
 // lib/features/lifecycle/domain/models/pregnancy_config_model.dart
 import 'package:flutter/foundation.dart';
+import 'package:herflow/features/lifecycle/domain/models/maternal_health_profile_model.dart';
 
 /// Model cấu hình theo dõi thai kỳ (Pregnancy Mode)
 @immutable
@@ -16,11 +17,15 @@ class PregnancyConfigModel {
   /// Trạng thái theo dõi thai kỳ đang hoạt động
   final bool isTrackingActive;
 
+  /// Hồ sơ thể trạng sinh học của mẹ bầu (Progressive Profiling)
+  final MaternalHealthProfileModel? maternalProfile;
+
   const PregnancyConfigModel({
     this.lastMenstrualPeriod,
     this.estimatedDueDate,
     this.conceptionDate,
     this.isTrackingActive = true,
+    this.maternalProfile,
   });
 
   /// Tạo bản sao với các thuộc tính thay đổi
@@ -29,12 +34,14 @@ class PregnancyConfigModel {
     DateTime? estimatedDueDate,
     DateTime? conceptionDate,
     bool? isTrackingActive,
+    MaternalHealthProfileModel? maternalProfile,
   }) {
     return PregnancyConfigModel(
       lastMenstrualPeriod: lastMenstrualPeriod ?? this.lastMenstrualPeriod,
       estimatedDueDate: estimatedDueDate ?? this.estimatedDueDate,
       conceptionDate: conceptionDate ?? this.conceptionDate,
       isTrackingActive: isTrackingActive ?? this.isTrackingActive,
+      maternalProfile: maternalProfile ?? this.maternalProfile,
     );
   }
 
@@ -45,12 +52,25 @@ class PregnancyConfigModel {
       'estimatedDueDate': estimatedDueDate?.toIso8601String(),
       'conceptionDate': conceptionDate?.toIso8601String(),
       'isTrackingActive': isTrackingActive,
+      'maternalProfile': maternalProfile?.toMap(),
     };
   }
 
-  /// Khởi tạo đối tượng từ Map lưu trữ
+  /// Khởi tạo đối tượng từ Map lưu trữ (An toàn tuyệt đối với null)
   factory PregnancyConfigModel.fromMap(Map<String, dynamic>? map) {
     if (map == null) return const PregnancyConfigModel();
+
+    MaternalHealthProfileModel? parsedProfile;
+    if (map['maternalProfile'] != null && map['maternalProfile'] is Map) {
+      try {
+        parsedProfile = MaternalHealthProfileModel.fromMap(
+          Map<String, dynamic>.from(map['maternalProfile'] as Map),
+        );
+      } catch (e) {
+        debugPrint('[PregnancyConfigModel] Error parsing maternalProfile: $e');
+        parsedProfile = null;
+      }
+    }
 
     return PregnancyConfigModel(
       lastMenstrualPeriod: map['lastMenstrualPeriod'] != null
@@ -63,6 +83,7 @@ class PregnancyConfigModel {
           ? DateTime.tryParse(map['conceptionDate'].toString())
           : null,
       isTrackingActive: map['isTrackingActive'] as bool? ?? true,
+      maternalProfile: parsedProfile,
     );
   }
 
@@ -73,7 +94,8 @@ class PregnancyConfigModel {
         other.lastMenstrualPeriod == lastMenstrualPeriod &&
         other.estimatedDueDate == estimatedDueDate &&
         other.conceptionDate == conceptionDate &&
-        other.isTrackingActive == isTrackingActive;
+        other.isTrackingActive == isTrackingActive &&
+        other.maternalProfile == maternalProfile;
   }
 
   @override
@@ -82,10 +104,12 @@ class PregnancyConfigModel {
         estimatedDueDate,
         conceptionDate,
         isTrackingActive,
+        maternalProfile,
       );
 
   @override
   String toString() {
-    return 'PregnancyConfigModel(LMP: $lastMenstrualPeriod, EDD: $estimatedDueDate, conception: $conceptionDate, active: $isTrackingActive)';
+    return 'PregnancyConfigModel(LMP: $lastMenstrualPeriod, EDD: $estimatedDueDate, active: $isTrackingActive, profile: $maternalProfile)';
   }
 }
+

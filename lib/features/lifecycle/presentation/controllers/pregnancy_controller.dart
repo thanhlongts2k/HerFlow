@@ -8,7 +8,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:herflow/core/constants/app_constants.dart';
 import 'package:herflow/core/utils/user_scope.dart';
 import 'package:herflow/features/lifecycle/domain/models/fetal_week_data.dart';
+import 'package:herflow/features/lifecycle/domain/models/maternal_health_profile_model.dart';
 import 'package:herflow/features/lifecycle/domain/models/pregnancy_config_model.dart';
+import 'package:herflow/features/lifecycle/domain/services/maternal_calculator_service.dart';
 import 'package:herflow/features/lifecycle/domain/services/pregnancy_calculator_service.dart';
 
 /// Controller quản lý cấu hình và trạng thái theo dõi thai kỳ (Pregnancy Mode)
@@ -181,6 +183,98 @@ class PregnancyController extends StateNotifier<PregnancyConfigModel?> {
     debugPrint('[PregnancyController] clearPregnancy completed');
   }
 
+  /// Lấy coupleId nếu đang ghép đôi
+  String? getSavedCoupleId([String? uid]) {
+    final effectiveUid = uid ?? UserScope.currentUid();
+    final scoped = _settingsBox.get(UserScope.key('partner_couple_id', effectiveUid)) as String?;
+    if (scoped != null && scoped.isNotEmpty) return scoped;
+    final fallback = _settingsBox.get('partner_couple_id') as String?;
+    if (fallback != null && fallback.isNotEmpty) return fallback;
+    return null;
+  }
+
+  /// Cập nhật hồ sơ thể trạng mẹ bầu (Maternal Health Profile)
+  /// - Ghi RAM tức thì
+  /// - Lưu Hive local bền vững
+  /// - Sync users/{uid}
+  /// - Đồng bộ sang document couples/{coupleId} cho máy Chồng realtime
+  Future<void> updateMaternalProfile(MaternalHealthProfileModel profile, {String? uid}) async {
+    final effectiveUid = uid ?? UserScope.currentUid();
+    final current = state ?? const PregnancyConfigModel();
+    final updated = current.copyWith(
+      maternalProfile: profile.copyWith(updatedAt: DateTime.now()),
+    );
+
+    // 1. Cập nhật RAM
+    state = updated;
+
+    // 2. Lưu Hive local
+    await _settingsBox.put(
+      _k(AppConstants.keyPregnancyConfig, effectiveUid),
+      jsonEncode(updated.toMap()),
+    );
+
+    // 3. Sync Firestore users/{uid}
+    if (effectiveUid.isNotEmpty) {
+      try {
+        FirebaseFirestore.instance.collection('users').doc(effectiveUid).set(
+          {
+            'pregnancyConfig': updated.toMap(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        ).catchError((e) {
+          debugPrint('[PregnancyController] Firestore sync error: $e');
+        });
+      } catch (e) {
+        debugPrint('[PregnancyController] Firestore sync skipped: $e');
+      }
+    }
+
+    // 4. Đồng bộ tóm tắt thể trạng sang couples/{coupleId} cho máy Chồng (Guardrail 1)
+    final coupleId = getSavedCoupleId(effectiveUid);
+    if (coupleId != null && coupleId.isNotEmpty) {
+      try {
+        int currentWeek = 1;
+        if (updated.lastMenstrualPeriod != null) {
+          currentWeek = PregnancyCalculatorService.calculateGestationalAge(
+            updated.lastMenstrualPeriod!,
+          ).currentWeekOrdinal;
+        } else if (updated.estimatedDueDate != null) {
+          final lmp = PregnancyCalculatorService.calculateLMPFromDueDate(
+            updated.estimatedDueDate!,
+          );
+          currentWeek = PregnancyCalculatorService.calculateGestationalAge(lmp).currentWeekOrdinal;
+        }
+
+        final eval = MaternalCalculatorService.evaluateProfile(
+          profile: profile,
+          gestationalWeek: currentWeek,
+        );
+
+        FirebaseFirestore.instance.collection('couples').doc(coupleId).set(
+          {
+            'maternalProfile': profile.toMap(),
+            'maternalBmi': profile.prePregnancyBmi,
+            'maternalBmiCategory': eval.bmiCategory?.label,
+            'maternalActualGainKg': profile.actualGainKg,
+            'maternalGainStatus': eval.gainStatus?.label,
+            'maternalWeeklyGainRange': eval.weeklyGainRange?.formattedRange,
+            'maternalHusbandNutritionTip': eval.husbandNutritionAdvice,
+            'maternalUpdatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        ).catchError((e) {
+          debugPrint('[PregnancyController] Firestore couple sync error: $e');
+        });
+      } catch (e) {
+        debugPrint('[PregnancyController] Firestore couple sync skipped: $e');
+      }
+    }
+
+    debugPrint('[PregnancyController] updateMaternalProfile: completed for uid=$effectiveUid');
+  }
+
   /// Nạp cấu hình thai kỳ cho người dùng cụ thể (gọi sau login/restore)
   void loadForUser(String uid) {
     _loadFromLocal(uid);
@@ -221,3 +315,23 @@ final currentFetalWeekDataProvider = Provider<FetalWeekData?>((ref) {
   // Lấy tuần thai đang diễn ra (currentWeekOrdinal, ví dụ 11 tuần 3 ngày là Tuần thứ 12)
   return FetalWeekData.getWeekData(age.currentWeekOrdinal);
 });
+
+/// Provider trích xuất trực tiếp hồ sơ thể trạng của mẹ bầu
+final maternalProfileProvider = Provider<MaternalHealthProfileModel?>((ref) {
+  return ref.watch(pregnancyConfigProvider)?.maternalProfile;
+});
+
+/// Provider tính toán thể trạng y khoa toàn diện (BMI, IOM, Weekly Gain, Clinical Tip)
+final maternalEvaluationProvider = Provider<MaternalEvaluationResult?>((ref) {
+  final profile = ref.watch(maternalProfileProvider);
+  if (profile == null) return null;
+
+  final ageResult = ref.watch(currentGestationalAgeProvider);
+  final currentWeek = ageResult?.currentWeekOrdinal ?? 1;
+
+  return MaternalCalculatorService.evaluateProfile(
+    profile: profile,
+    gestationalWeek: currentWeek,
+  );
+});
+

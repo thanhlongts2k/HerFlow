@@ -11,6 +11,7 @@ import 'package:herflow/features/lifecycle/domain/services/pregnancy_calculator_
 import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/pregnancy_controller.dart';
 import 'package:herflow/features/lifecycle/presentation/widgets/kick_counter_sheet.dart';
+import 'package:herflow/features/lifecycle/presentation/widgets/maternal_health_summary_card.dart';
 import 'package:herflow/features/lifecycle/presentation/widgets/prenatal_appointments_card.dart';
 import 'package:herflow/features/lifecycle/presentation/widgets/pregnancy_setup_sheet.dart';
 
@@ -157,8 +158,15 @@ class _PregnancyHomeScreenState extends ConsumerState<PregnancyHomeScreen> {
               // 2. Thẻ Hero "Hành Trình Thai Kỳ"
               if (ageResult != null) ...[
                 _buildHeroCard(context, isDark, ageResult, pregnancyConfig.estimatedDueDate),
-                const SizedBox(height: 22),
+                const SizedBox(height: 20),
               ],
+
+              // 2.2. Thẻ Hồ Sơ Thể Trạng Mẹ Bầu & Chuẩn Tăng Cân IOM
+              MaternalHealthSummaryCard(
+                currentWeek: actualWeekOrdinal,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 20),
 
               // 3. Bộ chuyển tuần thai (Week Carousel / Selector)
               _buildWeekSelectorSection(

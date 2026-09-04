@@ -4,6 +4,37 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.8.2+28] - 2026-09-04 (Maternal Health Profile & IOM BMI Standards)
+
+### [Added]
+- **🤰 Phân Hệ Hồ Sơ Thể Trạng Mẹ Bầu (Maternal Health Profile & Progressive Profiling):**
+  * `MaternalHealthProfileModel`: Model quản lý dữ liệu sinh học của mẹ bầu: Năm sinh (`birthYear`), chiều cao (`heightCm`), cân nặng trước thai kỳ (`prePregnancyWeightKg`), cân nặng ghi nhận gần nhất (`currentWeightKg`), tiền sử sinh con (`parity`), kế hoạch sinh nở (`deliveryPlan`), bệnh viện dự kiến sinh (`targetHospital`) và cờ đa thai / thai đơn (`isMultiplePregnancy`).
+  * Mở rộng `PregnancyConfigModel`: Tích hợp trường `maternalProfile` với giá trị mặc định `null`, đảm bảo an toàn tương thích ngược 100% với dữ liệu Hive cũ.
+  * `MaternalCalculatorService`:
+    - Tính toán chỉ số BMI tiền thai kỳ kèm cơ chế bảo vệ phép chia cho 0 (`heightCm <= 0` hoặc `null`).
+    - Phân loại chuẩn 4 nhóm Viện Y học Hoa Kỳ (IOM 2009): Nhẹ cân (12.5 - 18.0 kg), Bình thường (11.5 - 16.0 kg), Thừa cân (7.0 - 11.5 kg), Béo phì (5.0 - 9.0 kg).
+    - Tính toán dải cân nặng khuyến nghị chuẩn theo từng tuần thai từ tuần 1 đến tuần 40 (mặc định giả định thai đơn).
+    - Phân tầng độ tuổi mẹ sinh học: Nhận diện chính xác ngưỡng mẹ $\ge 35$ tuổi (Advanced Maternal Age - AMA) kèm cảnh báo sàng lọc NIPT và tầm soát tiền sản giật; mẹ vị thành niên (<18 tuổi) và độ tuổi tiêu chuẩn (18-34).
+    - Đánh giá mức độ tăng cân thực tế (Tăng chậm / Lý tưởng chuẩn IOM / Tăng nhanh).
+- **📱 Giao Diện Người Dùng & Thu Thập Dữ Liệu Theo Tiến Trình (Progressive Profiling):**
+  * `MaternalProfileSheet`: Modal Bottom Sheet dạng Liquid Glass cho phép mẹ cập nhật chiều cao, cân nặng, năm sinh, con thứ mấy và tính Live BMI tức thì.
+  * `MaternalHealthSummaryCard` trên `PregnancyHomeScreen`:
+    - Trạng thái chưa hoàn thiện: Hiển thị thanh tiến trình % hoàn thiện và nút CTA.
+    - Trạng thái hoàn thiện: Hiển thị BMI ban đầu, dải tăng cân chuẩn tuần hiện tại, mức tăng thực tế và lời khuyên y khoa cá nhân hóa.
+  * Giữ nguyên luồng Onboarding nhanh 1-chạm của `PregnancySetupSheet` (không gây rào cản form dài).
+- **👨‍🍼 Đồng Bộ Thể Trạng & Thực Đơn Cho Bố Bầu (`HusbandViewScreen`):**
+  * Nâng cấp `_buildPregnancyMomStatusCard`: Hiển thị thẻ Thể Trạng Chuẩn IOM của Vợ (BMI, dải tuần, thực tế).
+  * Hộp "Gợi Ý Thực Đơn Bố Chuẩn Bị": Đưa ra hướng dẫn chuẩn bị bữa phụ và thực đơn cụ thể cho chồng dựa trên mức tăng cân của vợ.
+  * Tự động đồng bộ tóm tắt thể trạng sang Firestore document `couples/{coupleId}` cho máy Chồng realtime.
+- **🧪 Bộ Kiểm Thử Đơn Vị & Widget Tests Đạt Chuẩn (Điều 10, 11, 12 AGENTS.md):**
+  * `test/maternal_calculator_service_test.dart`: 16/16 tests PASS (Bảo vệ phép chia cho 0, 4 nhóm IOM, tuần thai 1..40, tuổi mẹ $\ge 35$, % hoàn thiện, Safe Hive Migration).
+  * `test/pregnancy_maternal_profile_widget_test.dart`: 3/3 tests PASS (Viewport 1080x2400).
+  * `test/features/husband_view/husband_pregnancy_view_test.dart`: 7/7 tests PASS (Bổ sung kiểm thử thể trạng IOM & thực đơn Bố Bầu).
+  * `flutter analyze`: **0 issues found!**
+  * `flutter test`: **100% tests PASSED (292/292 tests)**.
+
+---
+
 ## [0.8.1+27] - 2026-09-04 (Phase 3: Mother Dashboard, Feeding Timer & Husband Motherhood Companion)
 
 ### [Added]
