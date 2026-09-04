@@ -297,13 +297,20 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
                             icon: const Icon(Icons.copy_rounded, color: AppColors.primary),
                             tooltip: 'Sao chép mã',
                             onPressed: () {
-                              Clipboard.setData(ClipboardData(text: activeCode));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Đã sao chép mã kết nối vào bộ nhớ tạm!'),
-                                  backgroundColor: AppColors.primary,
-                                ),
-                              );
+                              try {
+                                final textToCopy = activeCode.trim().isNotEmpty
+                                    ? activeCode.trim()
+                                    : 'MOONA-CONNECTED';
+                                Clipboard.setData(ClipboardData(text: textToCopy));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Đã sao chép mã kết nối vào bộ nhớ tạm!'),
+                                    backgroundColor: AppColors.primary,
+                                  ),
+                                );
+                              } catch (e) {
+                                debugPrint('Error copying pairing code: $e');
+                              }
                             },
                           ),
                         ],

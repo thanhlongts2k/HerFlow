@@ -237,6 +237,11 @@ class AuthRepository {
 
     try {
       await _googleSignIn.signOut();
+      try {
+        await _googleSignIn.disconnect();
+      } catch (e) {
+        debugPrint('Google disconnect error (safe to ignore): $e');
+      }
     } catch (e) {
       debugPrint('Google sign out error: $e');
     }
