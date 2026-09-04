@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#1E1B2E</color>
+    <color name="moona_splash_bg_light">#FDFBF7</color>
+    <color name="moona_splash_bg_dark">#191418</color>
+    <color name="moona_primary">#E87A90</color>
 </resources>

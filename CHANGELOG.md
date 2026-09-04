@@ -4,6 +4,21 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.6.6+21] - 2026-09-04 (Cold Start Seamless Splash & UI Optimization)
+
+### [Fixed]
+- **⚡ Triệt Tiêu Lỗi Màn Hình Đen Khi Khởi Động (Cold Start Seamless Launch Fix):**
+  * Tầng Native: Cấu hình `LaunchTheme` và `NormalTheme` với màu nền chuẩn thương hiệu (Kem vani `#FDFBF7` cho Light mode và Warm Espresso `#191418` cho Dark mode) thay vì phụ thuộc vào nền đen `#000000` mặc định của hệ điều hành.
+  * Hỗ trợ toàn diện Android 12+ (API 31+) với các tệp cấu hình `values-v31/styles.xml` và `values-night-v31/styles.xml`, tích hợp chuẩn `SplashScreen API` (`windowSplashScreenBackground`, `windowSplashScreenAnimatedIcon`).
+  * Tầng Dart Engine: Chuyển đổi tác vụ khôi phục vai trò từ Cloud Firestore sang luồng xử lý bất đồng bộ trong nền (non-blocking). Ứng dụng đọc trạng thái trực tiếp từ cache Hive tức thì, kích hoạt `runApp()` trong ~50ms mà không bị chặn bởi độ trễ mạng Firestore.
+
+### [Changed]
+- **🧹 Tối Giản Giao Diện Cài Đặt (Refined Settings UI):**
+  * Gỡ bỏ hoàn toàn thẻ "Xem trước Góc nhìn của Chồng" trên giao diện Cài đặt của Vợ để tránh gây xao nhãng và giữ trải nghiệm cá nhân hóa chuyên biệt.
+  * Dọn sạch các import và liên kết điều hướng preview không còn sử dụng.
+
+---
+
 ## [0.6.5+20] - 2026-09-04 (Native In-App OTA Updater with Dio & AndroidX FileProvider)
 
 ### [Added]

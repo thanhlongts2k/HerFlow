@@ -59,15 +59,15 @@ void main() async {
   bool isOnboardingCompleted =
       settingsBox.get(AppConstants.keyIsOnboardingCompleted, defaultValue: false) as bool;
 
-  // Khôi phục vai trò từ Cloud Firestore nếu đã đăng nhập
+  // Khôi phục vai trò từ Cloud Firestore trong nền (non-blocking để không gây trễ / màn hình đen lúc khởi động)
   final uid = userBox.get(AppConstants.keyUserUid) as String? ?? FirebaseAuth.instance.currentUser?.uid;
   if ((isLoggedIn || FirebaseAuth.instance.currentUser != null) && uid != null && uid.isNotEmpty) {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get()
-          .timeout(const Duration(seconds: 4));
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get()
+        .timeout(const Duration(seconds: 4))
+        .then((doc) async {
       if (doc.exists && doc.data() != null) {
         final cloudRole = doc.data()?['role'] as String?;
         if (cloudRole != null && (cloudRole == 'wife' || cloudRole == 'husband')) {
@@ -75,13 +75,11 @@ void main() async {
           await settingsBox.put('partner_user_role', cloudRole);
           await settingsBox.put(AppConstants.keyHasSelectedRole, true);
           await settingsBox.put(AppConstants.keyIsOnboardingCompleted, true);
-          hasSelectedRole = true;
-          isOnboardingCompleted = true;
         }
       }
-    } catch (e) {
-      debugPrint('Cloud role restoration on startup notice: $e');
-    }
+    }).catchError((e) {
+      debugPrint('Cloud role background sync notice: $e');
+    });
   }
 
   String initialRoute;

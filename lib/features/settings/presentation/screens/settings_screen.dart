@@ -16,7 +16,6 @@ import 'package:herflow/core/widgets/moona_brand_logo.dart';
 import 'package:herflow/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:herflow/features/cycle/domain/entities/cycle_info.dart';
 import 'package:herflow/features/cycle/presentation/controllers/cycle_controller.dart';
-import 'package:herflow/features/husband_view/presentation/screens/husband_view_screen.dart';
 import 'package:herflow/features/partner_sync/presentation/controllers/partner_sync_controller.dart';
 import 'package:herflow/features/partner_sync/presentation/screens/pairing_screen.dart';
 import 'package:herflow/features/settings/domain/models/nickname_config.dart';
@@ -445,31 +444,6 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
           ),
-
-          // Lối tắt xem trước giao diện của Chồng (nếu đang ở vai trò Vợ)
-          if (currentRole == UserRole.wife)
-            ListTile(
-              leading: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.shield_rounded, color: AppColors.secondary, size: 20),
-              ),
-              title: const Text('Xem trước Góc nhìn của Chồng', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('Xem giao diện người bạn đời sẽ nhìn thấy', style: TextStyle(fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const HusbandViewScreen(isWifePreview: true),
-                  ),
-                );
-              },
-            ),
 
           // ── NHÓM: CHU KỲ CỦA NÀNG (DÀNH CHO NGƯỜI THƯƠNG) ───────
           if (currentRole == UserRole.husband) ...[
