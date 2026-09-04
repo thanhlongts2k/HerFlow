@@ -223,7 +223,7 @@ Moona Master Roadmap
     │
     └── SPRINT 3C: Báo Cáo Đối Soát Chu Kỳ & Xuất/Nhập Dữ Liệu
         ├── [3C.1] UI Báo cáo đối soát: So sánh Chu kỳ lý thuyết vs Chu kỳ thực tế ghi nhận
-        ├── [3C.2] Module xuất dữ liệu sao lưu mã hóa AES-256 (.moona)
+        ├── [3C.2] [x] Module sao lưu & khôi phục dữ liệu mã hóa AES-256 (.moona & Cloud Vault) — [✅ HOÀN THÀNH v0.8.3+29]
         ├── [3C.3] Module xuất bảng tính nhanh (.json, .csv) phục vụ khám phụ khoa
         └── [3C.4] Kiểm thử toàn diện 100% pass, flutter analyze 0 issues, deploy v0.6.0
 ```

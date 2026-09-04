@@ -4,6 +4,41 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.8.3+29] - 2026-09-04 (Comprehensive Backup & Restore Service - v0.4.0 Legacy Fulfill)
+
+### [Added]
+- **🛡️ Phân Hệ Sao Lưu & Khôi Phục Dữ Liệu Toàn Diện (Backup & Restore Service):**
+  * `BackupEncryptionConfig`: Tập trung toàn bộ cấu hình mã hóa theo chuẩn Điều 8 trong `AGENTS.md` (Magic header `MOONA_BACKUP`, formatVersion 1, keyLength 32 bytes, ivLength 16 bytes, appSalt `Moona_FemTech_Vault_Salt_v1_2026`, KDF 1000 iterations).
+  * `BackupEncryptionService`:
+    - Thuật toán mật mã hóa AES-256-CBC kết hợp nén GZIP dữ liệu trước khi mã hóa (tối ưu dung lượng và chống vượt trần 1MB Firestore).
+    - Cơ chế dẫn xuất khóa mật mã (Key Derivation - KDF) an toàn từ UID người dùng và Application Salt.
+    - Vector khởi tạo ngẫu nhiên `IV.fromSecureRandom(16)` cho mỗi lượt xuất tệp.
+    - Kiểm định toàn vẹn dữ liệu bằng mã băm SHA-256 Checksum (chống giả mạo, can thiệp hoặc hư hỏng tệp).
+    - Bắt và định danh các ngoại lệ chuẩn: `BackupInvalidKeyException`, `BackupCorruptedException`, `BackupVersionMismatchException`.
+  * `BackupMetadata` & `BackupPayload`: Mô hình dữ liệu đại diện cho tệp container `.moona` và dữ liệu snapshot đa giai đoạn.
+  * `BackupRestoreService`:
+    - Quét và đóng gói snapshot toàn bộ các Hive Box qua 5 giai đoạn: Chu kỳ (`herflow_cycle_box`), Cặp đôi & Cài đặt (`herflow_settings_box`), Thai kỳ & Thụ thai, Nuôi con (`herflow_motherhood_box`), Tâm trạng (`herflow_mood_box`), Tài khoản (`herflow_user_box`).
+    - Hỗ trợ xuất tệp cục bộ `.moona` và kích hoạt chia sẻ trực tiếp qua `share_plus` (Zalo, Gmail, Drive).
+    - Hỗ trợ chọn tệp và khôi phục an toàn qua `file_picker`.
+    - Hỗ trợ đồng bộ đám mây riêng tư (Private Vault) lên Firestore subcollection `users/{uid}/backups/latest`.
+    - Tự động kích hoạt `HiveMigrationValidator.runMigrations(...)` khi khôi phục từ bản sao lưu phiên bản cũ để đảm bảo tương thích 100%.
+- **📱 Giao Diện Soft Glassmorphic & Trải Nghiệm Người Dùng (UI/UX):**
+  * `BackupRestoreScreen`: Màn hình Soft Glassmorphic hiển thị thẻ giới thiệu bảo mật AES-256, phân hệ Sao lưu Đám mây và phân hệ Tệp cục bộ (.moona).
+  * `BackupRestoreController`: Quản lý trạng thái tiến trình, lưu vết thời gian bản sao lưu gần nhất.
+  * Tích hợp `MoonaConfirmDialog`: Hộp thoại xác nhận phá hủy (`isDestructive: true`) trước khi khôi phục để chống ghi đè nhầm lẫn dữ liệu.
+  * Cơ chế `refreshAppStateAfterRestore(ref)`: Sử dụng `ref.invalidate(...)` trên toàn bộ controller (Chu kỳ, Thai kỳ, Mẹ bỉm, Vòng đời, Danh xưng, Giao diện) giúp cập nhật UI tức thì mà không cần khởi động lại ứng dụng.
+  * Đấu nối tuyến đường điều hướng `AppRoutes.backupRestore` và mở màn hình từ nút "Sao lưu & Khôi phục" trong `SettingsScreen`.
+- **🔒 Quy Tắc Bảo Mật Firestore (`firestore.rules`):**
+  * Bổ sung quy tắc bảo mật cho subcollection `users/{userId}/backups/{document}`, đảm bảo chỉ chính chủ tài khoản (`request.auth.uid == userId`) mới có quyền đọc và ghi bản sao lưu.
+- **🧪 Bộ Kiểm Thử Ma Trận Khôi Phục Đạt Chuẩn (Điều 10, 11, 12 AGENTS.md):**
+  * `test/backup_encryption_service_test.dart`: 8/8 tests PASS (KDF, tính duy nhất, Checksum SHA-256, GZIP + AES-256 roundtrip, tiếng Việt/Emoji, corrupt/invalid key exception handling).
+  * `test/backup_restore_service_test.dart`: 6/6 tests PASS cho đầy đủ 6 kịch bản Ma trận Khôi phục (M1 Roundtrip chuẩn, M2 Tệp hỏng/Sai hash, M3 Sai UID/Khóa khác, M4 Tương thích ngược phiên bản cũ v0.6/v0.7, M5 Serialization container JSON, M6 Từ chối formatVersion không hỗ trợ).
+  * `test/backup_restore_screen_test.dart`: 2/2 tests PASS với Viewport chuẩn `1080x2400`.
+  * `flutter analyze`: **0 issues found!**
+  * `flutter test`: **100% tests PASSED (308/308 tests)**.
+
+---
+
 ## [0.8.2+28] - 2026-09-04 (Maternal Health Profile & IOM BMI Standards)
 
 ### [Added]

@@ -46,6 +46,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       // Cho phép đọc vai trò phục vụ đối soát và ghép đôi
       allow read: if true;
+
+      // 3.1. Phân hệ sao lưu đám mây riêng tư (Private Cloud Backup Vault)
+      match /backups/{document} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }

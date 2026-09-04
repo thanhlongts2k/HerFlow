@@ -539,9 +539,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Xuất / nhập file .moona mã hóa AES-256', style: TextStyle(fontSize: 12)),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tính năng Backup sẽ khả dụng trong v0.4.0')),
-              );
+              Navigator.pushNamed(context, AppRoutes.backupRestore);
             },
           ),
 
