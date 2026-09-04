@@ -22,6 +22,8 @@ import 'package:herflow/features/settings/domain/models/nickname_config.dart';
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/pregnancy_controller.dart';
+import 'package:herflow/features/lifecycle/presentation/widgets/pregnancy_setup_sheet.dart';
 import 'package:herflow/core/services/app_update_service.dart';
 import 'package:herflow/core/widgets/app_update_dialog.dart';
 import 'package:herflow/core/widgets/moona_confirm_dialog.dart';
@@ -81,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
 
     final currentStage = ref.watch(currentLifeStageProvider);
     final lifeStageState = ref.watch(lifeStageControllerProvider);
-    final isCoupleMode = ref.watch(isCoupleModeProvider);
+    final supportsPartner = ref.watch(supportsCompanionProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -180,8 +182,8 @@ class SettingsScreen extends ConsumerWidget {
                 : const SizedBox.shrink(),
           ),
 
-          // ── CÁC CẤU HÌNH CẶP ĐÔI (CHỈ HIỆN KHI Ở CHẾ ĐỘ CHUNG ĐÔI - Q3) ──
-          if (isCoupleMode) ...[
+          // ── CÁC CẤU HÌNH CẶP ĐÔI (CHỈ HIỆN KHI Ở CHẾ ĐỘ HỖ TRỢ ĐỒNG HÀNH - KHÔNG PHẢI SOLO) ──
+          if (supportsPartner) ...[
             _SettingsDivider(),
 
             // ── NHÓM 2: VAI TRÒ ỨNG DỤNG (READ-ONLY BADGE) ───────────
@@ -193,44 +195,21 @@ class SettingsScreen extends ConsumerWidget {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.cardDark : AppColors.cardLight,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isConnected
-                        ? (isDark ? Colors.white24 : Colors.black12)
-                        : (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 80 : 50),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  AppHaptics.light();
+                  _showRoleSelectionBottomSheet(context, ref, currentRole, isConnected);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 80 : 50),
+                    ),
                   ),
-                ),
-                child: InkWell(
-                  onTap: () {
-                    if (isConnected) {
-                      AppHaptics.light();
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Row(
-                            children: [
-                              Icon(Icons.lock_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text('Tài khoản đang liên kết. Cần hủy kết nối nếu muốn đổi vai trò.'),
-                              ),
-                            ],
-                          ),
-                          backgroundColor: isDark ? const Color(0xFF2C243B) : const Color(0xFF3B334C),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
-                      return;
-                    }
-                    _showRoleSelectionBottomSheet(context, ref, currentRole, isConnected);
-                  },
-                  borderRadius: BorderRadius.circular(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -275,50 +254,29 @@ class SettingsScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: isConnected
-                                  ? Colors.grey.withAlpha(isDark ? 35 : 20)
-                                  : (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 45 : 30),
+                              color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(isDark ? 45 : 30),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isConnected
-                                    ? Colors.grey.withAlpha(isDark ? 60 : 40)
-                                    : (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(80),
+                                color: (currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary).withAlpha(80),
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (isConnected) ...[
-                                  const Icon(
-                                    Icons.lock_rounded,
-                                    size: 13,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'Đã khóa',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ] else ...[
-                                  Text(
-                                    'Đổi vai trò',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 14,
+                                Text(
+                                  isConnected ? 'Hoán đổi' : 'Đổi vai trò',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
                                     color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
                                   ),
-                                ],
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 14,
+                                  color: currentRole == UserRole.wife ? AppColors.primary : AppColors.secondary,
+                                ),
                               ],
                             ),
                           ),
@@ -328,24 +286,20 @@ class SettingsScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Icon(
-                            isConnected ? Icons.lock_outline_rounded : Icons.touch_app_rounded,
+                            isConnected ? Icons.swap_horiz_rounded : Icons.touch_app_rounded,
                             size: 14,
-                            color: isConnected
-                                ? (isDark ? Colors.amber[300] : Colors.amber[800])
-                                : (isDark ? Colors.white38 : Colors.grey),
+                            color: isDark ? Colors.white54 : Colors.grey[700],
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               isConnected
-                                  ? 'Tài khoản đang liên kết. Cần hủy kết nối nếu muốn đổi vai trò.'
+                                  ? 'Đang kết nối cặp đôi. Chạm để hoán đổi góc nhìn giữa Vợ và Chồng.'
                                   : 'Chạm để chuyển đổi linh hoạt giữa giao diện Vợ và Chồng.',
                               style: TextStyle(
                                 fontSize: 11.5,
-                                fontWeight: isConnected ? FontWeight.w600 : FontWeight.normal,
-                                color: isConnected
-                                    ? (isDark ? Colors.amber[300] : Colors.amber[900])
-                                    : (isDark ? Colors.white54 : Colors.grey[600]),
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? Colors.white54 : Colors.grey[600],
                               ),
                             ),
                           ),
@@ -706,7 +660,6 @@ class SettingsScreen extends ConsumerWidget {
     UserRole currentRole,
     bool isConnected,
   ) {
-    if (isConnected) return;
     AppHaptics.medium();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1136,6 +1089,82 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          // Khi đang ở chế độ Thai kỳ: Hiển thị tóm tắt tuần thai & nút chỉnh sửa ngày dự sinh
+          if (currentStage == LifeStage.pregnancy) ...[
+            Builder(
+              builder: (context) {
+                final pregnancyConfig = ref.watch(pregnancyConfigProvider);
+                final gestationalAge = ref.watch(currentGestationalAgeProvider);
+                final fetalWeek = ref.watch(currentFetalWeekDataProvider);
+
+                if (pregnancyConfig == null || !pregnancyConfig.isTrackingActive || gestationalAge == null) {
+                  return const SizedBox.shrink();
+                }
+
+                return Column(
+                  children: [
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Row(
+                        children: [
+                          Text(
+                            fetalWeek?.fruitEmoji ?? '👶',
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Bé: ${gestationalAge.formattedAge} • Dự sinh: ${pregnancyConfig.estimatedDueDate != null ? DateFormat('dd/MM/yyyy').format(pregnancyConfig.estimatedDueDate!) : ''}',
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (fetalWeek != null)
+                                  Text(
+                                    'Cỡ ${fetalWeek.fruitName} (${fetalWeek.formattedLength} • ${fetalWeek.formattedWeight})',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white60 : Colors.black54,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (!isHusband)
+                            TextButton(
+                              onPressed: () => PregnancySetupSheet.show(context),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Sửa ngày',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+
           Divider(
             height: 1,
             thickness: 1,
@@ -1350,6 +1379,26 @@ class SettingsScreen extends ConsumerWidget {
           AppHaptics.selection();
           Navigator.pop(context);
           if (!isSelected) {
+            // Khi chọn chuyển sang Thai Kỳ mà chưa có cấu hình thai kỳ -> mở PregnancySetupSheet
+            if (stage == LifeStage.pregnancy) {
+              final pregnancyConfig = ref.read(pregnancyConfigProvider);
+              if (pregnancyConfig == null || !pregnancyConfig.isTrackingActive) {
+                final configured = await PregnancySetupSheet.show(context);
+                if (configured == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Đã thiết lập thai kỳ & chuyển sang giai đoạn "Thai Kỳ" 🤰'),
+                      backgroundColor: AppColors.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+                return;
+              }
+            }
+
             await ref.read(lifeStageControllerProvider.notifier).switchStage(stage);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(

@@ -65,6 +65,12 @@ class UserModel {
   /// Tiện ích kiểm tra có đang ở chế độ cặp đôi không.
   bool get isCoupleMode => currentLifeStage == LifeStage.couple;
 
+  /// Tiện ích kiểm tra chế độ có hỗ trợ người đồng hành (Chồng / Partner) không.
+  bool get supportsPartner => currentLifeStage.supportsPartner;
+
+  /// Tiện ích kiểm tra có đang ở chế độ Solo (độc thân thuần túy) không.
+  bool get isSolo => currentLifeStage.isSolo;
+
   /// Tiện ích kiểm tra có đang trong giai đoạn thai kỳ/nuôi con không.
   bool get isBabyPhase =>
       currentLifeStage == LifeStage.pregnancy ||

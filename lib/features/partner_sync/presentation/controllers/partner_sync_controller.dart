@@ -43,10 +43,10 @@ final isPendingSyncProvider = Provider<bool>((ref) {
 });
 
 /// StreamProvider lắng nghe trực tiếp trạng thái hôm nay của đối phương theo thời gian thực
-/// DP-04: Ngắt kết nối nếu không ở Couple mode để tránh zombie streams
+/// DP-04: Ngắt kết nối khi ở chế độ Solo (độc thân) để tránh zombie streams
 final partnerLiveStatusStreamProvider = StreamProvider<PartnerStatusModel?>((ref) {
-  final isCouple = ref.watch(isCoupleModeProvider);
-  if (!isCouple) {
+  final supportsPartner = ref.watch(supportsCompanionProvider);
+  if (!supportsPartner) {
     return Stream.value(null);
   }
 

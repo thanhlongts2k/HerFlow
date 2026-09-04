@@ -20,6 +20,11 @@ import 'package:herflow/features/cycle/presentation/widgets/cycle_phase_legend.d
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 import 'package:herflow/features/settings/presentation/screens/settings_screen.dart';
 import 'package:herflow/features/care_signals/presentation/widgets/love_notes_thread_modal.dart';
+import 'package:herflow/features/lifecycle/domain/models/life_stage.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
+import 'package:herflow/features/lifecycle/domain/models/fetal_week_data.dart';
+import 'package:herflow/features/lifecycle/domain/services/pregnancy_calculator_service.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/pregnancy_controller.dart';
 import '../widgets/husband_quick_chat_sheet.dart';
 import '../widgets/contextual_behavior_banner.dart';
 import '../widgets/energy_battery_indicator.dart';
@@ -42,9 +47,41 @@ class HusbandViewScreen extends ConsumerWidget {
     final careSignal = careSignalAsync.valueOrNull;
     final nicknameConfig = ref.watch(nicknameConfigProvider);
     final partnerName = nicknameConfig.callPartnerAs;
+    final currentStage = ref.watch(currentLifeStageProvider);
+    final isPaused = ref.watch(isPausedModeProvider);
+    final gestationalAge = ref.watch(currentGestationalAgeProvider);
+    final fetalWeekData = ref.watch(currentFetalWeekDataProvider);
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    final String husbandTitle;
+    final String husbandSubtitle;
+    final IconData husbandIcon;
+
+    switch (currentStage) {
+      case LifeStage.pregnancy:
+        husbandTitle = 'Góc Nhìn Bố Bầu';
+        husbandSubtitle = 'Trợ lý chăm sóc thai kỳ & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})';
+        husbandIcon = Icons.child_care_rounded;
+        break;
+      case LifeStage.motherhood:
+        husbandTitle = 'Góc Nhìn Bố Bỉm';
+        husbandSubtitle = 'Trợ lý chăm con & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})';
+        husbandIcon = Icons.family_restroom_rounded;
+        break;
+      case LifeStage.conception:
+        husbandTitle = 'Góc Nhìn Bạn Đời';
+        husbandSubtitle = 'Đồng hành chuẩn bị đón bé cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})';
+        husbandIcon = Icons.spa_rounded;
+        break;
+      case LifeStage.couple:
+      case LifeStage.solo:
+        husbandTitle = 'Góc Nhìn Của Anh';
+        husbandSubtitle = 'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})';
+        husbandIcon = Icons.shield_rounded;
+        break;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -62,11 +99,11 @@ class HusbandViewScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.shield_rounded, size: 18, color: AppColors.secondary),
+                Icon(husbandIcon, size: 18, color: AppColors.secondary),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    'Góc Nhìn Của Anh',
+                    husbandTitle,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -79,7 +116,7 @@ class HusbandViewScreen extends ConsumerWidget {
             ),
             // BUG-03 FIX: Cho phép maxLines: 2 và dùng ellipsis tránh bị cắt cụt 1 dòng
             Text(
-              'Trợ lý thấu hiểu & đồng hành cùng $partnerName (${AppDateUtils.formatHeaderDate(selectedDate)})',
+              husbandSubtitle,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: isDark ? Colors.white60 : Colors.black54,
               ),
@@ -137,6 +174,8 @@ class HusbandViewScreen extends ConsumerWidget {
               ? liveStatus.energyLevel
               : moodEntry.energyLevel;
 
+          final isPregnancy = currentStage == LifeStage.pregnancy;
+
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -149,89 +188,175 @@ class HusbandViewScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                 ],
 
-                // 1. THẺ "CHẾ ĐỘ ỨNG XỬ" THEO CHU KỲ (CONTEXTUAL MODE BANNER)
-                ContextualBehaviorBanner(
-                  phase: currentPhase,
-                  partnerName: partnerName,
-                  isDark: isDark,
-                ),
+                // ── GIAI ĐOẠN THAI KỲ (PREGNANCY MODE DAD DASHBOARD) ──
+                if (isPregnancy) ...[
+                  // 1.1. BANNER TRẠNG THÁI KẾT NỐI
+                  _buildConnectionHeader(context, savedCoupleId, isDark),
+                  const SizedBox(height: 12),
 
-                const SizedBox(height: 12),
+                  // 1.2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG
+                  if (savedCoupleId != null && savedCoupleId.isNotEmpty && careSignal != null) ...[
+                    _buildCareSignalBox(context, ref, careSignal, isDark, partnerName),
+                    const SizedBox(height: 14),
+                  ],
 
-                // 1.2. BANNER TRẠNG THÁI KẾT NỐI
-                _buildConnectionHeader(context, savedCoupleId, isDark),
+                  if (isPaused) ...[
+                    // SAFEGUARD KHI Ở CHẾ ĐỘ TẠM DỪNG & CHỮA LÀNH
+                    _buildHealingModeCardForDad(context, isDark, partnerName),
+                    const SizedBox(height: 14),
+                    QuickCareSignalsRow(
+                      partnerName: partnerName,
+                      isDark: isDark,
+                      isHealing: true,
+                    ),
+                    const SizedBox(height: 14),
+                  ] else ...[
+                    // a. Thẻ "Bé Yêu Của Bố Tuần Này" (Fetal Pregnancy Card for Dad)
+                    _buildFetalPregnancyCardForDad(
+                      context,
+                      gestationalAge,
+                      fetalWeekData,
+                      isDark,
+                      partnerName,
+                    ),
+                    const SizedBox(height: 14),
 
-                const SizedBox(height: 12),
+                    // c. Tùy biến phím tắt Care Signals cho Bố Bầu
+                    QuickCareSignalsRow(
+                      partnerName: partnerName,
+                      isDark: isDark,
+                      isPregnancy: true,
+                    ),
+                    const SizedBox(height: 14),
 
-                // 2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG (CARE SIGNAL) — Chỉ hiển thị khi đã kết nối
-                if (savedCoupleId != null && savedCoupleId.isNotEmpty && careSignal != null) ...[
-                  _buildCareSignalBox(context, ref, careSignal, isDark, partnerName),
+                    // b. Thẻ "Bí Kíp Chăm Vợ Bầu" (Contextual Husband Pregnancy Insights)
+                    _buildPregnancyCheatSheetCard(
+                      context,
+                      gestationalAge?.trimester,
+                      isDark,
+                      partnerName,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Thể Trạng & Cảm Xúc Mẹ Bầu
+                    _buildPregnancyMomStatusCard(
+                      context,
+                      energyLevel: energyLevel,
+                      isDark: isDark,
+                      partnerName: partnerName,
+                      liveStatus: liveStatus,
+                      moodText: liveStatus?.moodSummary.isNotEmpty == true
+                          ? liveStatus!.moodSummary
+                          : (liveStatus?.moodTags.isNotEmpty == true
+                              ? liveStatus!.moodTags.join(', ')
+                              : moodEntry.mood),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Thẻ Hỏi Thăm & Nhắn Nhủ Nàng (Quick Chat)
+                  if (savedCoupleId != null && savedCoupleId.isNotEmpty)
+                    _buildQuickChatCard(context, currentPhase, partnerName, isDark)
+                  else
+                    _buildUnpairedQuickChatCard(context, isDark, partnerName),
                   const SizedBox(height: 14),
+
+                  // Nút Sao chép tóm tắt gửi nhanh (Zalo/SMS)
+                  _buildPregnancyQuickCopyButton(
+                    context,
+                    gestationalAge: gestationalAge,
+                    fetalWeekData: fetalWeekData,
+                    energyLevel: energyLevel,
+                    moodText: moodEntry.mood,
+                    isDark: isDark,
+                    isPaused: isPaused,
+                  ),
+                  const SizedBox(height: 32),
+                ] else ...[
+                  // 1. THẺ "CHẾ ĐỘ ỨNG XỬ" THEO CHU KỲ (CONTEXTUAL MODE BANNER)
+                  ContextualBehaviorBanner(
+                    phase: currentPhase,
+                    partnerName: partnerName,
+                    isDark: isDark,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 1.2. BANNER TRẠNG THÁI KẾT NỐI
+                  _buildConnectionHeader(context, savedCoupleId, isDark),
+
+                  const SizedBox(height: 12),
+
+                  // 2. HỘP TÍN HIỆU YÊU THƯƠNG TỪ NÀNG (CARE SIGNAL) — Chỉ hiển thị khi đã kết nối
+                  if (savedCoupleId != null && savedCoupleId.isNotEmpty && careSignal != null) ...[
+                    _buildCareSignalBox(context, ref, careSignal, isDark, partnerName),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // 3. HERO CARD: NHIỆT KẾ CẢM XÚC & NĂNG LƯỢNG NÀNG
+                  _buildHeroCard(
+                    context,
+                    phase: currentPhase,
+                    cycleDay: cycleDay,
+                    energyLevel: energyLevel,
+                    isDark: isDark,
+                    partnerName: partnerName,
+                    liveStatus: liveStatus,
+                    moodText: liveStatus?.moodSummary.isNotEmpty == true
+                        ? liveStatus!.moodSummary
+                        : (liveStatus?.moodTags.isNotEmpty == true
+                            ? liveStatus!.moodTags.join(', ')
+                            : moodEntry.mood),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // 3.1. HÀNG PHÍM TẮT "CỨU NGUY 1 CHẠM" (QUICK CARE SIGNALS)
+                  QuickCareSignalsRow(
+                    partnerName: partnerName,
+                    isDark: isDark,
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // 3.2. THẺ HỎI THĂM & NHẮN NHỦ NÀNG (HUSBAND QUICK CHAT)
+                  if (savedCoupleId != null && savedCoupleId.isNotEmpty)
+                    _buildQuickChatCard(context, currentPhase, partnerName, isDark)
+                  else
+                    _buildUnpairedQuickChatCard(context, isDark, partnerName),
+
+                  const SizedBox(height: 14),
+
+                  // 3.5. TÓM TẮT CHU KỲ CỦA NÀNG (CYCLE SUMMARY CARD)
+                  _buildCycleSummaryCard(context, ref, cycleInfo, isDark, partnerName),
+
+                  const SizedBox(height: 16),
+
+                  // 4. BẢNG "BÍ KÍP SINH TỒN" 1 CHẠM (DO'S & DON'TS CHEAT-SHEET)
+                  SurvivalCheatSheetCard(
+                    phase: currentPhase,
+                    isDark: isDark,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 4.2. GENTLEMAN'S PLAYBOOK: GỢI Ý MÓN ĂN / THỨC UỐNG
+                  _buildPlaybookSection(context, currentPhase, isDark),
+
+                  const SizedBox(height: 20),
+
+                  // 5. NÚT SAO CHÉP TÓM TẮT GỬI NHANH (ZALO/SMS)
+                  _buildQuickCopyButton(
+                    context,
+                    phase: currentPhase,
+                    cycleDay: cycleDay,
+                    energyLevel: energyLevel,
+                    moodText: moodEntry.mood,
+                    isDark: isDark,
+                  ),
+
+                  const SizedBox(height: 32),
                 ],
-
-                // 3. HERO CARD: NHIỆT KẾ CẢM XÚC & NĂNG LƯỢNG NÀNG
-                _buildHeroCard(
-                  context,
-                  phase: currentPhase,
-                  cycleDay: cycleDay,
-                  energyLevel: energyLevel,
-                  isDark: isDark,
-                  partnerName: partnerName,
-                  liveStatus: liveStatus,
-                  moodText: liveStatus?.moodSummary.isNotEmpty == true
-                      ? liveStatus!.moodSummary
-                      : (liveStatus?.moodTags.isNotEmpty == true
-                          ? liveStatus!.moodTags.join(', ')
-                          : moodEntry.mood),
-                ),
-
-                const SizedBox(height: 14),
-
-                // 3.1. HÀNG PHÍM TẮT "CỨU NGUY 1 CHẠM" (QUICK CARE SIGNALS)
-                QuickCareSignalsRow(
-                  partnerName: partnerName,
-                  isDark: isDark,
-                ),
-
-                const SizedBox(height: 14),
-
-                // 3.2. THẺ HỎI THĂM & NHẮN NHỦ NÀNG (HUSBAND QUICK CHAT)
-                if (savedCoupleId != null && savedCoupleId.isNotEmpty)
-                  _buildQuickChatCard(context, currentPhase, partnerName, isDark)
-                else
-                  _buildUnpairedQuickChatCard(context, isDark, partnerName),
-
-                const SizedBox(height: 14),
-
-                // 3.5. TÓM TẮT CHU KỲ CỦA NÀNG (CYCLE SUMMARY CARD)
-                _buildCycleSummaryCard(context, ref, cycleInfo, isDark, partnerName),
-
-                const SizedBox(height: 16),
-
-                // 4. BẢNG "BÍ KÍP SINH TỒN" 1 CHẠM (DO'S & DON'TS CHEAT-SHEET)
-                SurvivalCheatSheetCard(
-                  phase: currentPhase,
-                  isDark: isDark,
-                ),
-
-                const SizedBox(height: 16),
-
-                // 4.2. GENTLEMAN'S PLAYBOOK: GỢI Ý MÓN ĂN / THỨC UỐNG
-                _buildPlaybookSection(context, currentPhase, isDark),
-
-                const SizedBox(height: 20),
-
-                // 5. NÚT SAO CHÉP TÓM TẮT GỬI NHANH (ZALO/SMS)
-                _buildQuickCopyButton(
-                  context,
-                  phase: currentPhase,
-                  cycleDay: cycleDay,
-                  energyLevel: energyLevel,
-                  moodText: moodEntry.mood,
-                  isDark: isDark,
-                ),
-
-                const SizedBox(height: 32),
               ],
             ),
           );
@@ -1628,6 +1753,886 @@ class HusbandViewScreen extends ConsumerWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
     if (diff.inHours < 24) return '${diff.inHours} giờ trước';
     return DateFormat('HH:mm dd/MM').format(dateTime);
+  }
+
+  /// Thẻ "Bé Yêu Của Bố Tuần Này" (Fetal Pregnancy Card for Dad)
+  Widget _buildFetalPregnancyCardForDad(
+    BuildContext context,
+    GestationalAgeResult? gestationalAge,
+    FetalWeekData? fetalWeekData,
+    bool isDark,
+    String partnerName,
+  ) {
+    if (gestationalAge == null || fetalWeekData == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF282035) : const Color(0xFFFAF5FF),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.secondary.withAlpha(isDark ? 80 : 50),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            const Text('🌱', style: TextStyle(fontSize: 36)),
+            const SizedBox(height: 10),
+            Text(
+              'Hành Trình Thai Kỳ Cùng $partnerName',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$partnerName chưa thiết lập ngày dự sinh trên máy. Khi nàng thiết lập, thông tin tuổi thai và kích thước bé yêu sẽ tự động xuất hiện tại đây nhé bố!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: isDark ? Colors.white70 : Colors.black54,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final trimester = gestationalAge.trimester;
+    final List<Color> gradientColors = switch (trimester) {
+      Trimester.first => [
+          const Color(0xFFFF8DA1),
+          const Color(0xFFFFB4A2),
+        ],
+      Trimester.second => [
+          const Color(0xFF7C4DFF),
+          const Color(0xFF448AFF),
+        ],
+      Trimester.third => [
+          const Color(0xFFFF9800),
+          const Color(0xFFFFC107),
+        ],
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            gradientColors.first.withAlpha(isDark ? 55 : 30),
+            gradientColors.last.withAlpha(isDark ? 30 : 12),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: gradientColors.first.withAlpha(isDark ? 100 : 70),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withAlpha(isDark ? 30 : 15),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Tam cá nguyệt + D-Day countdown (Wrap an toàn chống overflow)
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: gradientColors.first.withAlpha(isDark ? 50 : 35),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: gradientColors.first.withAlpha(isDark ? 120 : 80),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('👶', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 5),
+                    Text(
+                      trimester.displayName,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : gradientColors.first,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(isDark ? 40 : 25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.secondary.withAlpha(isDark ? 90 : 60),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.event_rounded, size: 13, color: AppColors.secondary),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Còn ${gestationalAge.daysUntilDue} ngày nữa gặp con 🍼',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tuổi thai & Quả so sánh
+          Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.black26 : Colors.white).withAlpha(160),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(isDark ? 40 : 15),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  fetalWeekData.fruitEmoji,
+                  style: const TextStyle(fontSize: 36),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bé Yêu Của Bố Tuần Này',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${gestationalAge.formattedAge} • Tuần thứ ${gestationalAge.currentWeekOrdinal}',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Bé to bằng ${fetalWeekData.fruitName}',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: gradientColors.first,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // 2 Chip thông số Chiều dài + Cân nặng
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white10 : Colors.white).withAlpha(isDark ? 20 : 180),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.straighten_rounded, size: 15, color: Colors.blueAccent),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Dài ${fetalWeekData.formattedLength}',
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white10 : Colors.white).withAlpha(isDark ? 20 : 180),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.scale_rounded, size: 15, color: Colors.orangeAccent),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Nặng ${fetalWeekData.formattedWeight}',
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Thanh tiến trình thai kỳ
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Tiến trình thai kỳ: ${gestationalAge.progressPercentage.toStringAsFixed(1)}%',
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'Tuần ${gestationalAge.currentWeekOrdinal}/40',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (gestationalAge.progressPercentage / 100.0).clamp(0.0, 1.0),
+                  minHeight: 7,
+                  backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                  valueColor: AlwaysStoppedAnimation<Color>(gradientColors.first),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Cột mốc phát triển kỳ diệu của con
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('✨', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Cột mốc diệu kỳ tuần này:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      fetalWeekData.babyHighlights,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Thẻ "Bí Kíp Chăm Vợ Bầu" (Contextual Husband Pregnancy Insights)
+  Widget _buildPregnancyCheatSheetCard(
+    BuildContext context,
+    Trimester? trimester,
+    bool isDark,
+    String partnerName,
+  ) {
+    final activeTrimester = trimester ?? Trimester.first;
+
+    final List<String> dos;
+    final List<String> donts;
+    final String trimesterNote;
+
+    switch (activeTrimester) {
+      case Trimester.first:
+        trimesterNote = 'Tam cá nguyệt 1: Giai đoạn nhạy cảm & ốm nghén';
+        dos = [
+          'Chủ động nấu ăn hoặc dọn dẹp nhà nếu $partnerName sợ mùi thức ăn.',
+          'Chuẩn bị sẵn đồ ăn vặt thanh đạm (bánh quy gừng, nước ấm, hoa quả dịu nhẹ).',
+          'Bao dung và nhường nhịn tối đa khi nàng thay đổi cảm xúc do hormone thai kỳ.',
+        ];
+        donts = [
+          'Xịt nước hoa nồng hoặc để mùi dầu mỡ ám trong phòng ngủ.',
+          'Ép $partnerName ăn món ngấy hoặc món cô ấy đang sợ mùi.',
+          'Tranh luận to tiếng hay để $partnerName cảm thấy cô đơn một mình.',
+        ];
+        break;
+      case Trimester.second:
+        trimesterNote = 'Tam cá nguyệt 2: Giai đoạn phục hồi & tăng tốc phát triển';
+        dos = [
+          'Cùng $partnerName đi siêu âm mốc 20-22 tuần (khảo sát hình thái học toàn diện).',
+          'Massage lưng, bắp chân nhẹ nhàng giúp vợ giảm nhức mỏi và chuột rút ban đêm.',
+          'Chuẩn bị các bữa ăn giàu canxi, sắt và đồ tẩm bổ lành mạnh cho hai mẹ con.',
+        ];
+        donts = [
+          'Quên nhắc $partnerName lịch xét nghiệm đường huyết thai kỳ (OGTT tuần 24-28).',
+          'Để $partnerName khiêng vác đồ nặng hoặc với tay lên cao quá tầm.',
+          'Chủ quan khi vợ có dấu hiệu đau bụng dưới hoặc gò cứng bụng bất thường.',
+        ];
+        break;
+      case Trimester.third:
+        trimesterNote = 'Tam cá nguyệt 3: Giai đoạn về đích & chuẩn bị đón con';
+        dos = [
+          'Chuẩn bị sẵn xe cộ, viện phí dự phòng và kiểm tra kỹ giỏ đồ đi sinh.',
+          'Hỗ trợ $partnerName khi đứng lên ngồi xuống, đỡ nàng đi lại an toàn.',
+          'Cùng vợ học cách thở khi sinh, học cách bế và dỗ trẻ sơ sinh.',
+        ];
+        donts = [
+          'Để $partnerName đi xa hoặc tự lái xe một mình trong những tuần cuối.',
+          'Để $partnerName đi lại ở khu vực ẩm ướt, trơn trượt thiếu ánh sáng.',
+          'Đi công tác xa mà không có phương án người nhà hỗ trợ vợ khẩn cấp.',
+        ];
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F1A2C) : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.secondary.withAlpha(isDark ? 80 : 50),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 40 : 15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withAlpha(isDark ? 40 : 25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.psychology_rounded, size: 18, color: AppColors.secondary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bí Kíp Chăm Vợ Bầu Cho Bố',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      trimesterNote,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // KHỐI DO
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.success.withAlpha(isDark ? 25 : 15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.success.withAlpha(isDark ? 70 : 40)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, size: 15, color: AppColors.success),
+                    const SizedBox(width: 6),
+                    Text(
+                      'NÊN CHỦ ĐỘNG LÀM CHO ${partnerName.toUpperCase()}:',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...dos.map((d) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.success)),
+                          Expanded(
+                            child: Text(
+                              d,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.35,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // KHỐI DON'T
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.error.withAlpha(isDark ? 25 : 15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.error.withAlpha(isDark ? 70 : 40)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.cancel_rounded, size: 15, color: AppColors.error),
+                    SizedBox(width: 6),
+                    Text(
+                      'TUYỆT ĐỐI NÊN TRÁNH:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...donts.map((d) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error)),
+                          Expanded(
+                            child: Text(
+                              d,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.35,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Safeguard khi ở chế độ Tạm Dừng & Chữa Lành (isPaused == true)
+  Widget _buildHealingModeCardForDad(
+    BuildContext context,
+    bool isDark,
+    String partnerName,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF90A4AE).withAlpha(isDark ? 50 : 25),
+            const Color(0xFFB0BEC5).withAlpha(isDark ? 25 : 15),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFF90A4AE).withAlpha(isDark ? 90 : 60),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white12 : Colors.white).withAlpha(isDark ? 30 : 200),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Text('🕊️', style: TextStyle(fontSize: 22)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Đồng Hành & Vỗ Về Bạn Đời',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Chế độ Chữa Lành đang được bật',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'Giai đoạn này, sự dịu dàng, lắng nghe và cái ôm ấm áp của bạn là điểm tựa lớn nhất cho $partnerName. Hãy ở bên cạnh, lắng nghe và chia sẻ mọi gánh nặng tinh thần cùng nàng.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: (isDark ? Colors.black26 : Colors.white).withAlpha(140),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '💡 Lời khuyên cho bạn:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '• Ôm nàng thật chặt, lắng nghe mà không phán xét.\n'
+                  '• Chủ động làm việc nhà, nấu các món bổ dưỡng dễ tiêu.\n'
+                  '• Kiên nhẫn ở bên, cho nàng không gian yên tĩnh nghỉ ngơi.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Thể Trạng & Cảm Xúc Mẹ Bầu
+  Widget _buildPregnancyMomStatusCard(
+    BuildContext context, {
+    required int energyLevel,
+    required bool isDark,
+    required String moodText,
+    required String partnerName,
+    PartnerStatusModel? liveStatus,
+  }) {
+    final theme = Theme.of(context);
+    final batteryInfo = _getBatteryStatus(energyLevel);
+
+    final String momTip;
+    if (energyLevel <= 2) {
+      momTip = '$partnerName đang cảm thấy khá mệt mỏi hoặc ốm nghén. Bố hãy chủ động làm việc nhà, chuẩn bị nước ấm và xoa bóp cho nàng nhé.';
+    } else if (energyLevel <= 4) {
+      momTip = '$partnerName đang có thể trạng ổn định. Nhắc nàng uống đủ nước, đi dạo nhẹ nhàng và ăn các bữa nhỏ trong ngày.';
+    } else {
+      momTip = 'Năng lượng của $partnerName hôm nay rất tốt! Thời điểm tuyệt vời để hai vợ chồng trò chuyện cùng con yêu hoặc chuẩn bị kế hoạch sinh.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withAlpha(isDark ? 55 : 25),
+            const Color(0xFF1E293B).withAlpha(isDark ? 90 : 15),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.primary.withAlpha(isDark ? 90 : 50),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppColors.primary.withAlpha(50),
+                    child: const Text('🤰', style: TextStyle(fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Thể Trạng Của Mẹ Bầu $partnerName',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: batteryInfo.color.withAlpha(isDark ? 40 : 25),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: batteryInfo.color.withAlpha(60)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(batteryInfo.icon, style: const TextStyle(fontSize: 13)),
+                    const SizedBox(width: 4),
+                    Text(
+                      batteryInfo.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: batteryInfo.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            momTip,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // CHỈ SỐ PIN NĂNG LƯỢNG
+          EnergyBatteryIndicator(
+            energyLevel: energyLevel,
+            partnerName: partnerName,
+            isDark: isDark,
+          ),
+
+          if (moodText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Tâm trạng $partnerName: $moodText',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+            ),
+          ],
+
+          // HIỂN THỊ TRIỆU CHỨNG THỰC TẾ CỦA VỢ BẦU
+          if (liveStatus != null && liveStatus.moodTags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: liveStatus.moodTags.map((tag) {
+                final isSymptom = liveStatus.symptoms.contains(tag) ||
+                    const [
+                      'Ốm nghén',
+                      'Buồn nôn',
+                      'Mệt mỏi',
+                      'Đau thắt lưng',
+                      'Căng tức ngực',
+                      'Khó ngủ',
+                      'Chóng mặt',
+                      'Ợ chua',
+                      'Chuột rút',
+                    ].contains(tag);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isSymptom ? AppColors.error : AppColors.secondary)
+                        .withAlpha(isDark ? 45 : 25),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: (isSymptom ? AppColors.error : AppColors.secondary)
+                          .withAlpha(isDark ? 90 : 60),
+                    ),
+                  ),
+                  child: Text(
+                    isSymptom ? '🩹 $tag' : '✨ $tag',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isSymptom
+                          ? (isDark ? Colors.red[200] : AppColors.error)
+                          : (isDark ? Colors.tealAccent : AppColors.secondary),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Nút Sao chép tóm tắt gửi nhanh (Zalo/SMS) dành riêng cho Thai Kỳ
+  Widget _buildPregnancyQuickCopyButton(
+    BuildContext context, {
+    required GestationalAgeResult? gestationalAge,
+    required FetalWeekData? fetalWeekData,
+    required int energyLevel,
+    required String moodText,
+    required bool isDark,
+    required bool isPaused,
+  }) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.copy_rounded, size: 16),
+      label: const Text('Sao Chép Tóm Tắt Gửi Nhanh (Zalo/SMS)'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: isDark ? Colors.white70 : AppColors.secondary,
+        side: BorderSide(
+          color: (isDark ? Colors.white24 : AppColors.secondary.withAlpha(80)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      onPressed: () {
+        AppHaptics.light();
+        final text = isPaused
+            ? '🌿 Hôm nay anh luôn ở bên cạnh em, yêu thương và chăm sóc em nhé!'
+            : (gestationalAge != null && fetalWeekData != null)
+                ? '🍼 Hành trình thai kỳ: ${gestationalAge.formattedAge} (Tuần ${gestationalAge.currentWeekOrdinal}/40) • Bé to bằng ${fetalWeekData.fruitName} ${fetalWeekData.fruitEmoji} • Còn ${gestationalAge.daysUntilDue} ngày nữa đón con. Hôm nay bố luôn bên mẹ và bé yêu nhé!'
+                : '🍼 Đồng hành cùng mẹ bầu mỗi ngày!';
+        Clipboard.setData(ClipboardData(text: text));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Đã sao chép tóm tắt vào bộ nhớ tạm!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.secondary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      },
+    );
   }
 }
 

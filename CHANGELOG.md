@@ -4,6 +4,26 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.7.1+24] - 2026-09-04 (Husband Pregnancy View & Trimester Companion)
+
+### [Added]
+- **👶 Góc Nhìn Bố Bầu Chuyên Biệt (`HusbandViewScreen` khi Vợ ở `LifeStage.pregnancy`):**
+  * **Thẻ "Bé Yêu Của Bố Tuần Này":** Tự động đồng bộ tuổi thai chuẩn sản khoa (`Tuần X + Y ngày • Tuần thứ Z`), hình tượng quả so sánh trực quan kèm emoji (🥑 Bơ, 🍌 Chuối, 🫐 Việt quất...), đếm ngược D-Day ngày gặp con, cùng chiều dài và cân nặng thai nhi tiêu chuẩn.
+  * **Tiến trình 40 tuần & Cột mốc diệu kỳ:** Thanh tiến trình bo góc Liquid Glass hiển thị trực quan các bước ngoặt phát triển sinh học của bé theo tuần.
+  * **Bố cục Wrap chống tràn 100%:** Thiết kế co giãn thông minh, tự động xuống dòng mượt mà trên mọi kích thước màn hình thiết bị.
+- **💡 Thẻ Bí Kíp Chăm Vợ Bầu Cho Bố (Trimester Cheat-Sheet):**
+  * Tự động tổng hợp danh mục `Nên làm (Do's)` và `Cần tránh (Don'ts)` chuyên sâu cá nhân hóa theo từng Tam cá nguyệt (T1, T2, T3), giúp bố chủ động chăm sóc mẹ bầu chu đáo và thấu hiểu.
+- **⚡ Phím Tắt Chăm Sóc Care Signals Bố Bầu:**
+  * Bộ 3 phím tắt 1 chạm chuyên biệt cho thai kỳ: 💆‍♂️ *Bóp chân cho vợ* (giảm phù nề), 🍲 *Mua đồ tẩm bổ* (chuẩn bị bữa phụ bổ dưỡng), 👶 *Hỏi thăm con* (thai giáo và trò chuyện cùng bé).
+- **🛡️ Cơ Chế Phòng Vệ Healing Mode (Safeguard):**
+  * Tự động nhận diện khi Vợ bật chế độ Tạm Dừng (`isPaused == true`) để ẩn toàn bộ thẻ thai kỳ/D-Day, chuyển sang giao diện vỗ về dịu dàng và hướng dẫn Bố cách đồng hành chữa lành cùng bạn đời.
+- **🔋 Trạng Thái Mẹ Bầu & Phím Tắt Chia Sẻ:**
+  * Thẻ pin năng lượng và thể trạng mẹ bầu giúp bố nắm bắt tức thì; nút copy tóm tắt tuần thai vào Clipboard để gửi nhanh qua Zalo/SMS.
+- **🔄 Mở Khóa Hoán Đổi Vai Trò Vợ <-> Chồng:**
+  * Cho phép hoán đổi vai trò Vợ/Chồng kèm dialog xác nhận `MoonaConfirmDialog` ngay cả khi đang kết nối cặp đôi, đồng bộ realtime an toàn giữa Hive và Firestore.
+
+---
+
 ## [0.7.0+23] - 2026-09-04 (Female Lifecycle Platform Foundation & Modular Architecture)
 
 ### [Added]
@@ -11,14 +31,14 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
   * Chuyển dịch kiến trúc toàn diện từ ứng dụng cặp đôi sang Nền tảng Chăm sóc Sức khỏe Nữ giới theo Vòng đời với 5 giai đoạn cốt lõi:
     - 🌸 **Nàng (Solo):** Theo dõi chu kỳ kinh nguyệt & chăm sóc bản thân độc lập, bảo mật riêng tư, không phụ thuộc kết nối cặp đôi.
     - 💑 **Chung Đôi (Couple):** Đồng bộ realtime với người thương, góc nhìn Chồng và tín hiệu yêu thương chăm sóc.
-    - 🥚 **Đón Bé (Conception):** Cửa sổ thụ thai chuyên sâu, theo dõi nhiệt độ cơ thể cơ bản (BBT), dự đoán rụng trứng và lịch yêu tối ưu.
+    - 🌱 **Chuẩn Bị Bầu (Conception):** Cửa sổ thụ thai chuyên sâu, theo dõi nhiệt độ cơ thể cơ bản (BBT), dự đoán rụng trứng và lịch yêu tối ưu.
     - 🤰 **Thai Kỳ (Pregnancy):** Đồng hành thai kỳ theo 40 tuần thai, chỉ số thai nhi, kích thước bé, lịch khám định kỳ & nhật ký thai nghén.
     - 🍼 **Nuôi Con (Motherhood):** Quản lý hồ sơ nhiều bé, nhật ký cữ bú/ngủ/bỉm, biểu đồ tăng trưởng chiều cao & cân nặng chuẩn WHO.
   * Tích hợp `LifeStage` enum, `LifeStageConfig`, `LifeStageState` và `LifeStageController` quản lý trạng thái tập trung qua Riverpod.
   * Tích hợp chế độ tạm dừng / nghỉ ngơi (`Pause Mode` / `Loss Mode`) tôn trọng cảm xúc và quyền riêng tư của phụ nữ khi gặp biến cố thai kỳ hoặc mất mát.
 - **🧭 Dynamic Navigation Tự Co Giãn Tab Thông Minh:**
   * `MainNavigationWrapper` tự động tính toán danh sách tab theo giai đoạn sống hiện tại:
-    - Chế độ Solo (Nàng, Đón Bé, Thai Kỳ, Nuôi Con): Co giãn thành 4 tab an toàn (ẩn hoàn toàn tab Cặp đôi).
+    - Chế độ Solo (Nàng, Chuẩn Bị Bầu, Thai Kỳ, Nuôi Con): Co giãn thành 4 tab an toàn (ẩn hoàn toàn tab Cặp đôi).
     - Chế độ Cặp đôi (Chung Đôi): Hiển thị đầy đủ 5 tab (Chu kỳ, Cảm xúc, Cặp đôi, Dinh dưỡng, Cài đặt).
 - **🛡️ Bộ 4 Tầng Phòng Vệ Kiến Trúc (DP-01 -> DP-04):**
   * **DP-01 (Safe Hive Migration):** Khởi tạo `UserPreferencesHiveBox` và `MigrationService` tự động chuyển đổi an toàn người dùng cũ `v0.6.x` sang `LifeStage.couple` mà không làm mất dữ liệu.

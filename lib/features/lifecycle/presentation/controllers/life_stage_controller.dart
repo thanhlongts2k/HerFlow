@@ -347,9 +347,14 @@ final currentLifeStageProvider = Provider<LifeStage>((ref) {
 });
 
 /// `true` khi đang ở chế độ Chung Đôi.
-/// Thay thế [isPairedProvider] trong kiến trúc mới.
 final isCoupleModeProvider = Provider<bool>((ref) {
   return ref.watch(currentLifeStageProvider) == LifeStage.couple;
+});
+
+/// `true` khi chế độ sống hiện tại hỗ trợ tính năng cặp đôi / người đồng hành (tất cả các mode trừ Solo).
+/// Tách bạch giữa LifeStage (giai đoạn sinh học) và trạng thái đồng hành.
+final supportsCompanionProvider = Provider<bool>((ref) {
+  return ref.watch(currentLifeStageProvider).supportsPartner;
 });
 
 /// `true` khi đang ở chế độ Nàng (Solo).
@@ -357,7 +362,7 @@ final isSoloModeProvider = Provider<bool>((ref) {
   return ref.watch(currentLifeStageProvider) == LifeStage.solo;
 });
 
-/// `true` khi đang ở chế độ Đón Bé (Conception).
+/// `true` khi đang ở chế độ Chuẩn Bị Bầu (Conception).
 final isConceptionModeProvider = Provider<bool>((ref) {
   return ref.watch(currentLifeStageProvider) == LifeStage.conception;
 });

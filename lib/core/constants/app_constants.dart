@@ -50,7 +50,8 @@ class AppConstants {
   /// Lý do Pause: 'loss' | 'medical' | 'personal'. Null khi isPaused = false.
   static const String keyPauseReason = 'pause_reason';
 
-  // ── Phase 2 keys (chuẩn bị trước, chưa dùng đến khi implement Phase 2) ──
+  // ── Phase 2 keys ──
+  static const String keyPregnancyConfig     = 'pregnancy_config';
   static const String keyPregnancyDueDate    = 'pregnancy_due_date';
   static const String keyConceptionStartDate = 'conception_start_date';
 

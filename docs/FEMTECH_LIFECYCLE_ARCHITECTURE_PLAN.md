@@ -26,7 +26,7 @@ MOONA v0.6.7 (Hiện tại)        →    MOONA v1.0.0 (Mục tiêu)
 |---|------|------|-----------|
 | 1 | **NÀNG** (Solo) | 🌸 | Phụ nữ độc thân, thiếu niên theo dõi chu kỳ cơ bản |
 | 2 | **CHUNG ĐÔI** (Couple) | 💑 | Cặp đôi — tính năng hiện tại giữ nguyên |
-| 3 | **ĐÓN BÉ** (Conception) | 🥚 | Kế hoạch thụ thai, BBT, cửa sổ thụ thai nâng cao |
+| 3 | **CHUẨN BỊ BẦU** (Conception) | 🌱 | Kế hoạch thụ thai, BBT, cửa sổ thụ thai nâng cao |
 | 4 | **THAI KỲ** (Pregnancy) | 🤰 | Theo dõi thai nhi tuần 1–40, lịch khám, triệu chứng |
 | 5 | **NUÔI CON** (Motherhood) | 🍼 | Hồ sơ nhiều bé, nhật ký sơ sinh, biểu đồ WHO |
 

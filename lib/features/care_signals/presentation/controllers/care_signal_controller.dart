@@ -8,10 +8,10 @@ import 'package:herflow/features/partner_sync/presentation/controllers/partner_s
 import 'package:herflow/features/settings/presentation/controllers/nickname_controller.dart';
 
 /// StreamProvider lắng nghe tín hiệu yêu thương mới nhất (1 bản ghi)
-/// DP-04: Ngắt kết nối nếu không ở Couple mode để tránh zombie streams
+/// DP-04: Ngắt kết nối khi ở chế độ Solo (độc thân thuần túy) để tránh zombie streams
 final latestCareSignalStreamProvider = StreamProvider<CareSignalModel?>((ref) {
-  final isCouple = ref.watch(isCoupleModeProvider);
-  if (!isCouple) {
+  final supportsPartner = ref.watch(supportsCompanionProvider);
+  if (!supportsPartner) {
     return Stream.value(null);
   }
 
@@ -24,10 +24,10 @@ final latestCareSignalStreamProvider = StreamProvider<CareSignalModel?>((ref) {
 });
 
 /// StreamProvider lắng nghe danh sách toàn bộ tin nhắn / tín hiệu trong Hộp Thư 2 chiều (Thread)
-/// DP-04: Ngắt kết nối nếu không ở Couple mode để tránh zombie streams
+/// DP-04: Ngắt kết nối khi ở chế độ Solo (độc thân thuần túy) để tránh zombie streams
 final coupleCareSignalsStreamProvider = StreamProvider<List<CareSignalModel>>((ref) {
-  final isCouple = ref.watch(isCoupleModeProvider);
-  if (!isCouple) {
+  final supportsPartner = ref.watch(supportsCompanionProvider);
+  if (!supportsPartner) {
     return Stream.value([]);
   }
 

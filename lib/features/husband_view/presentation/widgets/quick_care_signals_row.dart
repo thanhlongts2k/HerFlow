@@ -12,11 +12,15 @@ import 'package:herflow/features/settings/presentation/controllers/nickname_cont
 class QuickCareSignalsRow extends ConsumerStatefulWidget {
   final String partnerName;
   final bool isDark;
+  final bool isPregnancy;
+  final bool isHealing;
 
   const QuickCareSignalsRow({
     super.key,
     required this.partnerName,
     required this.isDark,
+    this.isPregnancy = false,
+    this.isHealing = false,
   });
 
   @override
@@ -113,6 +117,86 @@ class _QuickCareSignalsRowState extends ConsumerState<QuickCareSignalsRow> {
 
   @override
   Widget build(BuildContext context) {
+    final String rowTitle;
+    final String rowIcon;
+    final Widget button1;
+    final Widget button2;
+    final Widget button3;
+
+    if (widget.isHealing) {
+      rowIcon = '🕊️';
+      rowTitle = 'Vỗ Về & Yêu Thương ${widget.partnerName}';
+      button1 = _buildQuickButton(
+        emoji: '🫂',
+        title: 'Ôm vỗ về',
+        subtitle: 'Bên cạnh em',
+        note: 'Anh luôn ở đây bên em, ôm em thật chặt 🫂',
+        accentColor: AppColors.primary,
+      );
+      button2 = _buildQuickButton(
+        emoji: '🍵',
+        title: 'Nấu cháo ấm',
+        subtitle: 'Dễ tiêu bồi bổ',
+        note: 'Anh nấu cháo ấm và pha trà nóng cho em nhé 🍵',
+        accentColor: const Color(0xFFFF9800),
+      );
+      button3 = _buildQuickButton(
+        emoji: '💆‍♂️',
+        title: 'Massage',
+        subtitle: 'Giúp em thư giãn',
+        note: 'Tối nay anh massage cho em thư giãn và dễ ngủ nha 💆‍♂️',
+        accentColor: const Color(0xFF9C27B0),
+      );
+    } else if (widget.isPregnancy) {
+      rowIcon = '🤰';
+      rowTitle = 'Chăm Sóc Mẹ Bầu 1 Chạm Tới ${widget.partnerName}';
+      button1 = _buildQuickButton(
+        emoji: '💆‍♂️',
+        title: 'Bóp chân cho vợ',
+        subtitle: 'Giảm phù nề',
+        note: 'Tối nay anh bóp chân cho em nha 💆‍♂️',
+        accentColor: const Color(0xFF9C27B0),
+      );
+      button2 = _buildQuickButton(
+        emoji: '🍲',
+        title: 'Mua đồ tẩm bổ',
+        subtitle: 'Món vợ thèm',
+        note: 'Em thèm món gì để anh mua/nấu? 🍲',
+        accentColor: const Color(0xFFFF9800),
+      );
+      button3 = _buildQuickButton(
+        emoji: '👶',
+        title: 'Hỏi thăm con',
+        subtitle: 'Con yêu của bố',
+        note: 'Hôm nay con đạp nhiều không em? 👶',
+        accentColor: AppColors.primary,
+      );
+    } else {
+      rowIcon = '⚡';
+      rowTitle = 'Cứu Nguy 1 Chạm Tới ${widget.partnerName}';
+      button1 = _buildQuickButton(
+        emoji: '🧋',
+        title: 'Mua đồ ngọt',
+        subtitle: 'Trà sữa / bánh',
+        note: 'Anh mua đồ ngọt / trà sữa mang qua cho em nhé 🧋',
+        accentColor: const Color(0xFFFF9800),
+      );
+      button2 = _buildQuickButton(
+        emoji: '💆‍♂️',
+        title: 'Massage',
+        subtitle: 'Vai gáy & lưng',
+        note: 'Tối nay anh massage vai gáy cho em thư giãn nha 💆‍♂️',
+        accentColor: const Color(0xFF9C27B0),
+      );
+      button3 = _buildQuickButton(
+        emoji: '🫂',
+        title: 'Ôm sạc pin',
+        subtitle: 'Nạp năng lượng',
+        note: 'Gửi em một cái ôm thật chặt để sạc pin năng lượng nhé 🫂',
+        accentColor: AppColors.primary,
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -120,10 +204,10 @@ class _QuickCareSignalsRowState extends ConsumerState<QuickCareSignalsRow> {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Row(
             children: [
-              const Text('⚡', style: TextStyle(fontSize: 14)),
+              Text(rowIcon, style: const TextStyle(fontSize: 14)),
               const SizedBox(width: 6),
               Text(
-                'Cứu Nguy 1 Chạm Tới ${widget.partnerName}',
+                rowTitle,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -145,40 +229,11 @@ class _QuickCareSignalsRowState extends ConsumerState<QuickCareSignalsRow> {
         ),
         Row(
           children: [
-            // 1. Mua đồ ngọt
-            Expanded(
-              child: _buildQuickButton(
-                emoji: '🧋',
-                title: 'Mua đồ ngọt',
-                subtitle: 'Trà sữa / bánh',
-                note: 'Anh mua đồ ngọt / trà sữa mang qua cho em nhé 🧋',
-                accentColor: const Color(0xFFFF9800),
-              ),
-            ),
+            Expanded(child: button1),
             const SizedBox(width: 8),
-
-            // 2. Massage thư giãn
-            Expanded(
-              child: _buildQuickButton(
-                emoji: '💆‍♂️',
-                title: 'Massage',
-                subtitle: 'Vai gáy & lưng',
-                note: 'Tối nay anh massage vai gáy cho em thư giãn nha 💆‍♂️',
-                accentColor: const Color(0xFF9C27B0),
-              ),
-            ),
+            Expanded(child: button2),
             const SizedBox(width: 8),
-
-            // 3. Cái ôm sạc pin
-            Expanded(
-              child: _buildQuickButton(
-                emoji: '🫂',
-                title: 'Ôm sạc pin',
-                subtitle: 'Nạp năng lượng',
-                note: 'Gửi em một cái ôm thật chặt để sạc pin năng lượng nhé 🫂',
-                accentColor: AppColors.primary,
-              ),
-            ),
+            Expanded(child: button3),
           ],
         ),
       ],

@@ -43,7 +43,7 @@ void main() {
     test('displayName trả tiếng Việt đúng cho mỗi stage', () {
       expect(LifeStage.solo.displayName,        equals('Nàng'));
       expect(LifeStage.couple.displayName,      equals('Chung Đôi'));
-      expect(LifeStage.conception.displayName,  equals('Đón Bé'));
+      expect(LifeStage.conception.displayName,  equals('Chuẩn Bị Bầu'));
       expect(LifeStage.pregnancy.displayName,   equals('Thai Kỳ'));
       expect(LifeStage.motherhood.displayName,  equals('Nuôi Con'));
     });
@@ -51,7 +51,7 @@ void main() {
     test('icon trả emoji đúng', () {
       expect(LifeStage.solo.icon,        equals('🌸'));
       expect(LifeStage.couple.icon,      equals('💑'));
-      expect(LifeStage.conception.icon,  equals('🥚'));
+      expect(LifeStage.conception.icon,  equals('🌱'));
       expect(LifeStage.pregnancy.icon,   equals('🤰'));
       expect(LifeStage.motherhood.icon,  equals('🍼'));
     });
@@ -63,18 +63,22 @@ void main() {
       }
     });
 
-    group('Feature flags: requiresCoupleModule', () {
-      test('Chỉ couple = true', () {
-        expect(LifeStage.couple.requiresCoupleModule, isTrue);
+    group('Feature flags: supportsPartner & requiresCoupleModule', () {
+      test('Solo = false (độc thân thuần túy không ghép đôi)', () {
+        expect(LifeStage.solo.supportsPartner, isFalse);
+        expect(LifeStage.solo.requiresCoupleModule, isFalse);
+        expect(LifeStage.solo.isSolo, isTrue);
       });
-      test('Solo, conception, pregnancy, motherhood = false', () {
+      test('Couple, conception, pregnancy, motherhood = true (đều hỗ trợ bạn đời / Chồng)', () {
         for (final s in [
-          LifeStage.solo,
+          LifeStage.couple,
           LifeStage.conception,
           LifeStage.pregnancy,
           LifeStage.motherhood,
         ]) {
-          expect(s.requiresCoupleModule, isFalse, reason: '$s không cần couple module');
+          expect(s.supportsPartner, isTrue, reason: '$s phải hỗ trợ người đồng hành');
+          expect(s.requiresCoupleModule, isTrue, reason: '$s cần kích hoạt module đồng hành');
+          expect(s.isSolo, isFalse);
         }
       });
     });
@@ -104,17 +108,17 @@ void main() {
     });
 
     group('Feature flags: isPersonalMode', () {
-      test('Couple = false (có partner module)', () {
-        expect(LifeStage.couple.isPersonalMode, isFalse);
+      test('Chỉ Solo = true (cá nhân thuần túy, không hỗ trợ partner)', () {
+        expect(LifeStage.solo.isPersonalMode, isTrue);
       });
-      test('Các mode còn lại = true', () {
+      test('Các mode còn lại = false (đều có hỗ trợ partner)', () {
         for (final s in [
-          LifeStage.solo,
+          LifeStage.couple,
           LifeStage.conception,
           LifeStage.pregnancy,
           LifeStage.motherhood,
         ]) {
-          expect(s.isPersonalMode, isTrue);
+          expect(s.isPersonalMode, isFalse, reason: '$s không phải personal-only mode');
         }
       });
     });

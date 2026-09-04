@@ -12,7 +12,7 @@ enum LifeStage {
   /// 💑 Chung đôi — Đồng bộ realtime vợ-chồng, Care Signals, góc nhìn Chồng.
   couple,
 
-  /// 🥚 Đón bé — Cửa sổ thụ thai, nhiệt độ BBT, nhắc nhở sinh hoạt tối ưu.
+  /// 🌱 Chuẩn bị bầu — Cửa sổ thụ thai, nhiệt độ BBT, canh ngày rụng trứng.
   conception,
 
   /// 🤰 Thai kỳ — Đếm tuần thai, kích thước thai nhi, lịch khám, nhật ký ốm nghén.
@@ -30,7 +30,7 @@ extension LifeStageExt on LifeStage {
     switch (this) {
       case LifeStage.solo:        return 'Nàng';
       case LifeStage.couple:      return 'Chung Đôi';
-      case LifeStage.conception:  return 'Đón Bé';
+      case LifeStage.conception:  return 'Chuẩn Bị Bầu';
       case LifeStage.pregnancy:   return 'Thai Kỳ';
       case LifeStage.motherhood:  return 'Nuôi Con';
     }
@@ -44,7 +44,7 @@ extension LifeStageExt on LifeStage {
       case LifeStage.couple:
         return 'Đồng bộ realtime với người thương. Tín hiệu yêu thương & góc nhìn Chồng.';
       case LifeStage.conception:
-        return 'Cửa sổ thụ thai chuyên sâu, theo dõi nhiệt độ BBT và lịch quan hệ tối ưu.';
+        return 'Cửa sổ thụ thai chuyên sâu, theo dõi nhiệt độ BBT và canh ngày rụng trứng.';
       case LifeStage.pregnancy:
         return 'Hành trình thai kỳ theo tuần. Kích thước bé, lịch khám và nhật ký ốm nghén.';
       case LifeStage.motherhood:
@@ -57,7 +57,7 @@ extension LifeStageExt on LifeStage {
     switch (this) {
       case LifeStage.solo:        return '🌸';
       case LifeStage.couple:      return '💑';
-      case LifeStage.conception:  return '🥚';
+      case LifeStage.conception:  return '🌱';
       case LifeStage.pregnancy:   return '🤰';
       case LifeStage.motherhood:  return '🍼';
     }
@@ -65,8 +65,16 @@ extension LifeStageExt on LifeStage {
 
   // ── Feature flags (kiểm soát module nào được kích hoạt) ─────────────────
 
-  /// Có cần kết nối Couple module (coupleId, Care Signals, HusbandView) không?
-  bool get requiresCoupleModule => this == LifeStage.couple;
+  /// Có hỗ trợ người đồng hành (Chồng / Partner) không?
+  /// Tất cả các giai đoạn (Chung Đôi, Chuẩn Bị Bầu, Thai Kỳ, Nuôi Con) đều hỗ trợ đồng hành.
+  /// Chỉ duy nhất [LifeStage.solo] là chế độ độc thân hoàn toàn.
+  bool get supportsPartner => this != LifeStage.solo;
+
+  /// Chế độ này có phải là Solo độc thân hoàn toàn không?
+  bool get isSolo => this == LifeStage.solo;
+
+  /// Có kích hoạt tính năng đồng hành (Care Signals, Sync, Góc nhìn Bạn Đời) không?
+  bool get requiresCoupleModule => supportsPartner;
 
   /// Có cần module Conception (BBT, Fertile Window) không?
   bool get requiresConceptionModule => this == LifeStage.conception;
@@ -105,18 +113,8 @@ extension LifeStageExt on LifeStage {
     }
   }
 
-  /// Là chế độ cá nhân (không liên quan đến partner module)?
-  bool get isPersonalMode {
-    switch (this) {
-      case LifeStage.solo:
-      case LifeStage.conception:
-      case LifeStage.pregnancy:
-      case LifeStage.motherhood:
-        return true;
-      case LifeStage.couple:
-        return false;
-    }
-  }
+  /// Là chế độ cá nhân thuần túy (không hỗ trợ người đồng hành)?
+  bool get isPersonalMode => this == LifeStage.solo;
 
   // ── Thứ tự logic (dùng để sort/display trong onboarding) ────────────────
 
