@@ -30,6 +30,8 @@ import '../widgets/contextual_behavior_banner.dart';
 import '../widgets/energy_battery_indicator.dart';
 import '../widgets/quick_care_signals_row.dart';
 import '../widgets/survival_cheat_sheet_card.dart';
+import 'package:herflow/features/lifecycle/presentation/controllers/kick_counter_controller.dart';
+import 'package:herflow/features/lifecycle/presentation/widgets/kick_counter_sheet.dart';
 
 /// Màn hình Góc Nhìn Của Anh — Trợ lý thấu hiểu của quý ông (Gentleman's Companion)
 class HusbandViewScreen extends ConsumerWidget {
@@ -220,6 +222,13 @@ class HusbandViewScreen extends ConsumerWidget {
                       partnerName,
                     ),
                     const SizedBox(height: 14),
+
+                    // a2. Tóm tắt cử động thai hôm nay (từ tuần 28+ hoặc khi đã có dữ liệu đếm hôm nay)
+                    if ((gestationalAge?.currentWeekOrdinal ?? 0) >= 28 ||
+                        ref.watch(todayKickSummaryProvider).totalKicks > 0) ...[
+                      _buildKickSummaryCard(context, ref, isDark),
+                      const SizedBox(height: 14),
+                    ],
 
                     // c. Tùy biến phím tắt Care Signals cho Bố Bầu
                     QuickCareSignalsRow(
@@ -2632,6 +2641,106 @@ class HusbandViewScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  // ── Kick Summary Card (Bố Bầu / Pregnancy Dad) ─────────────────────────────
+  /// Thẻ tóm tắt cử động thai hôm nay — chỉ hiển thị từ tuần 28 trở đi.
+  /// Khi tap → mở KickCounterSheet toàn bộ.
+  Widget _buildKickSummaryCard(
+      BuildContext context, WidgetRef ref, bool isDark) {
+    final summary = ref.watch(todayKickSummaryProvider);
+    final hasKicks = summary.totalKicks > 0;
+    final isGood = summary.totalKicks >= 10;
+
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.medium();
+        KickCounterSheet.show(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: isGood
+              ? LinearGradient(
+                  colors: [
+                    AppColors.success.withAlpha(isDark ? 40 : 25),
+                    AppColors.accentMint.withAlpha(isDark ? 30 : 18),
+                  ],
+                )
+              : null,
+          color: isGood
+              ? null
+              : (isDark
+                  ? AppColors.cardDark.withAlpha(220)
+                  : AppColors.cardLight),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isGood
+                ? AppColors.success.withAlpha(isDark ? 80 : 55)
+                : AppColors.primary.withAlpha(isDark ? 55 : 35),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(isDark ? 25 : 10),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon
+            Text(
+              isGood ? '✅' : (hasKicks ? '👶' : '🩷'),
+              style: const TextStyle(fontSize: 26),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cử Động Thai Hôm Nay',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white.withAlpha(222) : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasKicks
+                        ? '${summary.totalKicks} cử động • ${summary.sessions} phiên hoàn thành'
+                        : 'Chưa ghi nhận hôm nay — Nhắc nàng đếm nhé! 💕',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
+                  ),
+                  if (summary.lastSessionTime.isNotEmpty) ...[  
+                    const SizedBox(height: 2),
+                    Text(
+                      summary.lastSessionTime,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.success.withAlpha(isDark ? 200 : 170),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.touch_app_rounded,
+              color: isDark ? Colors.white30 : Colors.black26,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

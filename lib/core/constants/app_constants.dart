@@ -55,6 +55,12 @@ class AppConstants {
   static const String keyPregnancyDueDate    = 'pregnancy_due_date';
   static const String keyConceptionStartDate = 'conception_start_date';
 
+  // ── Phase 2.5 keys (Kick Counter & Prenatal Appointments) ──────────────────
+  /// JSON list của KickSessionModel trong 7 ngày gần nhất (user-scoped)
+  static const String keyKickSessions        = 'kick_sessions';
+  /// JSON list trạng thái người dùng của 7 mốc khám thai vàng (user-scoped)
+  static const String keyPrenatalAppointments = 'prenatal_appointments';
+
   // ── Phase 3 keys ────────────────────────────────────────────────────────
   static const String keyActiveChildId = 'active_child_id';
 

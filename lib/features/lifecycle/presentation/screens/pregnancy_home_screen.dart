@@ -10,6 +10,8 @@ import 'package:herflow/features/lifecycle/domain/models/fetal_week_data.dart';
 import 'package:herflow/features/lifecycle/domain/services/pregnancy_calculator_service.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/life_stage_controller.dart';
 import 'package:herflow/features/lifecycle/presentation/controllers/pregnancy_controller.dart';
+import 'package:herflow/features/lifecycle/presentation/widgets/kick_counter_sheet.dart';
+import 'package:herflow/features/lifecycle/presentation/widgets/prenatal_appointments_card.dart';
 import 'package:herflow/features/lifecycle/presentation/widgets/pregnancy_setup_sheet.dart';
 
 /// Màn hình chính Theo Dõi Thai Kỳ (Pregnancy Mode Dashboard).
@@ -180,6 +182,21 @@ class _PregnancyHomeScreenState extends ConsumerState<PregnancyHomeScreen> {
 
               // 5. Thẻ Lời nhắn nhủ cho mẹ (Mom Tips & Cột mốc vàng)
               _buildMomTipsCard(context, isDark, fetalData),
+              const SizedBox(height: 20),
+
+              // 6. Nút Bộ Đếm Cử Động Thai (hiển thị nổi bật từ tuần 28 trở đi)
+              _buildKickCounterBanner(
+                context,
+                isDark,
+                currentWeek: actualWeekOrdinal,
+              ),
+              const SizedBox(height: 20),
+
+              // 7. Lịch Khám Thai Mốc Vàng
+              PrenatalAppointmentsCard(
+                currentWeek: actualWeekOrdinal,
+                isDark: isDark,
+              ),
               const SizedBox(height: 32),
             ],
           ),
@@ -188,8 +205,157 @@ class _PregnancyHomeScreenState extends ConsumerState<PregnancyHomeScreen> {
     );
   }
 
+  // ── Kick Counter Banner ─────────────────────────────────────────────────────
+  /// Banner / nút mở bộ đếm cử động thai.
+  /// Từ tuần 28 trở đi sẽ được highlight màu primary với gợi ý nổi bật.
+  Widget _buildKickCounterBanner(
+    BuildContext context,
+    bool isDark, {
+    required int currentWeek,
+  }) {
+    final isHighlighted = currentWeek >= 28;
+
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.medium();
+        KickCounterSheet.show(context);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: isHighlighted
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withAlpha(isDark ? 55 : 35),
+                    AppColors.primaryLight.withAlpha(isDark ? 40 : 25),
+                  ],
+                )
+              : null,
+          color: isHighlighted
+              ? null
+              : (isDark ? AppColors.cardDark : AppColors.cardLight),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isHighlighted
+                ? AppColors.primary.withAlpha(isDark ? 100 : 70)
+                : (isDark
+                    ? Colors.white.withAlpha(18)
+                    : Colors.black.withAlpha(10)),
+            width: isHighlighted ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isHighlighted
+                  ? AppColors.primary.withAlpha(isDark ? 40 : 25)
+                  : Colors.black.withAlpha(isDark ? 25 : 10),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: isHighlighted
+                    ? const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryDark],
+                      )
+                    : null,
+                color: isHighlighted
+                    ? null
+                    : (isDark ? Colors.white10 : Colors.black.withAlpha(15)),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                Icons.touch_app_rounded,
+                color: isHighlighted
+                    ? Colors.white
+                    : (isDark ? Colors.white54 : Colors.black45),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Đếm Cử Động Thai',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: isHighlighted
+                              ? AppColors.primary
+                              : (isDark ? Colors.white.withAlpha(222) : Colors.black.withAlpha(222)),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      if (isHighlighted) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Tuần 28+',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    isHighlighted
+                        ? 'Bắt đầu đếm ngay! Mục tiêu 10 cử động trong 2 giờ 🩷'
+                        : 'Chuẩn Cardiff "Count to 10" — Kích hoạt từ tuần 28',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isHighlighted
+                          ? (isDark ? Colors.white.withAlpha(178) : AppColors.primaryDark)
+                          : (isDark ? Colors.white.withAlpha(115) : Colors.black.withAlpha(115)),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Chevron
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isHighlighted
+                  ? AppColors.primary
+                  : (isDark ? Colors.white30 : Colors.black26),
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Header Bar ─────────────────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context, bool isDark, {required bool isPaused}) {
+
     return Row(
       children: [
         Container(

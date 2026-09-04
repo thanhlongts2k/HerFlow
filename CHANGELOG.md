@@ -4,6 +4,34 @@ Toàn bộ những thay đổi đáng chú ý của dự án **Moona** được 
 
 ---
 
+## [0.7.2+25] - 2026-09-04 (Phase 2.5: Fetal Kick Counter & Prenatal Appointments)
+
+### [Added]
+- **👶 Bộ Đếm Cử Động Thai Chuẩn Y Khoa Cardiff "Count to 10" (`KickCounterSheet`):**
+  * Giao diện đếm cử động thai đẹp mắt với nút Tap lớn bo tròn, Ripple Effect, rung Haptic phản hồi mỗi lần bé đạp.
+  * Thuật toán Cardiff: đủ 10 cử động trong ≤ 2 giờ → auto-complete; vượt 2 giờ → cảnh báo timeout.
+  * Thanh tiến trình 10 nấc trực quan, hiển thị thời gian phiên đếm realtime.
+  * Lịch sử phiên đếm theo ngày, tóm tắt tổng cử động + số phiên hoàn thành.
+  * Banner nổi bật nhắc nhở từ tuần 28 trở đi trên `PregnancyHomeScreen`.
+- **📅 Thẻ Lịch Khám Thai 7 Mốc Vàng (`PrenatalAppointmentsCard`):**
+  * 7 mốc siêu âm và xét nghiệm tiêu chuẩn sản khoa: NT+Double Test/NIPT (11–13), Triple Test (16–18), Siêu âm 4D hình thái học (20–24), OGTT (24–28), Doppler + NST (32), Kiểm tra ngôi thai + CTG (36), Khám cuối (38–40).
+  * Tự động highlight mốc khám kế tiếp dựa trên tuần thai hiện tại.
+  * Tick hoàn thành và đặt ngày hẹn thực tế cho từng mốc.
+- **💑 Thẻ Tóm Tắt Cử Động Thai Cho Bố Bầu (`_buildKickSummaryCard`):**
+  * Hiển thị trên `HusbandViewScreen` từ tuần 28+, đồng bộ dữ liệu realtime qua `todayKickSummaryProvider`.
+  * Bấm vào mở `KickCounterSheet` để Bố có thể cùng đếm cử động với Mẹ.
+
+### [Fixed]
+- Fix `Colors.white87` không tồn tại trong Flutter Colors class → `Colors.white.withAlpha(222)` trong `husband_view_screen.dart` và `prenatal_appointments_card.dart`.
+- Fix `const LinearGradient` missing trong `pregnancy_home_screen.dart`.
+
+### [Tests]
+- Thêm 48 unit tests mới: `test/features/lifecycle/kick_counter_test.dart`
+  * 6 nhóm kiểm thử: KickSessionModel, Session logic (Cardiff), State computed getters, Hive Persistence, PrenatalAppointmentModel (7 mốc vàng), Appointments controller.
+  * `flutter analyze` — **0 issues** | `flutter test` — **48/48 PASS**.
+
+---
+
 ## [0.7.1+24] - 2026-09-04 (Husband Pregnancy View & Trimester Companion)
 
 ### [Added]

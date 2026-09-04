@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO BÀN GIAO CA (HANDOVER.md) — DỰ ÁN MOONA
 
-> **Phiên bản hiện tại:** `v0.6.4+19` (Bidirectional Mini Love Notes Thread & Outgoing Blindspot Elimination)  
-> **Thời điểm cập nhật:** 03/09/2026 — Nâng cấp Hộp thư yêu thương 2 chiều mini & phản hồi độc lập  
+> **Phiên bản hiện tại:** `v0.7.2+25` (Phase 2.5: Fetal Kick Counter & Prenatal Appointments)  
+> **Thời điểm cập nhật:** 04/09/2026 — Hoàn tất Bộ đếm cử động thai chuẩn Cardiff & Lịch khám thai 7 mốc vàng  
 > **Kỹ sư phụ trách:** Senior Mobile Flutter Engineer (AI Pair Programmer)  
 
 ---
@@ -11,7 +11,10 @@
 | Hạng mục | Kết quả kiểm toán | Ghi chú kỹ thuật |
 |---|:---:|---|
 | **Static Analysis (`flutter analyze`)** | ✅ **0 issues found!** | Toàn bộ codebase đạt chuẩn 100%, 0 errors, 0 warnings, const constructors chuẩn hóa |
-| **Unit Testing (`flutter test`)** | ✅ **32/32 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm Bidirectional Love Notes Thread) |
+| **Unit Testing (`flutter test`)** | ✅ **48/48 tests PASSED** | Đạt 100% pass toàn bộ test suites (bao gồm KickCounter & PrenatalAppointments) |
+| **Bộ Đếm Cử Động Thai (Kick Counter)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | Chuẩn Cardiff Count to 10 (2h), vòng tròn đếm gợn sóng + haptic feedback, lịch sử phiên đếm |
+| **Lịch Khám Thai Mốc Vàng (Prenatal Appointments)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | 7 mốc y tế Việt Nam, tự động tính tuần/status (upcoming/current/done), checklist tích chọn |
+| **Tóm Tắt Thai Máy Cho Bố Bầu (Husband View)** | ✅ **HOÀN TẤT & ĐÃ TEST TRỰC QUAN** | `_buildKickSummaryCard` đồng bộ số cử động hôm nay của con cho Bố Bầu |
 | **Bản Đồ Nghiệp Vụ Toàn Dự Án** | ✅ **CHUẨN HÓA** | Tạo `docs/APP_BUSINESS_MATRIX.md` phân định quyền 2 Role, Unpaired vs Paired, Data Boundary & Perspective Mapping |
 | **Hộp Thư Tình Yêu 2 Chiều (Love Notes Thread)** | ✅ **HOÀN TẤT** | Nâng cấp toàn diện: Luồng đối thoại 2 chiều mini, Timeline bong bóng chuẩn chat, triệt tiêu lỗi Outgoing Blindspot, hỗ trợ phản hồi tạo document mới |
 | **Quản Lý Kết Nối Cặp Đôi (Connection Modal)** | ✅ **FIXED & NÂNG CẤP** | Xóa bỏ crash khi bấm nút [Quản lý] trong Cài đặt; Modal BottomSheet hiển thị mã liên kết, sao chép 1 chạm an toàn (Clipboard try/catch) & MoonaConfirmDialog hủy kết nối |
